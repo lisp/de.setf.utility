@@ -35,7 +35,7 @@
 
 (in-package :common-lisp-user)
 
-;;; optional implementation package definition
+;;; ensure an implementation package definition
 
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (unless (find-package :de.setf.utility.implementation)
