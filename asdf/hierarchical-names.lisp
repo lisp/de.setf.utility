@@ -40,6 +40,16 @@
             asdf::system-qualified-component-name)
           :asdf))
 
+;;; ensure support for de.setf.utility.implementation::translate-physical-pathname
+
+(eval-when (:execute :load-toplevel :compile-toplevel)
+  (unless (and (find-package :de.setf.utility.implementation)
+               (find-symbol (string :translate-physical-pathname)
+                            :de.setf.utility.implementation))
+    (load (merge-pathnames (make-pathname :directory '(:relative :up) :name "pathnames")
+                           *load-pathname*))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; content
@@ -127,6 +137,8 @@
                                   (let* ((explicit-file-name (explicit-file-name))
                                          (versioned-file-names nil)
                                          (result (or (probe-file explicit-file-name)
+                                                     ;; if there are multiple versions, take the one with the
+                                                     ;; most recent write time rather than just the higher version
                                                      (first (setf versioned-file-names
                                                                   (sort (wild-file-names (versioned-file-pattern))
                                                                         #'> :key #'file-write-date))))))
@@ -241,12 +253,14 @@
 ;;;
 ;;; additions to instantiation steps to support the above
 
+;;; use primtive interface to allow that the operator extensions are not loaded
 (defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
   (when (slot-boundp instance 'asdf::name)
-    (setf (asdf::find-system (asdf:component-name instance)) nil))
+    (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
   (when (slot-boundp instance 'asdf::properties)
     (dolist (nick (asdf::system-nicknames instance))
-      (setf (asdf::find-system nick) nil))))
+      (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
+            instance))))
 
 (defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
                                      (description nil description-p)
@@ -254,7 +268,7 @@
                                      (contingent-on nil contingent-on-p))
   (when description-p (setf (asdf::component-description instance) description))
   (when long-description-p (setf (asdf::component-long-description instance) long-description))
-  (when contingent-on-p (setf (asdf::component-contingent-on instance) contingent-on)))
+  (when contingent-on-p  (setf (asdf::component-property instance 'asdf::contingent-on) contingent-on)))
 
 (defmethod shared-initialize :after ((instance asdf:system) (slots t) &key
                                      (nicknames nil nicknames-p))
