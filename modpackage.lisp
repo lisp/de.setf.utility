@@ -487,7 +487,8 @@
   (:method ((designator t))
     (edit-package (find-package designator)))
   (:method ((package package))
-    (asdf:edit-op (package-name package))))
+    ;; perform indirectly in case the operators are not loaded
+    (asdf:operate 'asdf::edit-op (package-name package))))
   
 
 (defgeneric ensure-package (designator &key if-does-not-exist)

@@ -50,20 +50,23 @@
   (defun load-op (system &rest args)
     (apply #'operate 'load-op system args)))
 
+(defclass edit-op (operation)
+  ())
 
-(defgeneric edit-op (component)
-  (:method ((component t))
-    (asdf:edit-op (find-system component)))
-
-  (:method ((system asdf:system))
-    (ed (or (system-source-file system)
+(defmethod perform ((operation edit-op) (system system))
+  (ed (or (system-source-file system)
             (let ((system-name (component-name system)))
               (make-pathname :name (subseq system-name (1+ (or (position #\. system-name :from-end t) -1)))
                              :type "asd"
                              :defaults (component-relative-pathname system))))))
-    
-  (:method ((file source-file))
-    (ed (component-pathname file)))
+
+(defmethod perform ((operation edit-op) (file source-file))
+  (ed (component-pathname file)))
+
+
+(defgeneric edit-op (component)
+  (:method ((component t))
+    (operate 'edit-op component))
 
   (:method ((pathname pathname))
     (ed pathname)))
