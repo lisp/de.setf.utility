@@ -26,6 +26,7 @@
 ;;; 2009-10-01  janderson  compute nicknames as defaults; canonicalize system
 ;;; pathnames relative to known logical hosts
 ;;; 2010-01-10  janderson  separate extensions topically and add to asdf.asd
+;;; 2010-02-02  janderson  updated to use (possible null) system-source-file
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -82,53 +83,60 @@
   (dolist (root asdf:*central-registry*)
     (funcall function (eval root))))
 
-(defun asdf::sysdef-hierarchical-search-function (name &key (verbose-p *sysdef-hierarchical-search-function.verbose*)
-                                                 (wild-p nil))
-  "given a possibly hierarchical NAME,
+(defgeneric asdf::sysdef-hierarchical-search-function (name &key verbose-p wild-p)
+  (:method ((datum t)  &key verbose-p wild-p)
+    (declare (ignore verbose-p wild-p))
+    nil)
+
+  (:method ((name string) &key (verbose-p *sysdef-hierarchical-search-function.verbose*) (wild-p nil))
+    "given a possibly hierarchical NAME,
  - decimate it to create a path relative to the central registry roots.
  - look first for an .asd in an eponymic leaf directory given that path
    relative to some root.
  - if that fails, look for any file ;<path butlast>;<name>*;**;<name>.asd"
-  (let* ((tokens (system-namestring-to-list name))
-         (name (first (last tokens))))
-    (map-registry-roots #'(lambda (root-path)
-                            (when (typep root-path 'logical-pathname)
-                              (setf root-path (translate-logical-pathname root-path)))
-                            (flet ((explicit-file-name ()
-                                     (merge-pathnames
-                                      (make-pathname  :directory `(:relative ,@tokens)
-                                                      :name name
-                                                      :type "asd")
-                                      root-path))
-                                   (versioned-file-pattern ()
-                                     ;; add a wildcard to the end the final path element to permit
-                                     ;; versioned directories release tar files.
-                                     (merge-pathnames
-                                      (make-pathname  :directory `(:relative ,@(butlast tokens)
-                                                                             ,(concatenate 'string
-                                                                                           (first (last tokens))
-                                                                                           "*")
-                                                                             ,@(when wild-p '(:wild-inferiors)))
-                                                      :name name
-                                                      :type "asd")
-                                      root-path))
-                                   (wild-file-names (wild-file-pattern)
-                                     #+ccl (directory wild-file-pattern :directories nil :files t)
-                                     #+lispworks (directory wild-file-pattern :directories nil)
-                                     #+sbcl  (directory wild-file-pattern)))
-                              (let* ((explicit-file-name (explicit-file-name))
-                                     (versioned-file-names nil)
-                                     (result (or (probe-file explicit-file-name)
-                                                 (first (setf versioned-file-names
-                                                              (sort (wild-file-names (versioned-file-pattern))
-                                                                    #'> :key #'file-write-date))))))
-                                (when (and verbose-p asdf::*verbose-out*)
-                                  (format asdf::*verbose-out* "~&asdf search: [ ~s ] [ ~s, ~s ] -> ~s"
-                                          root-path
-                                          explicit-file-name versioned-file-names
-                                          result))
-                                (when result
-                                  (return-from asdf::sysdef-hierarchical-search-function result))))))))
+    (let* ((tokens (system-namestring-to-list name))
+           (name (first (last tokens))))
+      (flet ((make-wild-directory-component (name)
+               #+ccl (concatenate 'string name "*")
+               #+sbcl (sb-impl::make-pattern `(,name :MULTI-CHAR-WILD))
+               #-(or ccl sbcl)  name))
+        (map-registry-roots #'(lambda (root-path)
+                                (when (typep root-path 'logical-pathname)
+                                  (setf root-path (translate-logical-pathname root-path)))
+                                (flet ((explicit-file-name ()
+                                         (merge-pathnames
+                                          (make-pathname  :directory `(:relative ,@tokens)
+                                                          :name name
+                                                          :type "asd")
+                                          root-path))
+                                       (versioned-file-pattern ()
+                                         ;; add a wildcard to the end the final path element to permit
+                                         ;; versioned directories release tar files.
+                                         (merge-pathnames
+                                          (make-pathname  :directory `(:relative ,@(butlast tokens)
+                                                                                 ,(make-wild-directory-component
+                                                                                   (first (last tokens)))
+                                                                                 ,@(when wild-p '(:wild-inferiors)))
+                                                          :name name
+                                                          :type "asd")
+                                          root-path))
+                                       (wild-file-names (wild-file-pattern)
+                                         #+ccl (directory wild-file-pattern :directories nil :files t)
+                                         #+lispworks (directory wild-file-pattern :directories nil)
+                                         #+sbcl  (directory wild-file-pattern)))
+                                  (let* ((explicit-file-name (explicit-file-name))
+                                         (versioned-file-names nil)
+                                         (result (or (probe-file explicit-file-name)
+                                                     (first (setf versioned-file-names
+                                                                  (sort (wild-file-names (versioned-file-pattern))
+                                                                        #'> :key #'file-write-date))))))
+                                    (when (and verbose-p asdf::*verbose-out*)
+                                      (format asdf::*verbose-out* "~&asdf search: [ ~s ] [ ~s, ~s ] -> ~s"
+                                              root-path
+                                              explicit-file-name versioned-file-names
+                                              result))
+                                    (when result
+                                      (return-from asdf::sysdef-hierarchical-search-function result))))))))))
 
 
 (defgeneric asdf::system-nicknames (component)
@@ -147,11 +155,11 @@
   (:documentation
    "return the fully qualified identifier for an instantiated system.
  SYSTEM : system-designator
- VALUE  : string : the qualfied name
+ VALUE  : string : the qualified name
  Resolve the designator to a system, retrieve the relative pathname, which
  (for a system) should be absolute, extract the shortest path relative to some
  registry root, replace the possibly versioned leaf directory and catenate
- pathcomponents.")
+ path components.")
   
   (:method ((designator string))
     (asdf::system-qualified-component-name (asdf:find-system designator)))
@@ -171,7 +179,7 @@
            (when (typep root-path 'logical-pathname)
              (setf root-path (translate-logical-pathname root-path)))
            (let ((root-directory (pathname-directory root-path)))
-             (when (and (plusp (length root-directory))
+             (when (and (> (length root-directory) 1)
                         (< (length root-directory) (length pathname-directory))
                         (equalp (subseq pathname-directory 0 (length root-directory))
                                 root-directory))
@@ -181,20 +189,30 @@
       candidate))
   
   (:method ((system asdf:system))
-    (let* ((pathname (asdf::component-relative-pathname system))
-           (path (asdf::system-qualified-component-name pathname))
-           (name (string (asdf::component-name system)))
-           (directory-name (first (last (pathname-directory pathname))))
-           (leaf-is-redundant (string-equal name directory-name
-                                            :end2 (min (length name) (length directory-name)))))
-      (when path
-        (format nil "~(~{~a~^.~}.~a~)"
-                (if leaf-is-redundant (butlast path) path)
-                name)))))
+    (let* ((system-name (asdf::component-name system))
+           (pathname (or (asdf::system-source-file system)
+                         (make-pathname :name (subseq system-name (1+ (or (position #\. system-name :from-end t) -1)))
+                                        :type "asd"
+                                        :defaults (asdf::component-relative-pathname system))))
+           (translated-pathname (when pathname (translate-logical-pathname pathname)))
+           (pathname-name-list (when translated-pathname (asdf::system-qualified-component-name translated-pathname)))
+           (system-name-list (system-namestring-to-list system-name)))
+      ;; (print (list :pathname-name-list pathname-name-list :system-name-list system-name-list))
+      (format nil "~(~{~a.~}~{~a~^.~}~)"
+              (butlast pathname-name-list (length system-name-list))
+              system-name-list))))
 
-
-;(asdf::system-qualified-component-name :montezuma)
-;(asdf::system-qualified-component-name :com.googlecode.montezuma)
+#+(or)
+(maphash #'(lambda (n s) n
+            (destructuring-bind (time . system) s
+              (asdf::%set-system-source-file nil system)
+              (print (list time
+                           (asdf::component-relative-pathname system)
+                           (asdf::component-name system)
+                           (asdf::system-qualified-component-name system)))))
+         asdf::*defined-systems*)
+#+(or)
+(asdf::system-qualified-component-name :de.setf.amqp)
 
 
 

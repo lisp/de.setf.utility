@@ -24,6 +24,7 @@
   :serial t
 
   :components ((:file "patches")
+               (:file "operators")
                (:file "hierarchical-names")
                (:file "contingent-on")
                (:file "dependency")

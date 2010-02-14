@@ -18,7 +18,7 @@
 ;;;  along with 'de.setf.utility'.  If not, see the GNU <a href='http://www.gnu.org/licenses/'>site</a>.
 
 ;;;
-;;; 2009-00-00  janderson  patches as they appeared
+;;; 2010-02-03  janderson  independent file
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -29,30 +29,44 @@
 ;;;
 ;;; content
 ;;;
-;;; patches to asdf operators
+;;; additional to asdf operators
+;;;  (setf find-system)
+;;;  load-op (system &rest args)
+;;;  edit (system)
 ;;;
 
-;;; relative pathname computation
-;;; at least in clozure, it requires the null directory to avoid
-;;; being created with (:absolute) and thereby  intefereing with any merge.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (export '(edit-op) :asdf))
 
-(defun merge-component-relative-pathname (pathname name type)
-  (multiple-value-bind (relative path filename)
-      (split-path-string name)
-  (merge-pathnames
-   (or pathname (make-pathname :directory `(,relative ,@path)))
-   (if type
-       (make-pathname :directory nil :name filename :type type)
-       filename))))
 
-;;;
-;;; correct setf to return the passed value
 
-(defmethod (setf component-property) (new-value (c component) property)
-  (let ((a (assoc property (component-properties c) :test #'equal)))
-    (cond (a
-           (setf (cdr a) new-value))
-          (t
-           (setf (component-properties c)
-                 (acons property new-value (slot-value c 'properties)))
-           new-value))))
+(defun (setf find-system) (system name)
+  (if system
+    (setf (gethash (coerce-name name) *defined-systems*) system)
+    (remhash (coerce-name name) *defined-systems*))
+  system)
+
+(unless (fboundp 'load-op)
+  (defun load-op (system &rest args)
+    (apply #'operate 'load-op system args)))
+
+
+(defgeneric edit-op (component)
+  (:method ((component t))
+    (asdf:edit-op (find-system component)))
+
+  (:method ((system asdf:system))
+    (ed (or (system-source-file system)
+            (let ((system-name (component-name system)))
+              (make-pathname :name (subseq system-name (1+ (or (position #\. system-name :from-end t) -1)))
+                             :type "asd"
+                             :defaults (component-relative-pathname system))))))
+    
+  (:method ((file source-file))
+    (ed (component-pathname file)))
+
+  (:method ((pathname pathname))
+    (ed pathname)))
+
+
+;;; (edit-op :de.setf.amqp)
