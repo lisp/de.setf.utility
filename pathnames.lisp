@@ -28,6 +28,7 @@
 ;;;  set-relative-logical-pathname-translations (host)
 ;;;    given a logical host name, set its translations relative to a given root.
 ;;;    by default, it uses the currently processed source file.
+;;;    see the use cases at the end of this file.
 ;;;
 ;;; translate-physical-pathname (pathname)
 ;;;    return the most immediate governing logical pathname given a physical pathname
