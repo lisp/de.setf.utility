@@ -116,7 +116,7 @@
       (declare (fixnum length) (dynamic-extent names))
       (flet ((string-first (symbols designators)
                (setf (first symbols) (string (first designators)))))
-        (declare (dynamic-extent #'intern-first))
+        (declare (dynamic-extent #'string-first))
         (mapl #'string-first names designators)
         (funcall function names)))
     (funcall function (string designators)))
@@ -165,23 +165,30 @@
 (defgeneric modify-package-operation (package operation arguments)
   (:method ((package t) (operation t) (arguments t))
            (modify-package-operation (ensure-package package :if-does-not-exist :error) operation arguments))
+
   (:method ((package package) (operation t) (symbol t))
            (modify-package-operation package operation (list symbol)))
+
   (:method ((package package) (operation t) (symbols list))
            (no-applicable-method #'modify-package-operation package operation symbols))
+
   (:method ((package package) (operation (eql :clear)) (arguments t))
            (unuse-package (package-use-list package) package)
            (dolist (using-package (package-used-by-list package)) (unuse-package package using-package))
            (do-all-symbols (symbol package) (unintern symbol package)))
+
   (:method ((package package) (operation (eql :ensure)) (arguments cons))
            (dolist (to-ensure arguments)
              (ensure-package to-ensure  :if-does-not-exist :load)))
+
   (:method ((package package) (operation (eql :like)) (arguments cons))
            (modify-package-operation package :like (first arguments))
            (when (rest arguments)
              (apply #'modify-package package (rest arguments))))
+
   (:method ((package package) (operation (eql :like)) (prototype t))
            (modify-package-operation package :like (ensure-package prototype :if-does-not-exist :error)))
+
   (:method ((package package) (operation (eql :like)) (prototype package))
            (modify-package-operation package :clear nil)
            (when (package-shadowing-symbols prototype)
@@ -194,14 +201,17 @@
                      (ecase accessibility
                        (:external (import symbol package) (export symbol package))
                        (:internal (import symbol package)))))))
+
   (:method ((package package) (operation (eql :alias)) (arguments list))
            (flet ((do-alias (names)
                     (unless (listp names) (setf names (list names)))
                     (rename-package package (package-name package) (union names (package-nicknames package) :test #'string=))))
              (declare (dynamic-extent #'do-alias))
              (call-with-symbol-names #'do-alias arguments)))
+
   (:method ((package package) (operation (eql :nicknames)) (nicknames list))
            (rename-package package (package-name package) (mapcar #'string nicknames)))
+
   (:method ((package package) (operation (eql :export-only)) (symbols list))
            (flet ((do-export (symbols) (export symbols package)))
              (declare (dynamic-extent #'do-export))
@@ -209,16 +219,20 @@
                (unless (find symbol symbols :test #'string=) (unexport symbol package)))
              (when symbols
                (call-with-interned-symbols #'do-export symbols package))))
+
   (:method ((package package) (operation (eql :export)) (symbols list))
            (flet ((do-export (symbols) (export symbols package)))
              (declare (dynamic-extent #'do-export))
              (call-with-interned-symbols #'do-export symbols package)))
+
   (:method ((package package) (operation (eql :unexport)) (symbols list))
            (flet ((do-unexport (symbols) (unexport symbols package)))
-             (declare (dynamic-extent #'do-export))
+             (declare (dynamic-extent #'do-unexport))
              (call-with-interned-symbols #'do-unexport symbols package)))
+
   (:method ((package package) (operation (eql :intern)) (symbols list))
            (call-with-interned-symbols #'identity symbols package))
+
   (:method ((package package) (operation (eql :intern-only)) (symbols list))
            (with-package-iterator (next-symbol package :internal)
              (loop (multiple-value-bind (more-p symbol) (next-symbol)
@@ -228,6 +242,7 @@
                        (unintern symbol package))))
              (when symbols
                (call-with-interned-symbols #'identity symbols package))))
+  
   (:method ((package package) (operation (eql :import-from)) (source-and-symbols list))
            (flet ((do-import (symbol) (import symbol package)))
              (declare (dynamic-extent #'do-import))
@@ -238,6 +253,7 @@
                  (do-external-symbols (symbol source-package)
                    (unless (find symbol (package-shadowing-symbols package) :test #'string=)
                      (do-import symbol)))))))
+
   (:method ((package package) (operation (eql :import-only)) (source-and-symbols list))
            (with-package-iterator (next-symbol package :internal)
              (loop (multiple-value-bind (more-p symbol) (next-symbol)
@@ -246,11 +262,13 @@
                        (unintern symbol package))))
              (when source-and-symbols
                (modify-package-operation package :import-from source-and-symbols))))
+
   (:method ((package package) (operation (eql :shadow)) (symbols list))
            (flet ((do-shadow (symbols) (shadow symbols package)))
-             (declare (dynamic-extent #'do-shadowing-import))
+             (declare (dynamic-extent #'do-shadow))
              (when symbols
                (call-with-interned-symbols #'do-shadow symbols package))))
+
   (:method ((package package) (operation (eql :shadowing-import-from)) (source-and-symbols list))
            (labels ((do-shadowing-import (symbol &aux accessible)
                       (if (setf accessible (find-symbol (string symbol) package))
@@ -272,6 +290,7 @@
                  (call-with-interned-symbols #'do-shadowing-import-list symbols source-package)
                  (do-external-symbols (symbol source-package)
                    (do-shadowing-import symbol))))))
+
   (:method ((package package) (operation (eql :shadowing-import-to)) (destination-and-symbols list))
            (let ((destination-package (first destination-and-symbols))
                  (symbols (rest destination-and-symbols)))
@@ -293,6 +312,7 @@
                  (call-with-interned-symbols #'do-shadowing-import-list symbols package)
                  (do-external-symbols (symbol package)
                    (do-shadowing-import symbol))))))
+
   (:method ((package package) (operation (eql :export-from)) (source-and-symbols list))
            (flet ((do-import-export (symbol) (import symbol package) (export symbol package)))
              (declare (dynamic-extent #'do-import-export))
@@ -302,6 +322,7 @@
                  (call-with-interned-symbols #'do-import-export symbols source-package)
                  ;; do all and don't allow for shadowing
                  (do-external-symbols (symbol source-package) (do-import-export symbol))))))
+
   (:method ((package package) (operation (eql :export-through)) (destination-and-symbols list))
            (let ((destination-package (ensure-package (first destination-and-symbols) :if-does-not-exist :error))
                  (symbols (rest destination-and-symbols)))
@@ -310,7 +331,7 @@
                (flet ((do-export-export (symbol) (export symbol package)
                                                  (import symbol destination-package)
                                                  (export symbol destination-package)))
-                 (declare (dynamic-extent #'do-import-export))
+                 (declare (dynamic-extent #'do-export-export))
                  (dolist (symbol symbols)
                    (when (setf symbol (find-symbol (string symbol) destination-package))
                      (import symbol package)))
@@ -318,26 +339,34 @@
                ;; do all and don't allow for shadowing
                (do-external-symbols (symbol package)
                  (import symbol destination-package) (export symbol destination-package)))))
+
   (:method ((package package) (operation (eql :use-only)) (packages list))
            (let ((packages-used (package-use-list package)))
              (when packages-used (unuse-package packages-used package)))
            (use-package packages package))
+
   (:method ((package package) (operation (eql :use)) (packages list))
            (when packages (use-package packages package)))
+
   (:method ((package package) (operation (eql :use-by)) (packages list))
            (dolist (other-package packages) (use-package package other-package)))
+
   (:method ((package package) (operation (eql :version)) (version cons))
            (modify-package-operation package operation (first version)))
+
   (:method ((package package) (operation (eql :version)) (version t))
            (setf (package-version package) version))
+
   (:method ((package package) (operation (eql :documentation)) (documentation cons))
            #-(or (and allegro allegro-version>= (not (version>= 6 0))) clisp)
            (setf (documentation package t) (first documentation))
            documentation)
+
   (:method ((package package) (operation (eql :documentation)) (documentation t))
            #-(or (and allegro allegro-version>= (not (version>= 6 0))) clisp)
            (setf (documentation package t) documentation)
            documentation)
+
   (:method ((package package) (operation (eql :purge)) (argument t))
            (dolist (using-package (package-used-by-list package))
              (unuse-package package using-package))
