@@ -166,6 +166,14 @@
 (defun logical-hosts ()
   (loop for host being each hash-key of SB-IMPL::*LOGICAL-HOSTS*
         collect host))
+#+allegro
+(defun logical-hosts ()
+  (loop for host being each hash-key of excl::*logical-pathname-translations*
+        collect host))
+
+#-(or ccl lispworks sbcl)
+(defun logical-hosts ()
+  (cerror "Assume no logical hosts." "This runtime has no definition for ~s." 'logical-hosts))
 
 (defgeneric translate-physical-pathname (pathname &key &allow-other-keys)
   (:documentation "translate a given PATHNAME back to the most specific logical pathname.
@@ -228,25 +236,25 @@
 ;;; set standard host complement
 ;;; - LIBRARY    presumes that this is in in `#p"LIBRARY:de;setf;utility;"`
 ;;; - P-LIBRARY  iff it is found at `#p"LIBRARY:..;..;production;Library;"`
+;;;
 
 ;;; (setf (logical-pathname-translations "LIBRARY") nil)
 ;;; if there is no LIBRARY host, make one
-(or (ignore-errors (logical-pathname-translations "LIBRARY"))
-    (apply #'set-relative-logical-pathname-translations
-           "LIBRARY"
-           #+digitool (list :relative-pathname
-                            (make-pathname :directory '(:relative :up :up :up)))
-           
-           #+clozure (list :absolute-pathname
-                            (let ((pathname *LOADING-FILE-SOURCE-FILE*))
-                              (make-pathname :directory (butlast (pathname-directory pathname) 3)
-                                             :name nil :type nil
-                                             :defaults pathname)))
-           #-(or digitool clozure) (list :absolute-pathname
-                                         (let ((pathname *LOAD-pathname*))
-                                           (make-pathname :directory (butlast (pathname-directory pathname) 3)
-                                                          :name nil :type nil
-                                                          :defaults pathname)))))
+;;; the macrolet captures *compile-file-pathname*, which should work in all runtimes.
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun define-library-host (source-pathname)
+    (set-relative-logical-pathname-translations "LIBRARY"
+                                                :absolute-pathname
+                                                (make-pathname :directory (butlast (pathname-directory source-pathname) 3)
+                                                               :name nil :type nil
+                                                               :defaults source-pathname)))
+  
+  (or (ignore-errors (logical-pathname-translations "LIBRARY"))
+      (macrolet ((source-pathname () (truename (or *compile-file-pathname* *load-pathname*))))
+        (define-library-host (source-pathname)))))
+
+
 (let ((production (merge-pathnames (make-pathname :directory '(:relative :up :up "production" "Library"))
                                    (truename #p"LIBRARY:"))))
   (when (probe-file production)
