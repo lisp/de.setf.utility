@@ -33,6 +33,7 @@
    :*physical-source-type*
    :check-feature
    :clean-package
+   :define-library-host
    :defvarconstant
    :edit-package
    :ensure-package
