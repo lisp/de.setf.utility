@@ -1,37 +1,36 @@
 ;;; -*- Package: de.setf.utility.implementation; -*-
 
-;;;  This file defines stream/buffer character set codecs. it is part of the 'de.setf.utility.mime'
-;;;  library component.
-;;;  (c) 2008, 2009, 2010 james anderson
-;;;
-;;;  'de.setf.utility.mime' is free software: you can redistribute it and/or modify
-;;;  it under the terms of the GNU Lesser General Public License as published by
-;;;  the Free Software Foundation, either version 3 of the License, or
-;;;  (at your option) any later version.
-;;;
-;;;  'de.setf.utility.mime' is distributed in the hope that it will be useful,
-;;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;;  GNU Lesser General Public License for more details.
-;;;
-;;;  You should have received a copy of the GNU Lesser General Public License
-;;;  along with 'de.setf.utility'.  If not, see the GNU <a href='http://www.gnu.org/licenses/'>site</a>.
-
 (in-package :de.setf.utility.implementation)
 
-;;;
-;;; The names are taken from the IANA document with character set names:
-;;;   [http://www.iana.org/assignments/character-sets]
-;;; The codec logic is from de.setf.xml. There are alternatives, but they were not suitable
-;;; - net.common-lisp.babel concerns sequence codecs
-;;; - clozure cl's l1-unicode includes stream codecs, but would mean extracting them from
-;;;   a much more extensive library.
-;;; as the (ultimate) goal is to en/decode to/from network buffers, just the stream operators
-;;; from de.setf.xml suffice.
 
+(document :file
+ (description "This file defines stream/buffer character set codecs for the 'de.setf.utility.mime.' library")
+ 
+ (copyright
+  "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
+  "'de.setf.utility' is free software: you can redistribute it and/or modify
+ it under the terms of version 3 of the GNU Lesser General Public License as published by
+ the Free Software Foundation.
 
-;;;
-;;; contents
+ 'de.setf.utility' is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ See the GNU Lesser General Public License for more details.
+
+ A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
+ If not, see the GNU [site](http://www.gnu.org/licenses/).")
+
+ (long-description
+  "The encoding names are taken from the [IANA document](http://www.iana.org/assignments/character-sets)
+ with character set names. The codec logic is from de.setf.xml. There are alternatives, but they were not
+ suitable
+
+- net.common-lisp.babel concerns sequence codecs
+- clozure cl's l1-unicode includes stream codecs, but would mean extracting them from
+  a much more extensive library.
+
+As the (ultimate) goal is to en/decode to/from network buffers, just the stream operators
+from de.setf.xml suffice."))
+
 
 (defparameter *content-encodings* (make-hash-table ))
 
@@ -57,7 +56,10 @@
     :reader content-encoding-byte-encoder
     :documentation "A function of two arguments (source byte-reader),
  where the byte-reader applied to the source returns an unsigned byte,
- or NIL, for EOF")))
+ or NIL, for EOF")
+   (documentation
+    :initarg :documentation :initform nil
+    :accessor content-encoding-documentation)))
 
 
 (def-class-constructor content-encoding
@@ -77,14 +79,13 @@
                                 (error "Invalid character encoding: ~s." keyword))))
         (define-encoding (apply #'make-instance keyword initargs))))))
 
+
 (defun (setf content-encoding) (encoding name)
   (when (gethash name *content-encodings*)
     (warn "redefining encoding: ~s." name))
   (setf (gethash name *content-encodings*) encoding))
 
 
-;;;
-;;; http://en.wikipedia.org/wiki/Utf-8
 
 (flet ((utf-8-encode (char put-byte destination)
          (macrolet ((emit (code) `(funcall put-byte destination ,code)))
@@ -132,11 +133,9 @@
   (content-encoding :name :utf-8
                     :encoded-code-point-size nil
                     :byte-decoder #'utf-8-decode
-                    :byte-encoder #'utf-8-encode))
+                    :byte-encoder #'utf-8-encode
+                    :documentation "http://en.wikipedia.org/wiki/Utf-8"))
 
-
-;;;
-;;; http://en.wikipedia.org/wiki/ISO/IEC_8859-1
 
 (flet ((iso-8859-1-encode (char put-byte destination)
          (let ((code (char-code char)))
@@ -149,12 +148,15 @@
   (content-encoding :name :iso-8859-1
                     :encoded-code-point-size 1
                     :byte-decoder #'iso-8859-1-decode
-                    :byte-encoder #'iso-8859-1-encode))
+                    :byte-encoder #'iso-8859-1-encode
+                    :documentation " http://en.wikipedia.org/wiki/ISO/IEC_8859-1"))
+
 
 (setf (content-encoding :us-ascii) :iso-8859-1)
 (setf (content-encoding :ascii) :iso-8859-1)
 
 ;;; (eq (content-encoding :iso-8859-1) (content-encoding :us-ascii))
+
 
 (defgeneric compute-charset-codecs (mime-type)
   (:method ((charset null))
