@@ -26,6 +26,7 @@
 (modPackage :de.setf.utility
   (:export
    :collate
+   :destructuring-keys
    :lambda-list-arity
    :map-plist
    :do-plist
@@ -175,5 +176,55 @@
                  (not (funcall predicate (elt keys i1) (elt keys i2))))
         (rotatef (elt sequence i2) (elt sequence i1)))))
   sequence)
-    
+
+(defmacro destructuring-keys (lambda-list value &body body-arg &environment env)
+  (let* ((body (member-if #'(lambda (x) (not (and (consp x) (eq (first x) 'declare)))) body-arg))
+         (declarations (ldiff body-arg body)))
+    (destructuring-bind (required-arguments &key key rest) (parse-lambda-list lambda-list)
+      (assert (null required-arguments))
+      (unless rest
+        (setf rest
+              (if (and (symbolp value) (eq (macroexpand-1 value env) value)) value (gensym "rest"))))
+      (setf key (mapcar #'(lambda (key)
+                            (etypecase key
+                              (symbol `((,(intern (symbol-name key) :keyword) ,key) nil))
+                              (cons (destructuring-bind (key value) key
+                                      (etypecase key
+                                        (symbol `((,(intern (symbol-name key) :keyword) ,key) ,value))
+                                        (cons `(,key ,value)))))))
+                        key))
+      `(let (,@(unless (eq rest value) `((,rest ,value)))
+             ,@(loop for ((nil variable) value) in key collect `(,variable ,value)))
+         ,@declarations
+         (loop (case (first ,rest)
+                 ,@(loop for ((key variable) nil) in key
+                         collect `(,key (pop ,rest) (setf ,variable (pop ,rest))))
+                 (t (return))))
+         ,@body))))
+
+(assert (equalp (macroexpand-1 '(destructuring-keys (&key key1 key2) forms (declare (optimize)) (list key1 key2)))
+                '(let ((key1 nil) (key2 nil))
+                   (declare (optimize))
+                   (loop (case (first forms)
+                           (:key1 (pop forms) (setf key1 (pop forms)))
+                           (:key2 (pop forms) (setf key2 (pop forms))) (t (return))))
+                   (list key1 key2))))
+
+(assert (equalp (macroexpand-1 '(destructuring-keys (&rest rest-forms &key key1 key2) forms (list forms rest-forms key1 key2)))
+                '(let ((rest-forms forms) (key1 nil) (key2 nil))
+                   (loop (case (first rest-forms)
+                           (:key1 (pop rest-forms) (setf key1 (pop rest-forms)))
+                           (:key2 (pop rest-forms) (setf key2 (pop rest-forms)))
+                           (t (return))))
+                   (list forms rest-forms key1 key2))))
+
+(assert (equalp (subst-if t #'(lambda (x) (and (symbolp x) (null (symbol-package x))))
+                          (macroexpand-1 '(destructuring-keys (&key key1 key2) (some forms) (declare (optimize)) (list key1 key2))))
+                '(let ((t (some forms)) (key1 nil) (key2 nil))
+                   (declare (optimize)) 
+                   (loop (case (first t)
+                           (:key1 (pop t) (setf key1 (pop t)))
+                           (:key2 (pop t) (setf key2 (pop t)))
+                           (t (return))))
+                   (list key1 key2))))
 :de.setf.utility
