@@ -82,7 +82,7 @@
       form
       `(let ((,l-var ,list)) ,form))))
 
-(defMacro collect-list ((collector &key (predicate 'identity) (finally 'rest)) &rest body)
+(defmacro collect-list ((collector &key (predicate 'identity) (finally 'rest)) &rest body)
   (let ((list (gensym "LIST-"))
         (end (gensym "END-")))
     `(let* ((,list (list nil)) (,end ,list))
