@@ -258,9 +258,10 @@
   (when (slot-boundp instance 'asdf::name)
     (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
   (when (slot-boundp instance 'asdf::properties)
+    (let ((time (get-universal-time)))
     (dolist (nick (asdf::system-nicknames instance))
       (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
-            instance))))
+            (cons time instance))))))
 
 (defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
                                      (description nil description-p)
