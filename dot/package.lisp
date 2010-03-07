@@ -154,6 +154,7 @@
            :context-put-graph
            :context-put-subgraph
            :context-put-node
+           :context-id
 
            :put-edge
            :put-eol
