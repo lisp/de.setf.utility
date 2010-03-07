@@ -3,9 +3,7 @@
 ;;;  This file is part of the 'de.setf.utility' Common Lisp library.
 ;;;  It implements universal time conversion functions.
 
-;;;  Copyright 2003 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
-;;;  Copyright 2004 Ravenpack International
-;;;  Copyright 2004, 2009, 2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
+;;;  Copyright 2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
 ;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
 ;;;  it under the terms of version 3 of the GNU Lesser General Public License as published by
 ;;;  the Free Software Foundation.
@@ -17,8 +15,6 @@
 ;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
-
-;;;
 ;;; contents : universal time conversion
 ;;;
 ;;; Implements universal-time data conversion according to java2se date and time patterns
@@ -28,8 +24,11 @@
 ;;; date:decode
 ;;; date:encode
 
+;;; Copyright 2003 [james anderson](mailto:james.anderson@setf.de)
+;;; Copyright 2004 Ravenpack International
 ;;; 20040222.jaa decode-iso-time
-;;; 20090304.jamderson  repacked
+;;; Copyright 2009 [james anderson](mailto:james.anderson@setf.de)
+;;; 20090304.jamderson  repackaged
 ;;; 20091025.janderson  added iso as shorthand op
 ;;; 20091220.janderson  corrected treatment of single quote; made 'Z' decoding optional
 ;;; 20100210.janderson  cleaned up ignored variables, types
