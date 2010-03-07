@@ -558,7 +558,7 @@ methods, which it removes from the effective method."))
       `(#+(or digitool clozure) with-lock-grabbed
         #+allegro mp:with-process-lock
         #+lispworks mp:with-lock
-        #+sb-thread:with-mutex
+        #+sbcl sb-thread:with-mutex
         (,(function-lock function))
          ,form))))
 
@@ -596,7 +596,7 @@ methods, which it removes from the effective method."))
       `(#+allegro mp:with-process-lock
         #+(or clozure digitool) ccl:with-lock-grabbed
         #+lispworks mp:with-lock
-        #+sb-thread:with-mutex
+        #+sbcl sb-thread:with-mutex
         (,lock-designator)
          ,form))))
 
