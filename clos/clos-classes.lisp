@@ -30,29 +30,39 @@
 
 ;;; 20030902 jaa : incorporated the class definition macros from cl-xml
 ;;; 20090103 jaa : minimum clos utilities factored out of full clos module
-;;; 20100125 jaa : bound-slot-value
+;;; 20100125 jaa : bound-slot-value (aka _slot-value)
 
 (in-package :de.setf.utility.implementation)
 
 (modpackage :de.setf.utility
-  (:export :bound-slot-value
-           :def-class-constructor
-           :def-class-constructors
-           :def-class-parameter
-           :def-delegate-method
-           :def-type-predicate
-           :def-type-predicates
-           :protected-print-unreadable-object))
+  (:export 
+   :_slot-value
+   :bound-slot-value
+   :def-class-constructor
+   :def-class-constructors
+   :def-class-parameter
+   :def-delegate-method
+   :def-type-predicate
+   :def-type-predicates
+   :protected-print-unreadable-object))
 
 
 (defparameter *defclass-output* nil
   "When non-null, macros trace to this stream.")
 
 (defgeneric bound-slot-value (object slot &optional default)
-  (:method (object slot &optional (default nil))
-    (if (slot-boundp object slot)
-      (slot-value object slot)
+  (:documentation
+   "if the object binds the designated slot, return the value.
+    otherwise return the given default.")
+
+  (:method ((object standard-object) slot-designator &optional (default nil))
+    ;; observed to be faster to check than to muzzle
+    (if (slot-boundp object slot-designator)
+      (slot-value object slot-designator)
       default)))
+
+(defmacro _slot-value (object slot &rest args)
+  `(bound-slot-value ,object ,slot ,@args))
 
 ;;
 ;; class definition macros
