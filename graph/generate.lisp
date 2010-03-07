@@ -21,7 +21,7 @@
   (history
    (copyright "COPYRIGHT 2002 james anderson")
    (delta 20020723 "factored out from path-relative behaviour")
-   (delta 20030902 "established as a utility"))
+   (delta 20030902 "established as a utility")))
 
 
 (defVar *null-generator* #'(lambda () nil))
