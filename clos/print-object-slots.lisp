@@ -20,8 +20,10 @@
 
 
 (modpackage :de.setf.utility
-  (:expot-slots
+  (:export
    :def-print-object-slots
+   :print-object-slots
+   :print-object-slot-names
    :*print-object-slots*))
 
 (defvar *print-object-slots* t
