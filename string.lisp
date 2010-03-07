@@ -38,6 +38,7 @@
    :split-string
    :split-sequence
    :trim-string-whitespace
+   :when-symbol
    ))
 
 (defun trim-string-whitespace (string)
@@ -136,6 +137,15 @@
   "Construct a symbol given string designators. If package is null, the symbol is
  a new, uninterned symbol."
   (declare (dynamic-extent args))
+
+  (multiple-value-bind (symbol name)
+                       (apply #'when-symbol package args)
+    (or symbol (intern name package))))
+
+
+(defun when-symbol (package &rest args)
+  (declare (dynamic-extent args))
+
   (flet ((element-length (element)
            (if element (length (string element)) 0)))
     (declare (dynamic-extent #'element-length))
@@ -160,7 +170,7 @@
                    (map-into name #'char-invert name))))
       (if package
         (or (find-symbol name package)
-            (intern (copy-seq name) package))
+            (values nil (copy-seq name)))
         (make-symbol (copy-seq name))))))
 
 
