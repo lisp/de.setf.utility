@@ -1,8 +1,11 @@
 ;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
 
+(in-package :de.setf.utility.implementation)
+
 ;;;  This file is part of the 'de.setf.utility' library component.
-;;;  (c) 2002, 2009 james anderson
-;;;
+;;;  It implementes a simple test framework
+
+;;;  Copyright 2002,2009,2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
 ;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
 ;;;  it under the terms of the GNU Lesser General Public License as published by
 ;;;  the Free Software Foundation, either version 3 of the License, or
@@ -32,14 +35,14 @@
 ;;;    - a single form is equivalent to specifying `:value` _`form`_
 ;;;    - multiple forms is equivalent to specifying `:values (list ` _`forms`_ `)`
 ;;;  *test-unit-mode* 
-;;;  specifies, test reporting circumstances
-;;;    :silent : reports failures only
-;;;    :verbose : reports every execution with results
-;;;    :report : reporsts succes and failure
-;;;  *SITUATION*
-;;;  indicates the execution situation
-;;;    :define  : correspsonds to test definition
-;;;    :execute corresponds to EXECUTE-TESTS
+;;;   specifies, test reporting circumstances
+;;;   - :silent : reports failures only
+;;;   - :verbose : reports every execution with results
+;;;   - :report : reporsts succes and failure
+;;;  *test-unit-situation*
+;;;   indicates the execution situation
+;;;   - :define  : correspsonds to test definition
+;;;   - :execute corresponds to EXECUTE-TESTS
 
 ;;;
 ;;;  20020601 ja : new
@@ -47,7 +50,7 @@
 ;;;  20090331 janderson : to facliltate individual test definition, the improved
 ;;;    the deftest operator with mode, situation.
 ;;;  20100110 ja  changed nil mode to :terse to make it clearer when setting
-(in-package :de.setf.utility.implementation)
+
 
 
 (defparameter *class.test-unit* 'test-unit)
@@ -315,7 +318,7 @@
   (:method ((test test-unit) (path cons))
     (setf (gethash path *tests*) test))
   (:method ((test null) (path cons))
-    (remhash path *tests*)))
+    (set-tests path nil)))
   
 
 
@@ -387,21 +390,21 @@
   (:method ((unit null) &key &allow-other-keys)
            nil)
 
-  (:method ((unit test-unit) &key (mode *test-unit-mode*) (force-p nil))
+  (:method ((unit test-unit) &key (mode *test-unit-mode*) (force-p nil) (stream *trace-output*))
     (cond ((and (eq (test-unit-status unit) :passed) (not force-p))
            (when (eq mode :verbose)
-             (format *trace-output* "~%~{~s~^.~}: skipped (passed)." (test-unit-path unit)))
+             (format stream "~%~{~s~^.~}: skipped (passed)." (test-unit-path unit)))
            :skipped)
           ((and (eq (test-unit-status unit) :known-failed) (not force-p))
            (when (eq mode :verbose)
-             (format *trace-output* "~%~{~s~^.~}: skipped (passed)." (test-unit-path unit)))
+             (format stream "~%~{~s~^.~}: skipped (passed)." (test-unit-path unit)))
            :known-failed)
           ((and (not (test-unit-situation-p unit '(nil :execute))) (not force-p))
            (when (eq mode :verbose)
-             (format *trace-output* "~%~{~s~^.~}: skipped (situation)." (test-unit-path unit)))
+             (format stream "~%~{~s~^.~}: skipped (situation)." (test-unit-path unit)))
            :skipped)
           (t
-           (%execute-test unit :mode mode)))))
+           (%execute-test unit :mode mode :stream stream)))))
 
 (defun unintern-test (test) (set-tests (test-unit-path test) nil))
 
