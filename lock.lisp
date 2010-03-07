@@ -8,7 +8,7 @@
 
 
 (document :file
- (description "This file defines mp/lock utilities for for the 'de.setf.utility' library.")
+ (description "This file defines mp/lock utilities for the 'de.setf.utility' library.")
  
  (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
@@ -103,29 +103,29 @@
 
 #+digitool
 (defun setf.lock:run-in-thread (function
-                   &key (name "anonymous")
+                   &key (name "anonymous") (priority 0)
                    parameters)
   "Runs function in it's own thread."
-  (apply #'ccl:process-run-function
-         name
-         function
-         parameters))
+  (let ((keys `(:name , name :priority ,priority)))
+    (declare (dynamic-extent keys))
+    (apply #'ccl:process-run-function keys function parameters)))
 
 #+clozure
 (defun setf.lock:run-in-thread (function
-                   &key (name "anonymous")
+                   &key (name "anonymous") (priority 0)
                    parameters)
   "Runs function in it's own thread."
-  (apply #'ccl:process-run-function
-         `(:name ,name)
-         function
-         parameters))
+  (let ((keys `(:name , name :priority ,priority)))
+    (declare (dynamic-extent keys))
+    (apply #'ccl:process-run-function keys function parameters)))
 
 #+(or lispworks allegro)
 (defun setf.lock:run-in-thread (function
                       &key (name (function-namestring function))
+                      priority
                            parameters)
   "Runs function in it's own thread."
+  (declare (ignore priority))
   (apply #'mp:process-run-function
          name
          function
@@ -134,8 +134,10 @@
 #+sbcl
 (defun setf.lock:run-in-thread (function
                       &key (name (function-namestring function))
+                      priority
                            parameters)
   "Runs function in it's own thread."
+  (declare (ignore priority))
   (flet ((run-op () (apply function parameters)))
     (sb-thread:make-thread #'run-op :name name)))
 
