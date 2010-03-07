@@ -78,15 +78,16 @@
                             (suffix (:suffix)))
   (:arguments condition stream)
   "combine primary methods as a progn with intervening calls to fresh-line. :prefix and :suffix methods are combined with allowance for call-next method, with order most-specific-first and least-specific-first, respectively."
-  (declare (ignore condition))
-  (let ((form (cons 'progn
-                    (reduce #'nconc
-                            (mapcar #'(lambda (method)
-                                        (if fresh-line-p
-                                          (list `(fresh-line ,stream)
-                                                `(call-method ,method ()))
-                                          `((call-method ,method ()))))
-                                    primary)))))
+
+  (let ((form (list* 'progn
+                     condition     ; pacify compilers
+                     (reduce #'nconc
+                             (mapcar #'(lambda (method)
+                                         (if fresh-line-p
+                                           (list `(fresh-line ,stream)
+                                                 `(call-method ,method ()))
+                                           `((call-method ,method ()))))
+                                     primary)))))
     (when prefix
       (setf form `(progn (call-method ,(first prefix) ,(rest prefix))
                          ,form)))
@@ -189,4 +190,6 @@
 (typep (make-condition (find-class 'test-condition)) 'test-condition)
 
 |#
-:EOF
+
+:de.setf.utility
+
