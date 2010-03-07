@@ -1,16 +1,26 @@
 ;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
 
+(in-package :de.setf.utility.implementation)
+
+;;;  This file extends the package definition for 'de.setf.utility' Common Lisp library
+;;;  to incorporate names for mime-related operators and classes. It also defined a `MIME` package
+;;;  to comprehend names for the mime types themselves.
 ;;;
-;;; A CLOS model for MIME types.
+;;;  Copyright 2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
+;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
+;;;  it under the terms of version 3 of the GNU Lesser General Public License as published by
+;;;  the Free Software Foundation.
 ;;;
-;;; See : (among others)
-;;;  http://en.wikipedia.org/wiki/MIME
-;;;  http://tools.ietf.org/html/rfc2046 : (MIME) Part Two: Media Types
-;;;  http://tools.ietf.org/html/rfc2049 : (MIME) Part Five: Conformance Criteria and Examples
+;;;  'de.setf.utility' is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+;;;  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+;;;  See the GNU Lesser General Public License for more details.
 ;;;
+;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
+;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
+
+;;; Copyright 2009 [james anderson](mailto:james.anderson@setf.de)
 ;;; 20100106 james.anderson : added octet-stream
 
-(in-package :de.setf.utility.implementation)
 
 (modPackage :de.setf.utility
   (:use-only )
@@ -66,9 +76,11 @@
    :application/json
    :application/octet-stream
    :application/xml
+   :graphviz
    :html
    :image
    :json
+   :markdown
    :mime-type
    :octet-stream
    :plain
@@ -76,10 +88,15 @@
    :svg+xml
    :text
    :text/*
+   :text/markdown
    :text/plain
    :text/xhtml
    :text/html
+   :text/vnd.graphviz
+   :text/x-graphviz
    :text/xml
+   :vnd.graphviz
+   :x-graphviz
    :xhtml
    :xhtml+xml
    :xml
