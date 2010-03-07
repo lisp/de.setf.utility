@@ -94,6 +94,7 @@
    #+(and lispworks powerpc)                                                         "lw-ppc"
    #+(and lispworks)                                                                 "lw"
 
+   #+(and clozure-common-lisp ccl-1.4 ppc-target)                                    "ccl-1-4-ppc"
    #+(and clozure-common-lisp ccl-1.3 ppc-target)                                    "ccl-1-3-ppc"
    #+(and clozure-common-lisp ccl-1.2 ppc-target)                                    "ccl-1-2-ppc"
    #+openmcl                                                                         "omcl"
