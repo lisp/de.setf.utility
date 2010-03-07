@@ -25,6 +25,7 @@
    - [wikipedia](http://en.wikipedia.org/wiki/MIME)
    - [rfc2046](http://tools.ietf.org/html/rfc2046) : (MIME) Part Two: Media Types
    - [rfc2049](http://tools.ietf.org/html/rfc2049) : (MIME) Part Five: Conformance Criteria and Examples
+   - [IANA](http://www.iana.org/assignments/media-types/) : media type list
 
    Each type is defined as a singleton in a major/minor type lattice and bound to a
  global variable with the same name. The `text/*` types include a slot for a content encoding
@@ -54,10 +55,13 @@
 (def-mime-type-key "HTML")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
+(def-mime-type-key "MARKDOWN")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
 (def-mime-type-key "TEXT")
+(def-mime-type-key "VND.GRAPHVIZ")
+(def-mime-type-key "X-GRAPHVIZ")
 (def-mime-type-key "XML")
 (def-mime-type-key "XHTML")
 (def-mime-type-key "XHTML+XML")
@@ -166,10 +170,20 @@
     :type keyword
     :documentation "See http://www.iana.org/assignments/character-sets")))
 (def-mime-type ("TEXT" "XHTML"))
-(def-mime-type ("APPLICATION" "XHTML+XML"))
+(def-mime-type ("APPLICATION" "XHTML+XML") ()
+  ()
+  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
 (def-mime-type ("TEXT" "HTML"))
-(def-mime-type ("TEXT" "XML"))
+(def-mime-type ("TEXT" "MARKDOWN"))
 (def-mime-type ("TEXT" "PLAIN"))
+(defclass mime:graphviz (mime:*/*)
+  ()
+  (:documentation "The abstract graphviz mime type is specialized as
+ TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
+ and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
+(def-mime-type ("TEXT" "X-GRAPHVIZ") (mime:graphviz))
+(def-mime-type ("TEXT" "VND.GRAPHVIZ") (mime:graphviz))
+(def-mime-type ("TEXT" "XML"))
 
 (defmethod mime-type-charset ((type mime:*/*))
   nil)
