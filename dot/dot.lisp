@@ -755,10 +755,10 @@
   (write-string string setf.dot:*context*))
 
 (defun setf.dot:id (datum)
-  (setf.dot::context-id setf.dot:*context* datum))
+  (setf.dot:context-id setf.dot:*context* datum))
 
 (defun (setf setf.dot:id) (value datum)
-  (setf (setf.dot::context-id setf.dot:*context* datum) value))
+  (setf (setf.dot:context-id setf.dot:*context* datum) value))
 
 ;;;
 ;;; external program interface
