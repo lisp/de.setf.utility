@@ -42,7 +42,8 @@
 
 (defun (setf find-system) (system name)
   (if system
-    (setf (gethash (coerce-name name) *defined-systems*) system)
+    (setf (gethash (coerce-name name) *defined-systems*)
+          (cons (get-universal-time) system))
     (remhash (coerce-name name) *defined-systems*))
   system)
 
