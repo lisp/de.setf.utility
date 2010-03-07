@@ -50,7 +50,7 @@
    arguments. for a given generic function definition, the qualifiers may be a
    literal list, or it may be a function designator.
    in the latter cases, the function is applied to a list* of the generic function
-   and the specializers.
+   and the _specializers_.
    in order to establish the specializers, if a :denominative method exists, its
    qualifiers are used, otherwise the most specific method is used."
   (ecase if-not-applicable ((nil)) (:error))
