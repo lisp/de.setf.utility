@@ -2,9 +2,8 @@
 
 (in-package :common-lisp-user)
 
-;;;
-;;;  This file modifies the package definition for 'de.setf.utility' Common Lisp library
-;;;  to incorporate CLOS-MOP from various runtimes and re-export them for basic MOP
+;;;  This file extends the package definition for 'de.setf.utility' Common Lisp library
+;;;  to incorporate CLOS-MOP symbols from various runtimes and re-export them for basic MOP
 ;;;  operations.
 ;;;
 ;;;  Copyright 2003,2009,2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
