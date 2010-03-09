@@ -38,6 +38,6 @@
  - `denominated-progn` similar variation on the `progn` combination
  - `locked-standard` a `standard` method combination with a lock
  - `print-object-slots` defines a base method and a definition form (`def-print-object-slots`) to
-    support printing objects.
+    support printing objects.")
 
 :de.setf.utility.clos
