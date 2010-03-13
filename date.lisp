@@ -36,6 +36,9 @@
 
 (in-package :de.setf.utility.implementation)
 
+#-( or sbcl allegro lispworks ccl)
+(cerror "Continue anyway" "Conditionalization required for funcallable-standar-class")
+
 (defPackage :de.setf.date
   (:nicknames :date)
   (:use)
@@ -65,6 +68,7 @@
    :month-name
    :month-quarter
    :quarter-in-year
+   :year
    :year-in-century
    :|yyyyMMdd|
    :|yyyyMMddTHH:mm:ss|
@@ -132,11 +136,17 @@
 (defparameter *date-package* (find-package :date))
 
 
-(defun date:year-in-century
+(defun date:year
        (&optional (date (get-universal-time)))
   (multiple-value-bind (s min h d m y) (decode-universal-time date)
     (declare (ignore s min h d m))
     y))
+
+(defun date:year-in-century
+       (&optional (date (get-universal-time)))
+  (multiple-value-bind (s min h d m y) (decode-universal-time date)
+    (declare (ignore s min h d m))
+    (mod y 100)))
 
 (defun date:month-in-year
        (&optional (date (get-universal-time)))
@@ -503,6 +513,7 @@
     ()
     (:metaclass #+:sbcl sb-mop:funcallable-standard-class
                 #+:allegro mop:funcallable-standard-class
+                #+lispworks hcl:funcallable-standard-class
                 #+:ccl ccl:funcallable-standard-class)
     (:documentation "A function class to distinguish conversion function
       for find-date-format."))
