@@ -101,9 +101,9 @@
 
    #+(and sbcl linux)                                                                "sbcl-linux"
    #+(and sbcl (or osx darwin))                                                      "sbcl-osx"
-   
-   (error "no runtime directory defined for ~s / ~s."
-          (lisp-implementation-type) (lisp-implementation-version))))
+
+   (subseq (lisp-implementation-type) 0
+           (position #\space (lisp-implementation-type)))))
 
 
 (defun make-hosted-pathname (host namestring)
@@ -172,9 +172,10 @@
   (loop for host being each hash-key of excl::*logical-pathname-translations*
         collect host))
 
-#-(or ccl lispworks sbcl)
+#-(or allegro ccl lispworks sbcl)
 (defun logical-hosts ()
-  (cerror "Assume no logical hosts." "This runtime has no definition for ~s." 'logical-hosts))
+  (cerror "Assume no logical hosts." "This runtime has no definition for ~s." 'logical-hosts)
+  nil)
 
 (defgeneric translate-physical-pathname (pathname &key &allow-other-keys)
   (:documentation "translate a given PATHNAME back to the most specific logical pathname.
