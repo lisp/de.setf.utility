@@ -81,7 +81,7 @@
 
       ;; collect the qualifier constraints for the given arguments and function
       ;; these are either a literal list, or generated for the specializers
-      ;; the denominative method serves the purpoise that, where metaclass management
+      ;; the denominative method serves the purpose that, where metaclass management
       ;; does not cause this value to be inherited, it is possible to declare the
       ;; class from which it should be extracted.
       (setf applicable-qualifiers
