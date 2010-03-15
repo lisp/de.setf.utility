@@ -55,9 +55,9 @@
    "each parent class implementation must include a method for <code>generate-children</CODE>.
     return a function which returns the children of a node in document order.
     an parent specialization must implement this function.")
-  (:method generate-children ((node t)) *null-generator*)
+  (:method ((node t)) *null-generator*)
   (:method ((node sg:parent)) (abstract-method-error #'generate-children node))
-  (:method generate-children ((node sg:leaf)) *null-generator*))
+  (:method ((node sg:leaf)) *null-generator*))
 
 (defgeneric generate-children-reversed (node)
   (:documentation
