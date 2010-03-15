@@ -27,5 +27,9 @@
   (declare (ignore arguments))
   (values))
 
+(defmacro :documentation (&rest arguments)
+  (declare (ignore arguments))
+  (values))
+
 #+mcl
 (setf (ccl:assq 'document *fred-special-indent-alist*) 1)
