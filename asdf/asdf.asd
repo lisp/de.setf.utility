@@ -15,10 +15,6 @@
 
  See graph.lisp for an example."
 
-  ; use an explict logical to provoke .BIN mapping
-  :pathname (when (ignore-errors (logical-pathname-translations "LIBRARY"))
-              (make-pathname :host "LIBRARY"
-                             :directory '(:absolute "de" "setf" "utility" "asdf")))
   :depends-on (:de.setf.utility.dot
                :de.setf.utility.walker)
   :serial t
