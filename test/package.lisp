@@ -57,7 +57,7 @@
    :with-test-situation
    ))
 
-(modPackage :de.setf.utility
+(modpackage :de.setf.utility
   (:export-from :test))
 
 (pushnew :de.setf.utility.test *features*)
