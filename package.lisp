@@ -57,3 +57,4 @@
   (:documentation "This is the package for source files in the :de.setf.utility library module."))
 
 
+(pushnew :de.setf.utility *features*)
