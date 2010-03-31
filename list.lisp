@@ -23,7 +23,7 @@
 
 (in-package :de.setf.utility.implementation)
 
-(modPackage :de.setf.utility
+(modpackage :de.setf.utility
   (:export
    :collate
    :destructuring-keys
@@ -82,11 +82,12 @@
       form
       `(let ((,l-var ,list)) ,form))))
 
-(defmacro collect-list ((collector &key (predicate 'identity) (finally 'rest)) &rest body)
+(defmacro collect-list ((collector &key (predicate 'identity) (finally 'rest) key) &rest body)
   (let ((list (gensym "LIST-"))
         (end (gensym "END-")))
     `(let* ((,list (list nil)) (,end ,list))
        (flet ((,collector (datum)
+                ,@(when key `((setf datum (,key datum))))
                 ,(case predicate
                    ((nil) `(setf (rest ,end) (list datum) ,end (rest ,end)))
                    (identity `(when datum (setf (rest ,end) (list datum) ,end (rest ,end))))
