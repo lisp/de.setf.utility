@@ -19,16 +19,17 @@
 
 ;;;
 ;;; 2009-02-20  janderson  additions to asdf to support
-;;; + locating components in hierarchic libraries 
-;;; + library system definitions with nicknames
+;;;  + locating components in hierarchic libraries 
+;;;  + library system definitions with nicknames
 ;;; 2009-06-13  janderson  reimplemented to not use specialized classes, but
-;;; instead to use component properties and augment, and/or replace methods
+;;;  instead to use component properties and augment, and/or replace methods
 ;;; 2009-10-01  janderson  compute nicknames as defaults; canonicalize system
-;;; pathnames relative to known logical hosts
+;;;  pathnames relative to known logical hosts
 ;;; 2010-01-10  janderson  separate extensions topically and add to asdf.asd
 ;;; 2010-02-02  janderson  updated to use (possible null) system-source-file
+;;; 2010-03-18  janderson  adjusted sysdef-hierarchical-search-function to look for -test systems in the
+;;;  respective base system's directory
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (in-package :cl-user)
 
@@ -98,6 +99,9 @@
     (declare (ignore verbose-p wild-p))
     nil)
 
+  (:method ((name symbol) &rest args)
+    (when name (apply #'asdf::sysdef-hierarchical-search-function (string-downcase name) args)))
+
   (:method ((name string) &key (verbose-p *sysdef-hierarchical-search-function.verbose*) (wild-p nil))
     "given a possibly hierarchical NAME,
  - decimate it to create a path relative to the central registry roots.
@@ -105,7 +109,10 @@
    relative to some root.
  - if that fails, look for any file ;<path butlast>;<name>*;**;<name>.asd"
     (let* ((tokens (system-namestring-to-list name))
-           (name (first (last tokens))))
+           (name (first (last tokens)))
+           (directory-name (if (eql (search "-test" name) (- (length name) 5))
+                             (subseq name 0 (- (length name) 5))
+                             name)))
       (flet ((make-wild-directory-component (name)
                #+allegro :wild
                #+ccl (concatenate 'string name "*")
@@ -115,7 +122,8 @@
                                   (setf root-path (translate-logical-pathname root-path)))
                                 (flet ((explicit-file-name ()
                                          (merge-pathnames
-                                          (make-pathname  :directory `(:relative ,@tokens)
+                                          (make-pathname  :directory `(:relative ,@(butlast tokens)
+                                                                                 ,directory-name)
                                                           :name name
                                                           :type "asd")
                                           root-path))
@@ -125,7 +133,7 @@
                                          (merge-pathnames
                                           (make-pathname  :directory `(:relative ,@(butlast tokens)
                                                                                  ,(make-wild-directory-component
-                                                                                   (first (last tokens)))
+                                                                                   directory-name)
                                                                                  ,@(when wild-p '(:wild-inferiors)))
                                                           :name name
                                                           :type "asd")
