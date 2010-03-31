@@ -29,28 +29,34 @@
 (defvar *print-object-slots* t
   "binds an indicator for use by applications to turn the behaviour on and off.")
 
-(defgeneric print-object-slot-names (function instance-class stream-class)
-  (:documentation
-   "this is used by the denominated-progn method combination to constrain
-    the method qualifiers introspectively.")
-  (:method ((function t) (instance-class class) (stream-class class))
-           "the general method just computes the names of the combined
-            class and instance slots"
-           (finalize-if-needed instance-class)
-           (class-slot-names instance-class)))
-
 (defgeneric print-object-slots (instance stream)
   ;(:argument-precedence-order stream instance)
-  (:method-combination denominated-progn
-                       :verbose-p nil
-                       :qualifiers #-lispworks print-object-slot-names
-                       #+lispworks 'print-object-slot-names
-                       )
+  (:method-combination denominated-progn)
+  
   (:method :around ((instance t) (stream t))
            (if *print-object-slots*
              (call-next-method)
              (write-string "[...]" stream)))
-  (:method :between ((instance t) (stream t)) (write-string " " stream)))
+      
+  (:method :between ((instance t) (stream t)) (write-string " " stream))
+  
+  (:method :qualifying ((instance t) (stream t))
+    "the general method just computes the names of the combined class and instance slots."
+    (print-object-slot-names instance stream)))
+
+
+(defgeneric print-object-slot-names (instance-class stream-class)
+  (:documentation "this is used by the denominated-progn method combination for print-object-slots to
+    constrain the method qualifiers introspectively.")
+
+  (:method ((instance standard-object) (stream t))
+    (print-object-slot-names (class-of instance) stream))
+  
+  (:method ((instance-class standard-class) (stream t))
+    (finalize-if-needed instance-class)
+    (class-slot-names instance-class)))
+    
+    
 
 (defmacro def-print-object-slots (specialized-parameter-list slot-print-specs)
   (let ((stream-var (second specialized-parameter-list))

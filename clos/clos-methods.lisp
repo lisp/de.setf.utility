@@ -35,6 +35,7 @@
 ;;; 20100212.janderson renamed classes and combination to reduce export conflicts:
 ;;;  concrete -> concrete-standard
 ;;;  abstract-* -> abstract-standard-*
+;;; 20100315.janderson  consolidaed denominated combination with denominated-progn in their own file.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -53,7 +54,6 @@
 ;;;
 ;;; method combinations
 ;;;  concrete-standard
-;;;  denominated
 ;;;  locked-standard
 ;;;  named-locked-standard
 ;;;  short-standard
@@ -395,199 +395,7 @@ methods, which it removes from the effective method."))
                                    (no-applicable-method #'specializer-prototype type)))
   (:method ((specializer cons)) (second specializer)))
   
-#+(or)
-;;; rewritten to interpret the constituency on each call from a maximal set
-(define-method-combination denominated (&key (operator 'progn)
-                                             (qualifiers (error "qualifiers required for denominated method combination."))
-                                             (order :most-specific-first)
-                                             (if-not-applicable nil)
-                                             (verbose nil))
-                           ((around (:around) :order :most-specific-first)
-                            (denominative (:denominative) :required t :order :most-specific-first)
-                            (default (t) :order :most-specific-first)
-                            (qualified-methods * :required t :order :most-specific-last))
-  (:generic-function function)
-  "combine all qualified methods. no unqualified method is permitted.
-   the method qualifiers are arbitrary. the initial set of applicable
-   methods is grouped by qualifier. the qualifier groups are then arranged
-   as specified by the applicable qualifiers for the given function and arguments.
-   for a given generic function definition, the qualifiers may be a literal
-   list, or it may be a function designator. in the latter cases, that function
-   is applied to a list* of the generic function and the specializer classes,
-   as derived from the most specific method :denominative.
-   methods within a group are then ordered according to the :order specified
-   for the given function. when no group matches, a t group is used if applicable,
-   otherwise an error is signaled."
-  (ecase if-not-applicable ((nil)) (:error))
-  (ecase order (:most-specific-first ) (:most-specific-last ))
-  (let ((grouped-methods nil)
-        (group nil)
-        (applicable-qualifiers nil)
-        (method-qualifiers nil)
-        (qualifier nil)
-        (form nil))
-    ;; collect the qualifier constraints for the given arguments and function
-    (setf applicable-qualifiers
-          (etypecase qualifiers
-            (cons
-             qualifiers)
-            ((or (and symbol (not null)) function)
-             #+(or)    ;; try w/o the denominatives
-             (unless denominative
-               (method-combination-error "no applicable :denominative method: ~s. ~s"
-                                         function qualified-methods))
-             (remove-duplicates 
-              (apply qualifiers function
-                     (mapc #'finalize-if-needed 
-                           (method-specializers
-                            #+(or) (first denominative)
-                            (first (last qualified-methods)))))
-              :from-end t))))
-    (when verbose (format *trace-output* "~%~s: ~s -> applicable qualifiers: ~s."
-                          function qualifiers applicable-qualifiers))
-    ;; group the methods by applicable qualifier, result is least-specific-first within arbitrary specializer order
-    (dolist (method qualified-methods)
-      (setf method-qualifiers (method-qualifiers method))
-      (cond ((= 1 (length method-qualifiers))
-             (setf qualifier (first method-qualifiers))
-             (if (or (member qualifier applicable-qualifiers) (find t applicable-qualifiers))
-               (cond ((setf group (assoc qualifier grouped-methods))
-                      (push method (rest group)))
-                     (t
-                      (push (list qualifier method) grouped-methods)))
-               (when if-not-applicable
-                 (invalid-method-error method "method qualifier not among those permitted: ~s." applicable-qualifiers))))
-            (t
-             (invalid-method-error method "method must have exactly one qualifier."))))
-    
-    ;; sort the groups by applicable qualifier
-    (setf grouped-methods (stable-sort grouped-methods #'<
-                                       :key #'(lambda (group) (or (position (first group) applicable-qualifiers)
-                                                                  (position t applicable-qualifiers)
-                                                                  (error "no position: ~s: ~s." qualifier applicable-qualifiers)))))
-    (when verbose
-      (format *trace-output* "~%grouped: ~:w" grouped-methods))
 
-    (flet ((call-method-group (method-group)
-             (destructuring-bind (nil . methods) method-group
-               ;; reverse them if desired to get the most specific methods within each group last
-               (when (eq order :most-specific-last) (setf methods (reverse methods)))
-               `(call-method ,(first methods) ,(rest methods)))))
-      (setf form
-            (cond ((rest grouped-methods)
-                   ;; if there is more than one group, combine them with the operator.
-                   `(,operator ,@(mapcar #'call-method-group grouped-methods)))
-                  (grouped-methods
-                   (call-method-group (first grouped-methods)))
-                  (default
-                    (call-method-group (cons t default)))
-                  (t
-                   (method-combination-error "no method groups: ~s." function)))))
-    
-    (when around
-      (setf form `(call-method ,(first around)
-                               (,@(rest around)
-                                (make-method ,form)))))
-    (when verbose
-      (format *trace-output* "~%~s: ~s:~%~:W" function `(:around ,around :denominative ,denominative ,qualified-methods) form))
-    form))
-
-(define-method-combination denominated (&key (operator 'progn)
-                                             (order :most-specific-first)
-                                             (verbose nil))
-                           ((around (:around) :order :most-specific-first)
-                            (qualifiers (:qualifiers) :required t :order :most-specific-first)
-                            (denominative (:denominative) :order :most-specific-first)
-                            (primary () :required t :order :most-specific-first)
-                            (qualified-methods * :order :most-specific-last))
-  (:generic-function function)
-
-  "combine all qualified methods. no unqualified method is permitted.
-   the method qualifiers are arbitrary. the initial set of applicable
-   methods is grouped by qualifier. the qualifier groups are then arranged
-   as specified by the applicable qualifiers for the given function and arguments.
-   for a given generic function definition, the qualifiers may be a literal
-   list, or it may be a function designator. in the latter cases, that function
-   is applied to a list* of the generic function and the specializer classes,
-   as derived from the most specific method :denominative.
-   methods within a group are then ordered according to the :order specified
-   for the given function. when no group matches, a t group is used if applicable,
-   otherwise an error is signaled."
-  (assert (member order '(:most-specific-first :most-specific-last)))
-  (let* ((grouped-methods nil)
-         (form nil)
-         (effective-qualifiers-form `(call-method ,(first qualifiers) ,(rest qualifiers))))
-    (when denominative
-      (break "replace :denominative methods."))
-    ;; group the methods by qualifier, result is most-specific-first within each group
-    (dolist (method qualified-methods)
-      (let ((method-qualifiers (method-qualifiers method)))
-        (cond ((= 1 (length method-qualifiers))
-               (let* ((qualifier (first method-qualifiers))
-                      (group (assoc qualifier grouped-methods)))
-                 (if group
-                   (push method (rest group))
-                   (push (list qualifier method) grouped-methods))))
-              (t
-               (invalid-method-error method "method must have exactly one qualifier.")))))
-    
-    ;; sort the groups by applicable qualifier
-    (when (eq order :most-specific-last)
-      (setf grouped-methods (mapcar #'(lambda (group) (cons (first group) (reverse (rest group))))
-                                    grouped-methods)))
-    (setf form
-          `(case qualifier
-             ,@(mapcar #'(lambda (group)
-                           (destructuring-bind (qualifier . methods) group
-                             `(,qualifier (call-method ,(first methods) ,(rest methods)))))
-                       grouped-methods)
-             (t t)))
-    (case operator
-      (and (setf form `(dolist (qualifier ,effective-qualifiers-form t)
-                         (unless ,form (return nil)))))
-      (or (setf form `(dolist (qualifier ,effective-qualifiers-form nil)
-                        (when ,form (return t)))))
-      (progn (setf form `(dolist (qualifier ,effective-qualifiers-form t)
-                          ,form)))
-      (t
-       (method-combination-error "invalid operator: ~s." operator)))
-    (setf form `(progn ,form (call-method ,(first primary) ,(rest primary))))
-    (when around
-      (setf form `(call-method ,(first around)
-                               (,@(rest around) (make-method ,form)))))
-
-    (when verbose
-      (format *trace-output* "~%~s: ~s:~%~:W" function `(:around ,around ,qualified-methods) form))
-    form))
-
-(defgeneric compute-applicable-qualifiers (function arguments)
-  (:method ((function standard-generic-function) (arguments t))
-           nil))
-    
-#|
-(defclass tc1 () ())
-(defclass tc2 (tc1) ())
-(defgeneric test-named (controller arg1 arg2)
-  (:method-combination denominated :operator list :qualifiers test-named-qualifiers)
-  (:generic-function-class named-generic-function)
-  (:method phase1 ((controller t) (arg1 float) (arg2 integer)) '(phase1 float integer))
-  (:method phase1 ((controller t) (arg1 integer) (arg2 integer)) '(phase1 integer integer))
-  (:method phase1 ((controller t) (arg1 number) (arg2 number)) '(phase1 number number))
-  (:method phase2 ((controller symbol) (arg1 integer) (arg2 integer)) '(phase2a integer integer))
-  (:method phase2 ((controller integer) (arg1 integer) (arg2 integer)) '(phase2a integer integer))
-  (:method phase2 ((controller t) (arg1 tc2) (arg2 number)) '(phase2 number number))
-  (:method phase3 ((controller t) (arg1 string) (arg2 integer)) '(phase3 integer integer))
-  (:method phase3 ((controller t) (arg1 number) (arg2 number)) '(phase3 number number)))
-(defMethod test-named-qualifiers ((function t) (controller number) (arg1 t) (arg2 t)) '(phase1 phase2 phase3))
-(defMethod test-named-qualifiers ((function t) (controller symbol) (arg1 t) (arg2 t)) '(phase3 phase2 phase1))
-
-(test-named 0 1 2)
-(test-named 'asdf 1 2)
-(trace test-named-qualifiers)
-(method-specializers (top-inspect-form))
-(untrace)
-|#
-  
 
 ;;
 ;; locked functions

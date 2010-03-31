@@ -203,6 +203,7 @@
    :def-type-predicate
    :def-type-predicates
    :denominated
+   :denominated-progn
    :direct-slot-definition-class
    :effective-slot-definition-class
    :encode-instance-as
