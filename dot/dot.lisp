@@ -91,17 +91,19 @@
    "a <code>DELEGATE-STREAM</code> mixes-in standard stream methods by
  delegating them to another stream"))
 
-(defMethod stream-write-sequence ((delegate delegate-stream) (string string) &rest args)
+(defmethod stream-write-sequence ((delegate delegate-stream) (string string) &rest args)
   (apply #'stream-write-sequence (delegate-stream-stream delegate) string args))
 
-(defMethod stream-write-string ((delegate delegate-stream) (string string) #-digitool &optional start end)
+(defmethod stream-write-string ((delegate delegate-stream) (string string) #-digitool &optional start end)
+  (unless start (setf start 0))
+  (unless end (setf end (length string)))
   (stream-write-string (delegate-stream-stream delegate) string start end))
 
 ;;; support whichever one the implementation uses
-(defMethod stream-tyo ((delegate delegate-stream) (datum t))
+(defmethod stream-tyo ((delegate delegate-stream) (datum t))
   (stream-tyo (delegate-stream-stream delegate) datum))
 
-(defMethod stream-write-char ((delegate delegate-stream) (datum t))
+(defmethod stream-write-char ((delegate delegate-stream) (datum t))
   (stream-write-char (delegate-stream-stream delegate) datum))
 
 (defmethod stream-line-column ((delegate delegate-stream))
@@ -208,10 +210,13 @@
 ;;;
 ;;; .dot terminal operators, both primitive and variations
 
-(defgeneric setf.dot:stream-write-escaped-string (stream string &optional downcase-p)
-  (:method ((stream stream) (string string) &optional (downcase-p nil))
+(defgeneric setf.dot:stream-write-escaped-string (stream string &optional case)
+  (:method ((stream stream) (string string) &optional (case nil))
     "write out the string with returns and quotes escaped"
-    (let ((char #\0))
+    (let ((char #\0)
+          (downcase-p (ecase case
+                        ((nil :upcase) nil)
+                        ((t :downcase) t))))
       (do ((i 0 (1+ i)))
           ((>= i (length string)))
         (case (setf char (char string i))
@@ -222,44 +227,52 @@
                          (char-downcase char) char)
                        stream)))))))
 
+(defun stream-write-casefolded-string (stream string &optional case)
+  (ecase case
+    (:upcase (format stream "~:@(~a~)" string))
+    ((t :downcase) (format stream "~(~a~)" string))
+    ((nil) (write-string string stream))))
 
-(defgeneric setf.dot:stream-write-id (stream id &optional downcase-p)
-  (:method ((stream stream) (id cons) &optional (downcase-p nil))
+
+(defgeneric setf.dot:stream-write-id (stream id &optional case)
+  (:method ((stream stream) (id cons) &optional (case nil))
     "support subgraph references"
     (destructuring-bind (tag . id-id) id
       (ecase tag
         (setf.dot:subgraph
           (unless (atom id-id) (error "invalid id: ~s" id))
           (write-string "subgraph " stream)
-          (setf.dot:stream-write-id stream id-id downcase-p))
+          (setf.dot:stream-write-id stream id-id case))
         (:port
          (setf.dot:stream-write-id stream (first id-id))
          (write-char #\: stream)
          (setf.dot:stream-write-id stream (second id-id))))))
-  (:method ((stream stream) (id string) &optional (downcase-p nil))
+  (:method ((stream stream) (id string) &optional (case nil))
     (flet ((id-char-p (c)
              (or (alphanumericp c)
                  (eql c #\_))))
       (cond ((and (every #'id-char-p id)
                   (plusp (length id))
                   (not (digit-char-p (char id 0))))
-             (write-string (if downcase-p (string-downcase id) id) stream))
+             (stream-write-casefolded-string stream id case))
             (t
              (write-char #\" stream)
-             (setf.dot:stream-write-escaped-string stream id downcase-p)
+             (setf.dot:stream-write-escaped-string stream id case)
              (write-char #\" stream)))))
-  (:method ((stream stream) (id-generator function) &optional downcase-p)
-           (declare (ignore downcase-p))
+  (:method ((stream stream) (id-generator function) &optional case)
+           (declare (ignore case))
            (write-char #\" stream)
            (funcall id-generator stream)
            (write-char #\" stream))
-  (:method ((stream stream) (id null) &optional downcase-p)
-           (declare (ignore downcase-p))
+  (:method ((stream stream) (id null) &optional case)
+           (declare (ignore case))
            (write-string "\" \"" stream))
-  (:method ((stream stream) (id symbol) &optional downcase-p)
-           (setf.dot:stream-write-id stream (string id) downcase-p))
-  (:method ((stream stream) (id t) &optional downcase-p)
-           (format stream "\"~:[~a~;~(~a~)~]\"" downcase-p id)))
+  (:method ((stream stream) (id symbol) &optional case)
+           (setf.dot:stream-write-id stream (string id) case))
+  (:method ((stream stream) (id t) &optional case)
+    (write-char #\" stream)
+    (stream-write-casefolded-string stream (princ-to-string id) case)
+    (write-char #\" stream)))
 
 (defstruct setf.dot:rgb red green blue)
 (defmethod make-load-form ((rgb setf.dot:rgb) &optional env)
@@ -748,8 +761,8 @@
 (defun setf.dot:put-eol ()
   (setf.dot:write-eol setf.dot:*context*))
 
-(defun setf.dot:put-id (id &optional downcase-p)
-  (setf.dot:stream-write-id setf.dot:*context* id downcase-p))
+(defun setf.dot:put-id (id &optional case)
+  (setf.dot:stream-write-id setf.dot:*context* id case))
 
 (defun setf.dot:put-string (string)
   (write-string string setf.dot:*context*))
