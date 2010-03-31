@@ -24,7 +24,7 @@
                (:file "clos-classes" :depends-on ("package"))
                (:file "clos-methods" :depends-on ("package"))
                (:file "clone-instance" :depends-on ("package"))
-               (:file "denominated-progn" :depends-on ("package"))
+               (:file "denominated" :depends-on ("package"))
                (:file "print-object-slots" :depends-on ("package")))
 
   :long-description
