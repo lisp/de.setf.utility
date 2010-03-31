@@ -61,6 +61,7 @@
    :decode-month-day-name
    :decode-month-name
    :encode
+   :format-iso-time
    :iso
    :leap-p
    :month-days
@@ -95,8 +96,8 @@
    :*day-names*
    :*month-names*
    :universal-time
-   :format-iso-time
    :decode-iso-time
+   :iso-time
    :date-conversion-function)
   (:export-from :de.setf.date))
 
@@ -585,6 +586,7 @@
            (funcall (date::find-date-format format :if-does-not-exist :error)
                     time)))
 
+#+(or)                                  ; one version only
 (defun format-iso-time (&optional (time (get-universal-time)) stream)
   (date:|yyyyMMddTHHmmssZZ| time stream))
 
@@ -592,15 +594,19 @@
   (:method ((stream stream) (time integer) &optional colon at var)
     (declare (ignore colon at var))
     (date:|yyyyMMddTHHmmssZZ| time stream)))
-  
-    
+
+;;; (let ((time (get-universal-time))) (format *trace-output* ">>~/date:format-iso-time/<<" time))
+;;; (let ((time (get-universal-time))) (format nil ">>~/date:format-iso-time/<<" time))
+
 
 (defun decode-iso-time (string)
-  (date:|yyyyMMddTHHmmssZZ| string))
+  (if (> (length string ) 15)
+    (date:|yyyyMMddTHHmmssZZ| string)
+    (date:|yyyyMMddTHHmmss| string)))
 
-(defun iso (time) (date:|yyyyMMddTHHmmss| time))
+(defun iso-time (&optional (time (get-universal-time))) (date:|yyyyMMddTHHmmss| time))
 
-;(let ((time (get-universal-time))) (= (decode-iso-time (format-iso-time time)) time))
+;(let ((time (get-universal-time))) (= (decode-iso-time (iso-time time)) time))
 
 (setq *current-year* (date:year-in-century (get-universal-time)))
 
