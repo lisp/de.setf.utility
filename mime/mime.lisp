@@ -45,17 +45,19 @@
                    (export name *mime-type-package*)
                    name)))))
 
-(defMacro def-mime-type-key (symbol &rest args)
-  (setf symbol (apply #'intern-mime-type-key symbol args))
+(defMacro def-mime-type-key (symbol &rest args &key (if-does-not-exist :create))
+  (setf symbol (apply #'intern-mime-type-key symbol :if-does-not-exist if-does-not-exist args))
   `(defvar ,symbol ',symbol))
 (defmacro defmimetypekey (symbol)
   `(def-mime-type-key ,symbol))
 
 (def-mime-type-key "APPLICATION")
+(def-mime-type-key "CSV")
 (def-mime-type-key "HTML")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
 (def-mime-type-key "MARKDOWN")
+(def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
@@ -158,6 +160,7 @@
 
 (def-mime-type ("APPLICATION" "*"))
 (def-mime-type ("APPLICATION" "JSON"))
+(def-mime-type ("APPLICATION" "N3"))
 (def-mime-type (:application :octet-stream))
 (def-mime-type ("APPLICATION" "XML"))
 (def-mime-type ("IMAGE" "*"))
@@ -169,6 +172,8 @@
     :reader mime-type-charset
     :type keyword
     :documentation "See http://www.iana.org/assignments/character-sets")))
+(def-mime-type ("TEXT" "CSV"))
+(def-mime-type ("TEXT" "N3"))
 (def-mime-type ("TEXT" "XHTML"))
 (def-mime-type ("APPLICATION" "XHTML+XML") ()
   ()
