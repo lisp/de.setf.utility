@@ -177,7 +177,7 @@
   (cerror "Assume no logical hosts." "This runtime has no definition for ~s." 'logical-hosts)
   nil)
 
-(defgeneric translate-physical-pathname (pathname &key &allow-other-keys)
+(defgeneric translate-physical-pathname (pathname &rest args)
   (:documentation "translate a given PATHNAME back to the most specific logical pathname.
  PATHNAME : (designator PATHNAME)
  VALUE    : (or LOGICAL-PATHNAME NULL) : the most specific logical pathname or NIL if
@@ -191,16 +191,37 @@
     (declare (dynamic-extent args))
     (apply #'translate-physical-pathname (pathname designator) args))
 
-  (:method ((pathname logical-pathname) &key &allow-other-keys)
+  (:method ((pathname logical-pathname) &key if-does-not-exist)
+    (declare (ignore if-does-not-exist))
     pathname)
 
-  (:method ((pathname pathname) &key &allow-other-keys)
-    (let ((specific-host nil)
-          (specific-enough nil)
-          (namestring (namestring pathname)))
+  (:method ((pathname pathname) &key (if-does-not-exist :create))
+    (let ((specific-enough nil)
+          (namestring (namestring pathname))
+          (translated nil))
       (flet ((record-candidate (host enough)
-               (setf specific-host host)
-               (setf specific-enough enough)))
+               (let* ((candidate (make-pathname :host host :directory (cons :absolute (rest (pathname-directory enough)))
+                                                :name (pathname-name pathname) :type (pathname-type pathname)
+                                                :defaults enough))
+                      (retranslated-candidate (ignore-errors (translate-logical-pathname candidate))))
+                 (when (and (equalp pathname retranslated-candidate)
+                            (ecase if-does-not-exist
+                              ((nil) (probe-file retranslated-candidate))
+                              (:create t)))
+                   (cond ((null translated)
+                          (setf specific-enough enough)
+                          (setf translated candidate))
+                         ((and (> (length specific-enough) (length enough))
+                               (string-equal specific-enough enough :start1 (- (length specific-enough) (length enough))))
+                          (setf specific-enough enough)
+                          (setf translated candidate))
+                         ((string-equal specific-enough enough)
+                          ;; there are two hosts which map to the same file, with the same host-relative path
+                          (cerror "ignore ambiguity and continue."
+                                  "translate-physical-pathname: ambiguous host-relative pathname: ~s , ~s)."
+                                  translated candidate)
+                          (setf specific-enough enough)
+                          (setf translated candidate)))))))
         (dolist (host (logical-hosts))
           (let ((proto-translation (ignore-errors (translate-logical-pathname (concatenate 'string host ":TEST.LISP")))))
             (when proto-translation
@@ -210,28 +231,8 @@
                 ;; if yes, retain the more specific host. if no, signal an error
                 ;; if non yet, cache this one
                 (unless (equal enough namestring)
-                  (cond ((null specific-host)
-                         ;; save first candidate
-                         (record-candidate host enough))
-                        ((and (> (length specific-enough) (length enough))
-                              (string-equal specific-enough enough :start1 (- (length specific-enough) (length enough))))
-                         ;; replace candidate
-                         (record-candidate host enough))
-                        ((and (> (length enough) (length specific-enough))
-                              (string-equal specific-enough enough :start2 (- (length enough) (length specific-enough))))
-                         ;; skip additional candidate
-                         )
-                        (t
-                         ;; neither fit in the other
-                         (cerror "ignore ambiguity and continue."
-                                 "translate-physical-pathname: ambiguous host-relative pathname: (~s . ~s) (~s . ~s)"
-                                 specific-host specific-enough host enough)))))))))
-      (when specific-host
-        (make-pathname :host specific-host
-                       :directory (cons :absolute (rest (pathname-directory specific-enough)))
-                       :name (pathname-name specific-enough)
-                       :type (pathname-type specific-enough)
-                       :defaults specific-enough)))))
+                  (record-candidate host enough)))))))
+      translated)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -246,6 +247,8 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun define-library-host (source-pathname)
+    ;; must be physical in order to serve at the target for logical mappings
+    (setf source-pathname (translate-logical-pathname source-pathname))
     (set-relative-logical-pathname-translations "LIBRARY"
                                                 :absolute-pathname
                                                 (make-pathname :directory (butlast (pathname-directory source-pathname) 3)
@@ -263,7 +266,7 @@
     (set-relative-logical-pathname-translations "P-LIBRARY" :absolute-pathname production)))
            
 
-(unless (let* ((logical #P"LIBRARY:asdf;asdf.lisp")
+(unless (let* ((logical #P"LIBRARY:de;setf;utility;pathnames.lisp")
                (physical (translate-logical-pathname logical))
                (back (translate-physical-pathname physical)))
           ;; test equality for the primary attributes
@@ -272,9 +275,9 @@
                (equal (pathname-directory back) (pathname-directory logical))
                (equalp (pathname-name back) (pathname-name logical))
                (equalp (pathname-type back) (pathname-type logical))
-               (null (translate-physical-pathname
-                      (make-pathname :directory (butlast (pathname-directory physical) 2)
-                                     :defaults physical)))))
+               (null (translate-physical-pathname (make-pathname :type "xxx" :defaults physical)
+                                                  :if-does-not-exist nil))))
   (warn "translate-physical-pathname ?"))
 ;(trace translate-physical-pathname)
+;(translate-physical-pathname (translate-logical-pathname #P"LIBRARY:de;setf;utility;pathnames.lisp"))
 :de.setf.utility
