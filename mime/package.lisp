@@ -45,7 +45,7 @@
    :mime-type-charset
    :mime-type-expression
    :mime-type-major-type
-   :mime-type-minortype
+   :mime-type-minor-type
    :mime-type-p
    :minor-mime-type
    ))
