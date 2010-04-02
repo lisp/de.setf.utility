@@ -56,9 +56,11 @@
 (def-mime-type-key "HTML")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
+(def-mime-type-key "JPEG")
 (def-mime-type-key "MARKDOWN")
 (def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
+(def-mime-type-key "PDF")
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
 (def-mime-type-key "TEXT")
@@ -131,7 +133,8 @@
   `(def-mime-type ,@args))
 
 (defclass mime-type ()
-   ((expression :allocation :class :reader mime-type-expression :initform nil)))
+   ((expression :allocation :class :reader mime-type-expression :initform nil)
+    (file-type :reader get-mime-type-file-type :initform nil)))
 
 #+(or)                                  ; no longer suffices once w/ charset
 (defmethod make-load-form ((instance mime-type) &optional environment)
@@ -162,9 +165,13 @@
 (def-mime-type ("APPLICATION" "JSON"))
 (def-mime-type ("APPLICATION" "N3"))
 (def-mime-type (:application :octet-stream))
+(def-mime-type ("APPLICATION" "PDF"))
 (def-mime-type ("APPLICATION" "XML"))
 (def-mime-type ("IMAGE" "*"))
-(def-mime-type ("IMAGE" "SVG"))
+(def-mime-type ("IMAGE" "JPEG") ()
+  ((file-type :initform "jpg" :allocation :class)))
+(def-mime-type ("IMAGE" "SVG") ()
+  ((file-type :initform "svg" :allocation :class)))
 (def-mime-type ("IMAGE" "SVG+XML") (mime::image/svg))
 (def-mime-type ("TEXT" "*") ()
   ((charset
@@ -176,13 +183,15 @@
 (def-mime-type ("TEXT" "N3"))
 (def-mime-type ("TEXT" "XHTML"))
 (def-mime-type ("APPLICATION" "XHTML+XML") ()
-  ()
+  ((file-type :initform "html" :allocation :class))
   (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
 (def-mime-type ("TEXT" "HTML"))
-(def-mime-type ("TEXT" "MARKDOWN"))
-(def-mime-type ("TEXT" "PLAIN"))
+(def-mime-type ("TEXT" "MARKDOWN") ()
+  ((file-type :initform "md" :allocation :class)))
+(def-mime-type ("TEXT" "PLAIN") ()
+  ((file-type :initform "txt" :allocation :class)))
 (defclass mime:graphviz (mime:*/*)
-  ()
+  ((file-type :initform "dot" :allocation :class))
   (:documentation "The abstract graphviz mime type is specialized as
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
  and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
@@ -193,6 +202,11 @@
 (defmethod mime-type-charset ((type mime:*/*))
   nil)
 
+(defgeneric mime-type-file-type (mime-type)
+  (:method ((type mime:*/*))
+    (or (get-mime-type-file-type type)
+        (setf (slot-value type 'file-type)
+              (string-downcase (mime-type-minor-type type))))))
 
 (defgeneric mime-type (designator &rest args)
   (:documentation
@@ -270,4 +284,5 @@
   (content-encoding (mime-type-charset mime-type)))
 
 
-:EOF
+:mime
+

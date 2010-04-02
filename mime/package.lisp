@@ -46,6 +46,7 @@
    :mime-type-expression
    :mime-type-major-type
    :mime-type-minor-type
+   :mime-type-file-type
    :mime-type-p
    :minor-mime-type
    ))
