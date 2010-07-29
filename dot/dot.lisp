@@ -91,8 +91,14 @@
    "a <code>DELEGATE-STREAM</code> mixes-in standard stream methods by
  delegating them to another stream"))
 
+#+mcl
 (defmethod stream-write-sequence ((delegate delegate-stream) (string string) &rest args)
   (apply #'stream-write-sequence (delegate-stream-stream delegate) string args))
+
+#+sbcl
+(defmethod stream-write-sequence ((delegate delegate-stream) (sequence sequence) &optional (start 0) (end nil))
+  (write-sequence sequence (delegate-stream-stream delegate) :start start :end end))
+
 
 (defmethod stream-write-string ((delegate delegate-stream) (string string) #-digitool &optional start end)
   (unless start (setf start 0))
