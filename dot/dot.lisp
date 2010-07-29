@@ -83,7 +83,7 @@
 
 (defClass delegate-stream (stream)
   ((stream
-    :initform (required-initarg :stream)
+    :initform (error "stream is required")
     :initarg :stream
     :reader delegate-stream-stream
     :type stream))
@@ -97,14 +97,16 @@
 (defmethod stream-write-string ((delegate delegate-stream) (string string) #-digitool &optional start end)
   (unless start (setf start 0))
   (unless end (setf end (length string)))
-  (stream-write-string (delegate-stream-stream delegate) string start end))
+  ;; some lisps are particular about which streams get stream-write-string, thus ...
+  (write-string string (delegate-stream-stream delegate) :start start :end end))
 
 ;;; support whichever one the implementation uses
 (defmethod stream-tyo ((delegate delegate-stream) (datum t))
   (stream-tyo (delegate-stream-stream delegate) datum))
 
 (defmethod stream-write-char ((delegate delegate-stream) (datum t))
-  (stream-write-char (delegate-stream-stream delegate) datum))
+  ;; some lisps are particular about which streams get stream-write-char, thus ...
+  (write-char datum (delegate-stream-stream delegate)))
 
 (defmethod stream-line-column ((delegate delegate-stream))
   (stream-line-column (delegate-stream-stream delegate)))
