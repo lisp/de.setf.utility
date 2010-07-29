@@ -56,7 +56,8 @@
         :de.setf.utility)
   #+sbcl
   (:import-from :sb-gray
-                :stream-write-string)
+                :stream-write-string
+                :stream-write-char)
   (:documentation "This is the package for source files in the :de.setf.utility library module."))
 
 
