@@ -111,6 +111,9 @@
 (defmethod stream-line-column ((delegate delegate-stream))
   (stream-line-column (delegate-stream-stream delegate)))
 
+(defmethod stream-line-length ((delegate delegate-stream))
+  nil)
+
 #+digitool
 (defmethod stream-line-column ((stream stream))
   (stream-column stream))
