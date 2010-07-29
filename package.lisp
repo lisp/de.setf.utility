@@ -54,6 +54,9 @@
   (:use #+:CCL :ccl
         :common-lisp
         :de.setf.utility)
+  #+sbcl
+  (:import-from :sb-gray
+                :stream-write-string)
   (:documentation "This is the package for source files in the :de.setf.utility library module."))
 
 
