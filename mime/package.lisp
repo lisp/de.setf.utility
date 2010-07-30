@@ -77,12 +77,14 @@
    :application/json
    :application/octet-stream
    :application/xml
+   :application/rdf+xml
    :graphviz
    :html
    :image
    :json
    :markdown
    :mime-type
+   :n3
    :octet-stream
    :plain
    :svg

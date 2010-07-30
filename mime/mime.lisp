@@ -3,7 +3,7 @@
 (in-package :de.setf.utility.implementation)
 
 
-(document :file
+(:documentation :file
  (description "This file defines a CLOS model for MIME types.")
  
  (copyright
@@ -61,6 +61,7 @@
 (def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "PDF")
+(def-mime-type-key "RDF+XML")
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
 (def-mime-type-key "TEXT")
@@ -161,33 +162,18 @@
 (defclass mime:*/* (major-mime-type minor-mime-type)
   ())
 
+;;; must be ordered such that abstract mime types appear first,
+;;; as each definition form instantiates a singleton
+
 (def-mime-type ("APPLICATION" "*"))
-(def-mime-type ("APPLICATION" "JSON"))
-(def-mime-type ("APPLICATION" "N3"))
-(def-mime-type (:application :octet-stream))
-(def-mime-type ("APPLICATION" "PDF"))
-(def-mime-type ("APPLICATION" "XML"))
 (def-mime-type ("IMAGE" "*"))
-(def-mime-type ("IMAGE" "JPEG") ()
-  ((file-type :initform "jpg" :allocation :class)))
-(def-mime-type ("IMAGE" "SVG") ()
-  ((file-type :initform "svg" :allocation :class)))
-(def-mime-type ("IMAGE" "SVG+XML") (mime::image/svg))
 (def-mime-type ("TEXT" "*") ()
   ((charset
     :initarg :charset :initform :iso-8859-1
     :reader mime-type-charset
     :type keyword
     :documentation "See http://www.iana.org/assignments/character-sets")))
-(def-mime-type ("TEXT" "CSV"))
-(def-mime-type ("TEXT" "N3"))
-(def-mime-type ("TEXT" "XHTML"))
-(def-mime-type ("APPLICATION" "XHTML+XML") ()
-  ((file-type :initform "html" :allocation :class))
-  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
-(def-mime-type ("TEXT" "HTML"))
-(def-mime-type ("TEXT" "MARKDOWN") ()
-  ((file-type :initform "md" :allocation :class)))
+
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
 (defclass mime:graphviz (mime:*/*)
@@ -195,9 +181,44 @@
   (:documentation "The abstract graphviz mime type is specialized as
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
  and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
+(defclass mime:n3 (mime:text/plain)
+  ()
+  (:documentation "The N3 mime class is the abstract base class for application/n3 and text/n3."))
+
+(def-mime-type ("APPLICATION" "JSON"))
+(def-mime-type ("APPLICATION" "N3") (mime:n3))
+(def-mime-type (:application :octet-stream))
+(def-mime-type ("APPLICATION" "PDF"))
+(def-mime-type ("APPLICATION" "XML"))
+(def-mime-type ("APPLICATION" "RDF+XML") ()
+  ((file-type :initform "dot" :allocation :class))
+  (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
+(def-mime-type ("IMAGE" "JPEG") ()
+  ((file-type :initform "jpg" :allocation :class)))
+(def-mime-type ("IMAGE" "SVG") ()
+  ((file-type :initform "svg" :allocation :class)))
+(def-mime-type ("IMAGE" "SVG+XML") (mime::image/svg))
+(def-mime-type ("TEXT" "CSV"))
+(def-mime-type ("TEXT" "N3") (mime:n3)
+  ((file-type :initform "nt" :allocation :class))
+  (:documentation "The [w3c](http://www.w3.org/TR/rdf-testcases/#ntriples) specifies text/plain."))
+(def-mime-type ("TEXT" "XHTML"))
+(def-mime-type ("APPLICATION" "XHTML+XML") ()
+  ((file-type :initform "html" :allocation :class))
+  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
+(def-mime-type ("TEXT" "HTML") ()
+  ((file-type :initform "html" :allocation :class)))
+(def-mime-type ("TEXT" "MARKDOWN") ()
+  ((file-type :initform "md" :allocation :class)))
+(defclass mime:graphviz (mime:*/*)
+  ((file-type :initform "dot" :allocation :class))
+  (:documentation "The abstract graphviz mime type is specialized as
+ TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
+ and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
 (def-mime-type ("TEXT" "X-GRAPHVIZ") (mime:graphviz))
 (def-mime-type ("TEXT" "VND.GRAPHVIZ") (mime:graphviz))
-(def-mime-type ("TEXT" "XML"))
+(def-mime-type ("TEXT" "XML") ()
+  ((file-type :initform "xml" :allocation :class)))
 
 (defmethod mime-type-charset ((type mime:*/*))
   nil)
@@ -207,6 +228,7 @@
     (or (get-mime-type-file-type type)
         (setf (slot-value type 'file-type)
               (string-downcase (mime-type-minor-type type))))))
+
 
 (defgeneric mime-type (designator &rest args)
   (:documentation
@@ -278,6 +300,7 @@
   (defmethod de.setf.utility::clone-instance ((instance mime-type) &rest args)
     (apply #'de.setf.utility::initialize-clone (allocate-instance (class-of instance)) instance
            args)))
+
 
 (defmethod content-encoding ((mime-type mime:text/*) &rest args)
   (declare (dynamic-extent args) (ignore args))
