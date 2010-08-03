@@ -7,8 +7,7 @@
     (cerror "Continue anyway." "This file must be conditionalized for ~a." (lisp-implementation-type))))
 
 
-(document :file
- (description "This file defines mp/lock utilities for the 'de.setf.utility' library.")
+(:documentation "This file defines mp/lock utilities for the 'de.setf.utility' library."
  
  (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
