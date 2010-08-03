@@ -1,0 +1,193 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+;;;
+
+(in-package :de.setf.utility.implementation)
+
+<DOCUMENTATION>
+ <DESCRIPTION>
+  <p>
+  a simple class grapher </p>
+  <p>
+  this file specializes graph walking classes to implement a class hierarchy walker and
+  provides two interface functions. one, graph-classes, generates a graphviz dot file
+  which depicts the hierarchy. the second, print classes, prints a formatted list of
+  which depicts the class tree.</p> 
+  </DESCRIPTION>
+ <COPYRIGHT YEAR='2003' AUTHOR='james adam anderson'>all rights reserved. no warranty.
+  <a href='http://www.setf.de/library/ncsl.html'>[0]</a>
+  <a href='ncsl.html'>[1]</a></COPYRIGHT>
+ <CHRONOLOGY>
+  <DELTA DATE='20021120' />
+  <DELTA DATE='20031101'> cleaned up and adjusted for denominated methods</DELTA>
+  <DELTA DATE='20031210'> corrected qualifier slot name for walker class</DELTA>
+  </CHRONOLOGY>
+ </DOCUMENTATION>
+
+(modPackage :de.setf.utility.clos.graph
+  (:use-only )
+  (:use-by :de.setf.utility.implementation)
+  (:export
+   :class-walker
+   :walk-classes
+   :graph-classes
+   :print-classes
+   ))
+
+
+
+;; dot-graphing for classes
+
+(defparameter *class-walk-depth* 0)
+(defparameter *class-walk-depth-limit* nil)
+(defparameter *class-walk-count* 0)
+(defparameter *class-walk-count-limit* nil)
+
+(defvar *superclass-link* 'superclass
+  "binds the link identifier for class-to-superclass links. the default value is superclass")
+(defvar *subclass-link* 'subclass
+  "binds the link identifier for class-to-superclass links. the default value is subclass")
+
+(defun coerce-to-class (datum)
+  (etypecase datum
+    (symbol (find-class datum))
+    (class datum)))
+
+
+(defClass class-walker (preorder-node-walker
+                        preorder-link-walker
+                        cyclic-walker
+                        walk-qualifier)
+  ((walk-qualifiers
+    :initform '(subclass superclass binds relations other)
+    :allocation :class)
+   (effective-qualifiers
+    :initform nil
+    :accessor walker-effective-qualifiers
+    :documentation
+    "binds a list of the effective qualifiers for the particuler walker.
+     these limit the relations followed.")))
+
+(defmethod initialize-instance :after ((instance class-walker)
+                                       &key (qualifiers nil qualifiers-p))
+    (setf (walker-effective-qualifiers instance)
+          (if qualifiers-p
+            (remove-if-not #'(lambda (q) (find q qualifiers :test #'string-equal))
+                           (walk-qualifiers instance))
+            (walk-qualifiers instance))))
+
+(defmethod walk-node-successors subclass
+           ((walker class-walker) (class class) (op t))
+  (when (find 'subclass (walker-effective-qualifiers walker))
+    (dolist (subclass  (class-direct-subclasses class))
+      (unless (find class (getf (walker-node-properties walker subclass) 'superclass))
+        (push subclass (getf (walker-node-properties walker class) 'subclass))
+        (walk-link walker *subclass-link* class subclass op))))
+  class)
+
+(defmethod walk-node-predecessors superclass
+           ((walker class-walker) (class class) (op t))
+  (when (find 'superclass (walker-effective-qualifiers walker))
+    (dolist (superclass  (class-direct-superclasses class))
+      (setf superclass (coerce-to-class superclass))
+      (unless (find class (getf (walker-node-properties walker superclass) 'subclass))
+        (push superclass (getf (walker-node-properties walker class) 'superclass))
+        (walk-link walker *superclass-link* class superclass op))))
+  class)
+
+(defmethod walk-node-predecessors binds
+           ((walker class-walker) (class standard-class) (op t))
+  (when (find 'binds (walker-effective-qualifiers walker))
+    (flet ((walk-slot (slot &aux (type (slot-definition-type slot)) (name (slot-definition-name slot)) slot-class)
+             (when (and type (not (eq type t)) (symbolp type)
+                        (setf slot-class (find-class type nil)))
+               (walk-link walker name class slot-class op))))
+      (declare (dynamic-extent #'walk-slot))
+      #+digitool
+      (map nil #'walk-slot (ccl::class-direct-class-slots class))
+      #+digitool
+      (map nil #'walk-slot (class-direct-instance-slots class))
+      #-ccl
+      (map nil #'walk-slot (class-direct--slots class))))
+  class)
+
+(defMethod walk-link :around
+           ((walker class-walker) (relation t) (from class) (to class) (op t))
+  (when (find (symbol-package (class-name to)) *packages-to-walk*)
+    (let ((*class-walk-depth* (1+ *class-walk-depth*)))
+      (call-next-method)
+      to)))
+
+(defmethod walk-node :denominative ((navigator class-walker) (node t) (operator t)))
+(defmethod walk-node-predecessors :denominative ((navigator class-walker) (node t) (operator t)))
+(defmethod walk-node-successors :denominative ((navigator class-walker) (node t) (operator t)))
+(defmethod walk-link :denominative ((walker class-walker) (relation t) (from t) (to t) (op t)))
+
+
+;;;
+;;; interface
+
+(defGeneric walk-classes (root classes op &key &allow-other-keys)
+  (:argument-precedence-order classes root op)
+   (:method ((root class) (classes null) op &rest options)
+           (apply #'walk-classes root (list (symbol-package (class-name root))) op options))
+  (:method ((root t) (package-predicate function) op &rest options)
+           (apply #'walk-packages root (remove-if-not package-predicate (list-all-packages)) op options))
+  (:method ((root symbol) (packages t) (op t) &rest options)
+           (apply #'walk-classes (find-class root) packages op options))
+  (:method ((root class) (*packages-to-walk* cons) op &rest options)
+           (setf *packages-to-walk* (mapcar #'coerce-to-package *packages-to-walk*))
+           (walk-model root (apply #'make-instance 'class-walker options) op)))
+            
+
+(defun write-graph-statement (class &optional (other-class nil op-p) relation)
+  (when (and (or (null *class-walk-depth-limit*) (<= *class-walk-depth* *class-walk-depth-limit*))
+             (or (null *class-walk-count-limit*) (<= *class-walk-count* *class-walk-count-limit*)))
+    (cond (op-p
+           ;; a link
+           (dot:dot-write-edge-statement dot:*dot-output*
+                                         (class-name class) (class-name other-class)
+                                         `(("label" . ,(string relation)))))
+          (t
+           (incf *class-walk-count*)
+           (dot:dot-write-node-statement dot:*dot-output* (class-name class) nil))))
+  class)
+
+
+
+
+(defun graph-classes (&key packages (stream *standard-output*) class
+                      ((:depth-limit *class-walk-depth-limit*) *class-walk-depth-limit*)
+                      ((:count-limit *class-walk-count-limit*) *class-walk-count-limit*)
+                      (options nil)
+                      &aux (*class-walk-count* 0))
+  (dot:dot-write-graph stream
+                       #'(lambda (grapher)
+                           (declare (ignore grapher))
+                           (dot-write-attribute *dot-output* "size" "8.5,11")
+                           (write-string "; " *dot-output*)
+                           (dot-write-attribute *dot-output* "ratio" "compress")
+                           (write-string "; " *dot-output*)
+                           (dot-write-attribute *dot-output* "rankdir" "LR")
+                           (write-string "; " *dot-output*)
+                           (dot-write-attribute *dot-output* "margin" ".5")
+                           (write-string "; " *dot-output*)
+                           (apply #'walk-classes class packages #'write-graph-statement
+                                  options)))
+  *class-walk-count*)
+
+(defun print-classes (&key packages (stream *standard-output*) class)
+  (flet ((print-class (class &optional (other nil other-p) relation)
+           (cond (other-p
+                  (terpri stream)
+                  (dotimes (x (* 5 *class-walk-depth*)) (write-char #\space stream))
+                  (format stream "~a -> ~a" relation (class-name other)))
+                 (t
+                  (terpri stream)
+                  (dotimes (x (* 5 *class-walk-depth*)) (write-char #\space stream))
+                  (format stream "~a:" (class-name class))))
+           class))
+    (walk-classes class packages #'print-class)))
+
+
+
+:EOF

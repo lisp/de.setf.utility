@@ -1,0 +1,697 @@
+<html><head><title>walker.lisp</title><style type='text/css'>
+body {background-color: #f4f4f8;}
+hr { clear: left;}
+ *.logo { color: rgb(50%, 9%, 5%);}
+ *.header {
+  background-color: #f0f0f0;
+  margin-bottom: 1ex;
+  border: 1px solid;
+  border-bottom-color: #d8d8d8; border-right-color: #d8d8d8;
+  border-top-color: #ffffff; border-left-color: #ffffff;
+  }
+ *.footer {
+  background-color: #f0f0f0;
+  margin-top: 1ex;
+  border: 1px solid;
+  border-top-color: #d8d8d8; border-left-color: #d8d8d8;
+  border-bottom-color: #ffffff; border-right-color: #ffffff;
+  }
+
+div.text { margin: 1ex; width: 30%; padding: 0; float:left; clear: left; }
+div.definition {
+  width: 65%; margin-left: auto; margin-right:1em; margin-top: .5ex; margin-bottom: .5ex; padding-left: 1em;
+  border: solid; border-width: 1px;
+  border-top-color: #e0e0e0; border-left-color: #e0e0e0; border-right-color: #ffffff; border-bottom-color: #ffffff;
+  background-color: #f6f6fa;
+  }
+div.definition div.signature {
+  margin-top: .1ex; margin-bottom: 0ex; font-family: 'courier';
+  }
+span.nature { float: right; }
+div.definition div.documentation {
+  visibility: visible; margin-left: 2em; margin-top: .1ex; margin-bottom: 0ex;
+  }
+div.definition div.form {
+  visibility: hidden; height: 0;
+  margin-left: 2em; margin-top: 0ex; margin-bottom: 0ex;  white-space: pre;
+  border-color: #e0e0e0;  border: solid; border-width: 1px;
+  font-family: 'courier';
+  background-color: #ffffff;
+  }
+div.source {
+  width: 65%; margin-top: 1ex; margin-bottom: 1ex;  white-space: pre;  clear:left;
+  border-color: #e0e0e0;  border: solid; border-width: 1px;
+  font-family: 'courier';
+  background-color: #ffffff;
+  }
+div.file div.DOCUMENTATION { background-color: #f8f6fa; clear:left;
+                    border: solid; border-width: 1px;
+                    border-color: #e0e0e0;}
+</style>
+<script type='text/javascript'>
+  function showElement(target) {
+    target.style.visibility='visible';
+    target.style.height='auto';
+  }
+  function hideElement(target) {
+    target.style.visibility='hidden';
+    target.style.height='0';
+  }
+  function toggleDefinitionVisibility(name) {
+    formTarget = document.getElementById(name+'_form');
+    docTarget = document.getElementById(name+'_documentation');
+    if ( formTarget != undefined) {
+      if ( formTarget.style.visibility == 'visible' )
+        hideElement(formTarget);
+      else
+        showElement(formTarget);
+    }
+    if ( docTarget != undefined) {
+      if ( docTarget.style.visibility == 'hidden' )
+        showElement(docTarget);
+      else
+        hideElement(docTarget);
+    }
+  }
+  
+</script></head>
+<body>
+<table border='0' cellpadding='.1ex' cellspacing='0' width='100%'><tr><td style='font-size: 16pt; font-weight: bold;' class='logo'>setf.de:</td></tr><tr><td><a href='./walker.lisp' type='text/plain'>walker.lisp</a></td></tr><tr><td><hr/></td></tr></table>
+<div class='definition' ID='def_1'>
+  <div class='signature' ><span>*WALKER*</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_1")'>Parameter</a></span></div>
+  <div class='documentation' ID='def_1_documentation'>binds the current walker within walk-model.</div>
+  <div class='form' ID='def_1_form' onclick='javascript: toggleDefinitionVisibility("def_1")'>(DEFPARAMETER *WALKER* () "binds the current walker within walk-model.")</div></div><h3 class='text'>class structure</h3><div class='text'>
+ the abstract walker classes distinguish the aspects
+ <ul>
+  <li><code>walker</code> is the abstract class for which the elementary interface functions - <code>walk-model</code>
+   <code>walk-node</code>, and <code>walk-link</code>, are defined.</li>
+  <li><code>walk-operator</code> distinguished classes intended to operate on nodes and links.</li>
+  <li><code>walk-navigator</code> distinguishes classes intended to traverse nodes and links.</li>
+  <li><code>caching-walker</code> binds a cache and implements operations to record properties for nodes and links.</li>
+  <li><code>cyclic-walker</code> uses recorded node properties to limit node operations to once only.</li>
+  <li><code>acyclic-walker</code> distinguishes classes intended to traverse nodes and links.</li>
+  </ul>
+
+these abstract classes are specialized to distinguish constituents in walking patterns
+ <ul>
+  <li><code>node-operator</code> operates on nodes</li>
+  <li><code>node-predecessor-navigator</code> traverses a node's predecessors</li>
+  <li><code>node-successor-navigator</code> traverses a node's successors</li>
+  <li><code>link-navigator</code> traverse from a links origin to its target</li>
+  <li><code>link-relation-operator</code> operates on a named link relation</li>
+  <li><code>walk-qualifier</code> computes qualification constraints for the actions of the other pattern constituent classes</li>
+  </ul>
+
+these, in turn, are combined in classes which implement concrete walking patterns
+ <ul>
+  <li><code>node-walker</code></li>
+  <li><code>preorder-node-walker</code> operates on the node, then walks predecessors, then successors</li>
+  <li><code>symmetric-node-walker</code> traverses predecessors, then operates, then traverses the successors</li>
+  <li><code>endorder-node-walker</code> walks predecessors, then successors, then operates on the node</li>
+  <li><code>node-navigator</code>  walks predecessors, then successors, but does not operate on a node </li>
+  <li><code>preorder-link-walker</code> operates on a links relation then traverses from origin to target</li>
+  <li><code>endorder-link-walker</code> traversed from origin to target, then operates on a links relation</li>
+  </ul>
+
+ </div>
+<div class='definition' ID='def_2'>
+  <div class='signature' ><span>WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_2")'>Class</a></span></div>
+  <div class='documentation' ID='def_2_documentation'>the abstract class of all walker controls.</div>
+  <div class='form' ID='def_2_form' onclick='javascript: toggleDefinitionVisibility("def_2")'>(DEFABSTRACTCLASS
+  WALKER
+  NIL
+  NIL
+  (:DOCUMENTATION "the abstract class of all walker controls."))</div></div>
+<div class='definition' ID='def_3'>
+  <div class='signature' ><span>WALK-NAVIGATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_3")'>Class</a></span></div>
+  <div class='documentation' ID='def_3_documentation'>the abstract class of walker controls which control navigation.</div>
+  <div class='form' ID='def_3_form' onclick='javascript: toggleDefinitionVisibility("def_3")'>(DEFABSTRACTCLASS
+  WALK-NAVIGATOR
+  (WALKER)
+  NIL
+  (:DOCUMENTATION
+   "the abstract class of walker controls which control navigation."))</div></div>
+<div class='definition' ID='def_4'>
+  <div class='signature' ><span>WALK-OPERATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_4")'>Class</a></span></div>
+  <div class='documentation' ID='def_4_documentation'>the abstract class of walker controls which control manipulation.</div>
+  <div class='form' ID='def_4_form' onclick='javascript: toggleDefinitionVisibility("def_4")'>(DEFABSTRACTCLASS
+  WALK-OPERATOR
+  (WALKER)
+  NIL
+  (:DOCUMENTATION
+   "the abstract class of walker controls which control manipulation."))</div></div>
+<div class='definition' ID='def_5'>
+  <div class='signature' ><span>CACHING-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_5")'>Class</a></span></div>
+  <div class='documentation' ID='def_5_documentation'>an abstract class of walker controls which bind a node cache and implement
+    walker-node-cache-entry walker-node-properties and walker-node-visited.</div>
+  <div class='form' ID='def_5_form' onclick='javascript: toggleDefinitionVisibility("def_5")'>(DEFABSTRACTCLASS
+  CACHING-WALKER
+  (WALKER)
+  ((CACHE :INITFORM NIL))
+  (:DOCUMENTATION
+   "an abstract class of walker controls which bind a node cache and implement
+    walker-node-cache-entry walker-node-properties and walker-node-visited."))</div></div>
+<div class='definition' ID='def_6'>
+  <div class='signature' ><span>CYCLIC-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_6")'>Class</a></span></div>
+  <div class='documentation' ID='def_6_documentation'>an abstract class of walker controls which uses a node cache to constrain node operations to once only.</div>
+  <div class='form' ID='def_6_form' onclick='javascript: toggleDefinitionVisibility("def_6")'>(DEFABSTRACTCLASS
+  CYCLIC-WALKER
+  (CACHING-WALKER)
+  NIL
+  (:DOCUMENTATION
+   "an abstract class of walker controls which uses a node cache to constrain node operations to once only."))</div></div>
+<div class='definition' ID='def_7'>
+  <div class='signature' ><span>ACYCLIC-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_7")'>Class</a></span></div>
+  <div class='form' ID='def_7_form' onclick='javascript: toggleDefinitionVisibility("def_7")'>(DEFCLASS ACYCLIC-WALKER (WALKER) NIL)</div></div>
+<div class='definition' ID='def_8'>
+  <div class='signature' ><span>NODE-OPERATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_8")'>Class</a></span></div>
+  <div class='documentation' ID='def_8_documentation'>a node-operator implements walk-node-self methods to effect operator application to the node proper.</div>
+  <div class='form' ID='def_8_form' onclick='javascript: toggleDefinitionVisibility("def_8")'>(DEFCLASS NODE-OPERATOR (WALK-OPERATOR)
+  NIL
+  (:DOCUMENTATION
+   "a node-operator implements walk-node-self methods to effect operator application to the node proper."))</div></div>
+<div class='definition' ID='def_9'>
+  <div class='signature' ><span>NODE-PREDECESSOR-NAVIGATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_9")'>Class</a></span></div>
+  <div class='documentation' ID='def_9_documentation'>a node-pre-navigator implements walk-node-predecessors methods to effect traversal of links which preceed the node proper.</div>
+  <div class='form' ID='def_9_form' onclick='javascript: toggleDefinitionVisibility("def_9")'>(DEFCLASS NODE-PREDECESSOR-NAVIGATOR (WALK-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a node-pre-navigator implements walk-node-predecessors methods to effect traversal of links which preceed the node proper."))</div></div>
+<div class='definition' ID='def_10'>
+  <div class='signature' ><span>NODE-SUCCESSOR-NAVIGATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_10")'>Class</a></span></div>
+  <div class='documentation' ID='def_10_documentation'>a node-post-navigator implements walk-node-successors methods to effect traversal of links which succeed the node proper.</div>
+  <div class='form' ID='def_10_form' onclick='javascript: toggleDefinitionVisibility("def_10")'>(DEFCLASS NODE-SUCCESSOR-NAVIGATOR (WALK-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a node-post-navigator implements walk-node-successors methods to effect traversal of links which succeed the node proper."))</div></div>
+<div class='definition' ID='def_11'>
+  <div class='signature' ><span>LINK-NAVIGATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_11")'>Class</a></span></div>
+  <div class='documentation' ID='def_11_documentation'>a link-navigator implements walk-link-other to effect traversal to the link's target node. the default method ignores the initial node.</div>
+  <div class='form' ID='def_11_form' onclick='javascript: toggleDefinitionVisibility("def_11")'>(DEFCLASS LINK-NAVIGATOR (WALK-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a link-navigator implements walk-link-other to effect traversal to the link's target node. the default method ignores the initial node."))</div></div>
+<div class='definition' ID='def_12'>
+  <div class='signature' ><span>LINK-RELATION-OPERATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_12")'>Class</a></span></div>
+  <div class='documentation' ID='def_12_documentation'>a link-relation-operator implements walk-link-relation methods to effect operator application to the (relation X initial-node X target-node) combination.</div>
+  <div class='form' ID='def_12_form' onclick='javascript: toggleDefinitionVisibility("def_12")'>(DEFCLASS LINK-RELATION-OPERATOR (WALK-OPERATOR)
+  NIL
+  (:DOCUMENTATION
+   "a link-relation-operator implements walk-link-relation methods to effect operator application to the (relation X initial-node X target-node) combination."))</div></div>
+<div class='definition' ID='def_13'>
+  <div class='signature' ><span>WALK-QUALIFIER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_13")'>Class</a></span></div>
+  <div class='documentation' ID='def_13_documentation'>a mixin class for walkers which explicitly qualified the operations for a node.</div>
+  <div class='form' ID='def_13_form' onclick='javascript: toggleDefinitionVisibility("def_13")'>(DEFCLASS WALK-QUALIFIER (WALKER)
+  ((WALK-QUALIFIERS
+     :INITFORM
+     NIL
+     :ACCESSOR
+     WALK-QUALIFIERS
+     :INITARG
+     :QUALIFIERS
+     :ALLOCATION
+     :CLASS
+     :DOCUMENTATION
+     "a list of method wualifiers which constraint the selection and order of methods for a given denominated method combination. by default it is shared by the combinations for the functions walk-node, walk-link, walk-navigate-nde-predecessors, and walk-node-successors. should there be some reason to need to treat identical qualifiers differently for the respective methods, the immediate source in each case is the respective function -qualifiers, which can be specialized by walker. note that the literal source is an allocated instance, which means that the reference must suceed on an uninitialized instance; thus the class allocation."))
+  (:DOCUMENTATION
+   "a mixin class for walkers which explicitly qualified the operations for a node."))</div></div>
+<div class='definition' ID='def_14'>
+  <div class='signature' ><span>WALKER-NODE-QUALIFIERS (WALKER)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_14")'>Function</a></span></div>
+  <div class='form' ID='def_14_form' onclick='javascript: toggleDefinitionVisibility("def_14")'>(DEFGENERIC WALKER-NODE-QUALIFIERS
+            (WALKER)
+            (:METHOD ((WALKER WALK-QUALIFIER)) (WALK-QUALIFIERS WALKER)))</div></div>
+<div class='definition' ID='def_15'>
+  <div class='signature' ><span>WALKER-NODE-PREDECESSOR-QUALIFIERS (WALKER)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_15")'>Function</a></span></div>
+  <div class='form' ID='def_15_form' onclick='javascript: toggleDefinitionVisibility("def_15")'>(DEFGENERIC WALKER-NODE-PREDECESSOR-QUALIFIERS
+            (WALKER)
+            (:METHOD ((WALKER WALK-QUALIFIER)) (WALK-QUALIFIERS WALKER)))</div></div>
+<div class='definition' ID='def_16'>
+  <div class='signature' ><span>WALKER-NODE-SUCCESSOR-QUALIFIERS (WALKER)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_16")'>Function</a></span></div>
+  <div class='form' ID='def_16_form' onclick='javascript: toggleDefinitionVisibility("def_16")'>(DEFGENERIC WALKER-NODE-SUCCESSOR-QUALIFIERS
+            (WALKER)
+            (:METHOD ((WALKER WALK-QUALIFIER)) (WALK-QUALIFIERS WALKER)))</div></div>
+<div class='definition' ID='def_17'>
+  <div class='signature' ><span>WALKER-LINK-QUALIFIERS (WALKER)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_17")'>Function</a></span></div>
+  <div class='form' ID='def_17_form' onclick='javascript: toggleDefinitionVisibility("def_17")'>(DEFGENERIC WALKER-LINK-QUALIFIERS
+            (WALKER)
+            (:METHOD ((WALKER WALK-QUALIFIER)) (WALK-QUALIFIERS WALKER)))</div></div>
+<div class='definition' ID='def_18'>
+  <div class='signature' ><span>PREORDER-NODE-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_18")'>Class</a></span></div>
+  <div class='documentation' ID='def_18_documentation'>a preorder-node-walker combines walk-node methods so as to implement preorder traversal.</div>
+  <div class='form' ID='def_18_form' onclick='javascript: toggleDefinitionVisibility("def_18")'>(DEFCLASS PREORDER-NODE-WALKER (NODE-OPERATOR NODE-PREDECESSOR-NAVIGATOR
+                                NODE-SUCCESSOR-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a preorder-node-walker combines walk-node methods so as to implement preorder traversal."))</div></div>
+<div class='definition' ID='def_19'>
+  <div class='signature' ><span>SYMMETRIC-NODE-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_19")'>Class</a></span></div>
+  <div class='documentation' ID='def_19_documentation'>a symmetric-order-node-walker combines walk-node methods so as to implement symmetric (postorder) traversal.</div>
+  <div class='form' ID='def_19_form' onclick='javascript: toggleDefinitionVisibility("def_19")'>(DEFCLASS SYMMETRIC-NODE-WALKER (NODE-PREDECESSOR-NAVIGATOR NODE-OPERATOR
+                                 NODE-SUCCESSOR-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a symmetric-order-node-walker combines walk-node methods so as to implement symmetric (postorder) traversal."))</div></div>
+<div class='definition' ID='def_20'>
+  <div class='signature' ><span>ENDORDER-NODE-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_20")'>Class</a></span></div>
+  <div class='documentation' ID='def_20_documentation'>a endorder-node-walker combines walk-node methods so as to implement endorder traversal.</div>
+  <div class='form' ID='def_20_form' onclick='javascript: toggleDefinitionVisibility("def_20")'>(DEFCLASS ENDORDER-NODE-WALKER (NODE-PREDECESSOR-NAVIGATOR
+                                NODE-SUCCESSOR-NAVIGATOR NODE-OPERATOR)
+  NIL
+  (:DOCUMENTATION
+   "a endorder-node-walker combines walk-node methods so as to implement endorder traversal."))</div></div>
+<div class='definition' ID='def_21'>
+  <div class='signature' ><span>NODE-NAVIGATOR</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_21")'>Class</a></span></div>
+  <div class='documentation' ID='def_21_documentation'>a node-navigator combines walk-node methods so as to implement navigation without manipulation.</div>
+  <div class='form' ID='def_21_form' onclick='javascript: toggleDefinitionVisibility("def_21")'>(DEFCLASS NODE-NAVIGATOR (NODE-PREDECESSOR-NAVIGATOR NODE-SUCCESSOR-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a node-navigator combines walk-node methods so as to implement navigation without manipulation."))</div></div>
+<div class='definition' ID='def_22'>
+  <div class='signature' ><span>PREORDER-LINK-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_22")'>Class</a></span></div>
+  <div class='documentation' ID='def_22_documentation'>a preorder-link-walker combines walk-link methods so as to implement link traversal as a relation operation followed by navigation to the target.</div>
+  <div class='form' ID='def_22_form' onclick='javascript: toggleDefinitionVisibility("def_22")'>(DEFCLASS PREORDER-LINK-WALKER (LINK-RELATION-OPERATOR LINK-NAVIGATOR)
+  NIL
+  (:DOCUMENTATION
+   "a preorder-link-walker combines walk-link methods so as to implement link traversal as a relation operation followed by navigation to the target."))</div></div>
+<div class='definition' ID='def_23'>
+  <div class='signature' ><span>ENDORDER-LINK-WALKER</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_23")'>Class</a></span></div>
+  <div class='documentation' ID='def_23_documentation'>a endorder-link-walker combines walk-link methods so as to implement link traversal as navigation to the target followed by a relation operation.</div>
+  <div class='form' ID='def_23_form' onclick='javascript: toggleDefinitionVisibility("def_23")'>(DEFCLASS ENDORDER-LINK-WALKER (LINK-NAVIGATOR LINK-RELATION-OPERATOR)
+  NIL
+  (:DOCUMENTATION
+   "a endorder-link-walker combines walk-link methods so as to implement link traversal as navigation to the target followed by a relation operation."))</div></div><h3 class='text'>cache management</h3><div class='text'>
+ a caching-walker maintaines a record for nodes. the specialization
+ cyclic-walker implements and :around method for walk-node which cuts off
+ the walk if the respective cache entry indicates that the node has already
+ been visited. it does not, however, either add the cache entry or set the
+ indicator. this is left to the application in order that it can specify
+ when it is through with the respective node.</div>
+<div class='definition' ID='def_24'>
+  <div class='signature' ><span>WALKER-ENTRY</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_24")'>Structure</a></span></div>
+  <div class='form' ID='def_24_form' onclick='javascript: toggleDefinitionVisibility("def_24")'>(DEFSTRUCT WALKER-ENTRY
+  "each walker cache entry binds the node, a visited flag, and a property list"
+  (VISITED NIL :TYPE (MEMBER NIL T))
+  (NODE NIL :TYPE T)
+  (PROPERTIES NIL :TYPE LIST))</div></div>
+<div class='definition' ID='def_25'>
+  <div class='signature' ><span>MAKE-WALKER-CACHE-ENTRY (NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_25")'>Function</a></span></div>
+  <div class='form' ID='def_25_form' onclick='javascript: toggleDefinitionVisibility("def_25")'>(DEFGENERIC MAKE-WALKER-CACHE-ENTRY
+            (NAVIGATOR NODE)
+            (:METHOD ((NAVIGATOR CACHING-WALKER) (NODE T))
+             (MAKE-WALKER-ENTRY :NODE NODE)))</div></div>
+<div class='definition' ID='def_26'>
+  <div class='signature' ><span>WALKER-NODE-CACHE-ENTRY (NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_26")'>Function</a></span></div>
+  <div class='form' ID='def_26_form' onclick='javascript: toggleDefinitionVisibility("def_26")'>(DEFGENERIC WALKER-NODE-CACHE-ENTRY
+            (NAVIGATOR NODE)
+            (:METHOD ((NAVIGATOR T) (NODE T)) NIL)
+            (:METHOD ((NAVIGATOR CACHING-WALKER) (NODE T))
+             (WITH-SLOTS (CACHE)
+                         NAVIGATOR
+                         (OR (GETHASH NODE CACHE)
+                             (SETF (GETHASH NODE CACHE)
+                                   (MAKE-WALKER-CACHE-ENTRY NAVIGATOR NODE))))))</div></div>
+<div class='definition' ID='def_27'>
+  <div class='signature' ><span>WALKER-NODE-PROPERTIES (NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_27")'>Function</a></span></div>
+  <div class='form' ID='def_27_form' onclick='javascript: toggleDefinitionVisibility("def_27")'>(DEFGENERIC WALKER-NODE-PROPERTIES
+            (NAVIGATOR NODE)
+            (:METHOD ((NAVIGATOR T) (NODE T)) NIL)
+            (:METHOD ((NAVIGATOR CACHING-WALKER) (NODE T))
+             (WALKER-ENTRY-PROPERTIES
+               (WALKER-NODE-CACHE-ENTRY NAVIGATOR NODE))))</div></div>
+<div class='definition' ID='def_28'>
+  <div class='signature' ><span>(SETF WALKER-NODE-PROPERTIES) (PROPERTIES NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_28")'>Function</a></span></div>
+  <div class='form' ID='def_28_form' onclick='javascript: toggleDefinitionVisibility("def_28")'>(DEFGENERIC (SETF WALKER-NODE-PROPERTIES)
+            (PROPERTIES NAVIGATOR NODE)
+            (:METHOD ((PROPERTIES LIST) (NAVIGATOR CACHING-WALKER) (NODE T))
+             (SETF (WALKER-ENTRY-PROPERTIES
+                     (WALKER-NODE-CACHE-ENTRY NAVIGATOR NODE))
+                   PROPERTIES)))</div></div>
+<div class='definition' ID='def_29'>
+  <div class='signature' ><span>WALKER-NODE-VISITED-P (NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_29")'>Function</a></span></div>
+  <div class='form' ID='def_29_form' onclick='javascript: toggleDefinitionVisibility("def_29")'>(DEFGENERIC WALKER-NODE-VISITED-P
+            (NAVIGATOR NODE)
+            (:METHOD ((NAVIGATOR T) (NODE T)) NIL)
+            (:METHOD ((NAVIGATOR CACHING-WALKER) (NODE T))
+             (WALKER-ENTRY-VISITED (WALKER-NODE-CACHE-ENTRY NAVIGATOR NODE))))</div></div>
+<div class='definition' ID='def_30'>
+  <div class='signature' ><span>(SETF WALKER-NODE-VISITED) (VISITED NAVIGATOR NODE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_30")'>Function</a></span></div>
+  <div class='form' ID='def_30_form' onclick='javascript: toggleDefinitionVisibility("def_30")'>(DEFGENERIC (SETF WALKER-NODE-VISITED)
+            (VISITED NAVIGATOR NODE)
+            (:METHOD ((VISITED T) (NAVIGATOR CACHING-WALKER) (NODE T))
+             (SETF (WALKER-ENTRY-VISITED
+                     (WALKER-NODE-CACHE-ENTRY NAVIGATOR NODE))
+                   VISITED)))</div></div>
+<div class='definition' ID='def_31'>
+  <div class='signature' ><span>WALKER-INITIALIZE-CACHE (NAVIGATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_31")'>Function</a></span></div>
+  <div class='form' ID='def_31_form' onclick='javascript: toggleDefinitionVisibility("def_31")'>(DEFGENERIC WALKER-INITIALIZE-CACHE
+            (NAVIGATOR)
+            (:METHOD ((NAVIGATOR T)) NIL)
+            (:METHOD ((NAVIGATOR CACHING-WALKER))
+             (WITH-SLOTS (CACHE) NAVIGATOR (SETF CACHE (MAKE-HASH-TABLE)))))</div></div>
+<div class='definition' ID='def_32'>
+  <div class='signature' ><span>WALKER-CLEAR-CACHE (NAVIGATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_32")'>Function</a></span></div>
+  <div class='form' ID='def_32_form' onclick='javascript: toggleDefinitionVisibility("def_32")'>(DEFGENERIC WALKER-CLEAR-CACHE
+            (NAVIGATOR)
+            (:METHOD ((NAVIGATOR T)) NIL)
+            (:METHOD ((NAVIGATOR CACHING-WALKER))
+             (WITH-SLOTS (CACHE)
+                         NAVIGATOR
+                         (IF CACHE
+                             (CLRHASH CACHE)
+                             (WALKER-INITIALIZE-CACHE NAVIGATOR)))))</div></div><h3 class='text'>generic traversal</h3><div class='text'>
+ traversal exhibits an iterative symmetry between nodes and links involving
+ four distinct operations
+ <ul>
+  <li>operate on the node</li>
+  <li>navigate from the node through the links</li>
+  <li>operate on the link</li>
+  <li>navigate from the link through the nodes</li>
+  </ul>
+
+ the implementation is expressed in distinct qualified methods for walk-node
+ and walk-link. each method is qualifed to indicate its role in a general
+ traversal - from nodes: self, predecessors, and successors - from links: 
+ other, and relations.</div><div class='text'> in both cases, the order of combination is determined for the respective
+ navigator class through the method combination, in that it combines the
+ denominated methods as specified by the walker through the various forms of
+ walker-*-qualifiers. each of the abstract classes node-operator, 
+ node-predecessor-navigator, node-successor-navigator,
+ link-relation-operator, and link-navigator contribute a qualifier and the
+ abstract idiomatic classes like endorder-node-walker cause these to be
+ ordered appropriately.
+ an application is also free to define and specify entirely different
+ walk-node and walk-link components</div>
+<div class='definition' ID='def_33'>
+  <div class='signature' ><span>WALK-MODEL (MODEL WALKER OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_33")'>Function</a></span></div>
+  <div class='form' ID='def_33_form' onclick='javascript: toggleDefinitionVisibility("def_33")'>(DEFGENERIC WALK-MODEL
+            (MODEL WALKER OPERATOR)
+            (:DOCUMENTATION
+             "iterate over a model graph using a navigator instance to control link traversal and operator application. the operator should be both polymorphic and multivalent to the extent required by the nodes and node pairs. this includes children as well as class-specific dependants, such as definitional aspects of a document, element, or annotation. a before method is defined for caching walker to clear the cache and a general base method is defined which combines the navigator, model, and function in call to walk-node to start navigation.
+    where the navigator caches, the cache is cleared at the outset.")
+            (:METHOD :BEFORE ((MODEL T) (WALKER CACHING-WALKER) (OPERATOR T))
+             (WALKER-CLEAR-CACHE WALKER))
+            (:METHOD ((MODEL T) (*WALKER* T) (OPERATOR T))
+             (WALK-NODE *WALKER* MODEL OPERATOR)))</div></div>
+<div class='definition' ID='def_34'>
+  <div class='signature' ><span>WALK-NODE (NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_34")'>Function</a></span></div>
+  <div class='form' ID='def_34_form' onclick='javascript: toggleDefinitionVisibility("def_34")'>(DEFGENERIC WALK-NODE
+            (NAVIGATOR NODE OPERATOR)
+            (:DOCUMENTATION "walk within the node proper.
+    the primary navigation methods distinguish pre- and post-order navigation. the method combination, denominated, is declared to use the function walk-node-qualifiers to determine which qualifiers apply to a given walker instance and in which order. the initial generic definition defines an :around methods for cyclic-walker and cor a nullnode to filter traversal, and the qualified methods self - for walk-node-self, predecessors - for walk-node-predecessors, and successors - for walk-node-successors.")
+            (:METHOD-COMBINATION DENOMINATED :ORDER :MOST-SPECIFIC-FIRST
+             :OPERATOR AND :QUALIFIERS WALK-NODE-QUALIFIERS :VERBOSE NIL)
+            (:METHOD :AROUND ((NAVIGATOR CYCLIC-WALKER) (NODE T) (OPERATOR T))
+             (UNLESS (WALKER-NODE-VISITED-P NAVIGATOR NODE)
+               (CALL-NEXT-METHOD)))
+            (:METHOD :AROUND ((NAVIGATOR WALKER) (NODE NULL) (OPERATOR T)) NIL)
+            (:METHOD T ((NAVIGATOR WALKER) (NODE T) (OPERATOR T)) NODE)
+            (:METHOD SELF ((NAVIGATOR WALKER) (NODE T) (OPERATOR T))
+             (WALK-NODE-SELF NODE NAVIGATOR OPERATOR))
+            (:METHOD SELF ((NAVIGATOR CACHING-WALKER) (NODE T) (OPERATOR T))
+             (LET ((RESULT (CALL-NEXT-METHOD)))
+               (WHEN RESULT (SETF (WALKER-NODE-VISITED NAVIGATOR NODE) T))
+               RESULT))
+            (:METHOD PREDECESSORS ((NAVIGATOR WALKER) (NODE T) (OPERATOR T))
+             (WALK-NODE-PREDECESSORS NAVIGATOR NODE OPERATOR) NODE)
+            (:METHOD SUCCESSORS ((NAVIGATOR WALKER) (NODE T) (OPERATOR T))
+             (WALK-NODE-SUCCESSORS NAVIGATOR NODE OPERATOR) NODE))</div></div>
+<div class='definition' ID='def_35'>
+  <div class='signature' ><span>WALK-NODE-QUALIFIERS (FUNCTION NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_35")'>Function</a></span></div>
+  <div class='form' ID='def_35_form' onclick='javascript: toggleDefinitionVisibility("def_35")'>(DEFGENERIC WALK-NODE-QUALIFIERS
+            (FUNCTION NAVIGATOR NODE OPERATOR)
+            (:DOCUMENTATION
+             "computes the qualifiers which govern the effective navigation from a given node using a given walker. these are used by the denominated method combination when computing the effective method for a given operation. the default implementation relies the either on the superclasses of the walker only (node-predecessor-navigator, node-successor-navigator, and node-operator) and determines the applicable qualifiers and their order from the class precedence, or relies on the sequence yielded by the walker-node-qualifiers method. it does not take the generic function, node, and operator in to account.")
+            (:METHOD (#'T (NAVIGATOR WALKER) (NODE T) (OPERATOR T)) NIL)
+            (:METHOD (#'T (NAVIGATOR NODE-OPERATOR) (NODE T) (OPERATOR T))
+             (CONS 'SELF (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR NODE-PREDECESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'PREDECESSORS (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR NODE-SUCCESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'SUCCESSORS (CALL-NEXT-METHOD)))
+            (:METHOD (#'T (NAVIGATOR CLASS) (NODE T) (OPERATOR T))
+             (WALK-NODE-QUALIFIERS
+               FUNCTION
+               (CLASS-PROTOTYPE NAVIGATOR)
+               NODE
+               OPERATOR))
+            (:METHOD (#'T (NAVIGATOR WALK-QUALIFIER) (NODE T) (OPERATOR T))
+             (APPEND (WALKER-NODE-QUALIFIERS NAVIGATOR) (CALL-NEXT-METHOD))))</div></div>
+<div class='definition' ID='def_36'>
+  <div class='signature' ><span>WALK-NODE-SELF (NODE NAVIGATOR FUNCTION)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_36")'>Function</a></span></div>
+  <div class='form' ID='def_36_form' onclick='javascript: toggleDefinitionVisibility("def_36")'>(DEFGENERIC WALK-NODE-SELF
+            (NODE NAVIGATOR FUNCTION)
+            (:METHOD ((NODE T) (NAVIGATOR NODE-OPERATOR) #'T)
+             (FUNCALL FUNCTION NODE))
+            (:METHOD ((NODE T) (NAVIGATOR T) #'T) NODE))</div></div>
+<div class='definition' ID='def_37'>
+  <div class='signature' ><span>WALK-NODE-PREDECESSORS (NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_37")'>Function</a></span></div>
+  <div class='form' ID='def_37_form' onclick='javascript: toggleDefinitionVisibility("def_37")'>(DEFGENERIC WALK-NODE-PREDECESSORS
+            (NAVIGATOR NODE OPERATOR)
+            (:METHOD-COMBINATION DENOMINATED :ORDER :MOST-SPECIFIC-FIRST
+             :OPERATOR AND :QUALIFIERS WALK-NODE-PREDECESSOR-QUALIFIERS)
+            (:DOCUMENTATION
+             "concrete specializations of node-successor-navigator must implement named methods to walk predecessor links for each node class by calling walk-link with arguments navigator, relation, outgoing node, and incident node. they effective method is a most-specific-last and method combination."))</div></div>
+<div class='definition' ID='def_38'>
+  <div class='signature' ><span>WALK-NODE-SUCCESSORS (NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_38")'>Function</a></span></div>
+  <div class='form' ID='def_38_form' onclick='javascript: toggleDefinitionVisibility("def_38")'>(DEFGENERIC WALK-NODE-SUCCESSORS
+            (NAVIGATOR NODE OPERATOR)
+            (:METHOD-COMBINATION DENOMINATED :ORDER :MOST-SPECIFIC-FIRST
+             :OPERATOR AND :QUALIFIERS WALK-NODE-SUCCESSOR-QUALIFIERS)
+            (:DOCUMENTATION
+             "concrete specializations of node-successor-navigator must implement named methods to walk predecessor links for each initial node class. they effective method is a most-specific-last and method combination."))</div></div>
+<div class='definition' ID='def_39'>
+  <div class='signature' ><span>WALK-NODE-SUCCESSOR-QUALIFIERS (FUNCTION NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_39")'>Function</a></span></div>
+  <div class='form' ID='def_39_form' onclick='javascript: toggleDefinitionVisibility("def_39")'>(DEFGENERIC WALK-NODE-SUCCESSOR-QUALIFIERS
+            (FUNCTION NAVIGATOR NODE OPERATOR)
+            (:DOCUMENTATION
+             "computes the qualifiers which govern the effective navigation from a given node using a given walker to its successors. the general method delegates to walk-node-qualifiers.")
+            (:METHOD (#'T (NAVIGATOR T) (NODE T) (OPERATOR T)) NIL)
+            (:METHOD
+             (#'T (NAVIGATOR NODE-PREDECESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'PREDECESSORS (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR NODE-SUCCESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'SUCCESSORS (CALL-NEXT-METHOD)))
+            (:METHOD (#'T (NAVIGATOR CLASS) (NODE T) (OPERATOR T))
+             (WALK-NODE-SUCCESSOR-QUALIFIERS
+               FUNCTION
+               (CLASS-PROTOTYPE NAVIGATOR)
+               NODE
+               OPERATOR))
+            (:METHOD (#'T (NAVIGATOR WALK-QUALIFIER) (NODE T) (OPERATOR T))
+             (APPEND (WALKER-NODE-PREDECESSOR-QUALIFIERS NAVIGATOR)
+                     (CALL-NEXT-METHOD))))</div></div>
+<div class='definition' ID='def_40'>
+  <div class='signature' ><span>WALK-NODE-PREDECESSOR-QUALIFIERS (FUNCTION NAVIGATOR NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_40")'>Function</a></span></div>
+  <div class='form' ID='def_40_form' onclick='javascript: toggleDefinitionVisibility("def_40")'>(DEFGENERIC WALK-NODE-PREDECESSOR-QUALIFIERS
+            (FUNCTION NAVIGATOR NODE OPERATOR)
+            (:DOCUMENTATION
+             "computes the qualifiers which govern the effective navigation from a given node using a given walker to its successors. the general method delegates to walk-node-qualifiers.")
+            (:METHOD (#'T (NAVIGATOR T) (NODE T) (OPERATOR T)) NIL)
+            (:METHOD
+             (#'T (NAVIGATOR NODE-PREDECESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'PREDECESSORS (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR NODE-SUCCESSOR-NAVIGATOR) (NODE T) (OPERATOR T))
+             (CONS 'SUCCESSORS (CALL-NEXT-METHOD)))
+            (:METHOD (#'T (NAVIGATOR CLASS) (NODE T) (OPERATOR T))
+             (WALK-NODE-PREDECESSOR-QUALIFIERS
+               FUNCTION
+               (CLASS-PROTOTYPE NAVIGATOR)
+               NODE
+               OPERATOR))
+            (:METHOD (#'T (NAVIGATOR WALK-QUALIFIER) (NODE T) (OPERATOR T))
+             (APPEND (WALKER-NODE-PREDECESSOR-QUALIFIERS NAVIGATOR)
+                     (CALL-NEXT-METHOD))))</div></div>
+<div class='definition' ID='def_41'>
+  <div class='signature' ><span>WALK-LINK (NAVIGATOR RELATION FROM TO OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_41")'>Function</a></span></div>
+  <div class='form' ID='def_41_form' onclick='javascript: toggleDefinitionVisibility("def_41")'>(DEFGENERIC WALK-LINK
+            (NAVIGATOR RELATION FROM TO OPERATOR)
+            (:DOCUMENTATION
+             "walk a relation link between a node from and a node to
+    controlled by navigator and using operator.")
+            (:METHOD-COMBINATION DENOMINATED :ORDER :MOST-SPECIFIC-FIRST
+             :OPERATOR AND :QUALIFIERS WALK-LINK-QUALIFIERS)
+            (:METHOD T ((NAVIGATOR WALKER) (RELATION T) (FROM T) (TO T) (OP T))
+             TO)
+            (:METHOD OTHER
+             ((NAVIGATOR WALKER) (RELATION T) (FROM T) (TO T) (OP T))
+             (WALK-LINK-OTHER NAVIGATOR FROM TO OP))
+            (:METHOD RELATIONS
+             ((NAVIGATOR WALKER) (RELATION T) (FROM T) (TO T) (OP T))
+             (WALK-LINK-RELATION NAVIGATOR RELATION FROM TO OP)))</div></div>
+<div class='definition' ID='def_42'>
+  <div class='signature' ><span>WALK-LINK-QUALIFIERS (FUNCTION NAVIGATOR RELATION FROM TO OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_42")'>Function</a></span></div>
+  <div class='form' ID='def_42_form' onclick='javascript: toggleDefinitionVisibility("def_42")'>(DEFGENERIC WALK-LINK-QUALIFIERS
+            (FUNCTION NAVIGATOR RELATION FROM TO OPERATOR)
+            (:DOCUMENTATION
+             "computes the qualifiers which govern the effective navigation for a given link. these are used by the nominated method combination when computing the effective method for a given operation. the qualifiers are distinguished by the class of the walker only. the generic function, node, and operator do not signify.")
+            (:METHOD
+             (#'T (NAVIGATOR WALKER) (RELATION T) (FROM T) (TO T) (OP T)) NIL)
+            (:METHOD
+             (#'T (NAVIGATOR LINK-NAVIGATOR) (RELATION T) (FROM T) (TO T)
+              (OPERATOR T))
+             (CONS 'OTHER (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR LINK-RELATION-OPERATOR) (RELATION T) (FROM T)
+              (TO T) (OPERATOR T))
+             (CONS 'RELATIONS (CALL-NEXT-METHOD)))
+            (:METHOD
+             (#'T (NAVIGATOR CLASS) (RELATION T) (FROM T) (TO T) (OP T))
+             (WALK-LINK-QUALIFIERS
+               FUNCTION
+               (CLASS-PROTOTYPE NAVIGATOR)
+               RELATION
+               FROM
+               TO
+               OP))
+            (:METHOD
+             (#'T (NAVIGATOR WALK-QUALIFIER) (RELATION T) (FROM T) (TO T)
+              (OP T))
+             (APPEND (WALKER-LINK-QUALIFIERS NAVIGATOR) (CALL-NEXT-METHOD))))</div></div>
+<div class='definition' ID='def_43'>
+  <div class='signature' ><span>WALK-LINK-OTHER (NAVIGATOR FROM TO OP)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_43")'>Function</a></span></div>
+  <div class='form' ID='def_43_form' onclick='javascript: toggleDefinitionVisibility("def_43")'>(DEFGENERIC WALK-LINK-OTHER
+            (NAVIGATOR FROM TO OP)
+            (:METHOD ((NAVIGATOR T) (FROM T) (TO T) (OP T)) TO)
+            (:METHOD ((NAVIGATOR LINK-NAVIGATOR) (FROM T) (TO T) (OP T))
+             (WALK-NODE NAVIGATOR TO OP)))</div></div>
+<div class='definition' ID='def_44'>
+  <div class='signature' ><span>WALK-LINK-RELATION (NAVIGATOR RELATION FROM-NODE TO-NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_44")'>Function</a></span></div>
+  <div class='form' ID='def_44_form' onclick='javascript: toggleDefinitionVisibility("def_44")'>(DEFGENERIC WALK-LINK-RELATION
+            (NAVIGATOR RELATION FROM-NODE TO-NODE OPERATOR)
+            (:METHOD
+             ((NAVIGATOR LINK-RELATION-OPERATOR) (RELATION T) (FROM T) (TO T)
+              (OPERATOR T))
+             (FUNCALL OPERATOR FROM TO RELATION) (CALL-NEXT-METHOD))
+            (:METHOD ((NAVIGATOR T) (RELATION T) (FROM T) (TO T) (OPERATOR T))
+             TO))</div></div>
+<div class='definition' ID='def_45'>
+  <div class='signature' ><span>MAP-WALK-LINK (TO-NODE-SEQUENCE NAVIGATOR RELATION FROM-NODE OPERATOR)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_45")'>Function</a></span></div>
+  <div class='form' ID='def_45_form' onclick='javascript: toggleDefinitionVisibility("def_45")'>(DEFGENERIC MAP-WALK-LINK
+            (TO-NODE-SEQUENCE NAVIGATOR RELATION FROM-NODE OPERATOR)
+            (:METHOD ((TO T) (NAVIGATOR T) (RELATION T) (FROM T) (OPERATOR T))
+             (WALK-LINK NAVIGATOR RELATION FROM TO OPERATOR))
+            (:METHOD
+             ((TO NULL) (NAVIGATOR T) (RELATION T) (FROM-NODE T) (OPERATOR T))
+             NIL)
+            (:METHOD
+             ((TO-NODES CONS) (NAVIGATOR T) (RELATION T) (FROM-NODE T)
+              OPERATOR)
+             (DOLIST (TO TO-NODES)
+               (WALK-LINK NAVIGATOR RELATION FROM-NODE TO OPERATOR)))
+            (:METHOD
+             ((TO-NODES HASH-TABLE) (NAVIGATOR T) (RELATION T) (FROM-NODE T)
+              OPERATOR)
+             (MAPHASH #'(LAMBDA (KEY TO)
+                          (DECLARE (IGNORE KEY))
+                          (WALK-LINK NAVIGATOR RELATION FROM-NODE TO OPERATOR))
+                      TO-NODES))
+            (:METHOD
+             ((TO-NODES SEQUENCE) (NAVIGATOR T) (RELATION T) (FROM-NODE T)
+              OPERATOR)
+             (MAP NIL
+                  #'(LAMBDA (TO)
+                      (WALK-LINK NAVIGATOR RELATION FROM-NODE TO OPERATOR))
+                  TO-NODES)))</div></div>
+<div class='source' >(MACROLET ((DEFDENOMINATIVES (CLASS &amp;REST METHODS)
+             (LIST* 'PROGN
+                    (APPEND (WHEN (FIND 'WALK-NODE METHODS)
+                              (LIST (LIST* 'DEFMETHOD
+                                           (LIST*
+                                            'WALK-NODE
+                                            (LIST*
+                                             :DENOMINATIVE
+                                             (LIST
+                                              (LIST*
+                                               (LIST* 'NAVIGATOR (LIST CLASS))
+                                               '((NODE T) (OPERATOR T)))))))))
+                            (APPEND (WHEN (FIND
+                                           'WALK-NODE-PREDECESSORS
+                                           METHODS)
+                                      (LIST (LIST*
+                                             'DEFMETHOD
+                                             (LIST*
+                                              'WALK-NODE-PREDECESSORS
+                                              (LIST*
+                                               :DENOMINATIVE
+                                               (LIST
+                                                (LIST*
+                                                 (LIST*
+                                                  'NAVIGATOR
+                                                  (LIST CLASS))
+                                                 '((NODE T)
+                                                   (OPERATOR T)))))))))
+                                    (APPEND (WHEN
+                                             (FIND
+                                              'WALK-NODE-SUCCESSORS
+                                              METHODS)
+                                             (LIST
+                                              (LIST*
+                                               'DEFMETHOD
+                                               (LIST*
+                                                'WALK-NODE-SUCCESSORS
+                                                (LIST*
+                                                 :DENOMINATIVE
+                                                 (LIST
+                                                  (LIST*
+                                                   (LIST*
+                                                    'NAVIGATOR
+                                                    (LIST CLASS))
+                                                   '((NODE T)
+                                                     (OPERATOR T)))))))))
+                                            (WHEN
+                                             (FIND 'WALK-LINK METHODS)
+                                             (LIST
+                                              (LIST*
+                                               'DEFMETHOD
+                                               (LIST*
+                                                'WALK-LINK
+                                                (LIST*
+                                                 :DENOMINATIVE
+                                                 (LIST
+                                                  (LIST*
+                                                   (LIST* 'WALKER (LIST CLASS))
+                                                   '((RELATION T)
+                                                     (FROM T)
+                                                     (TO T)
+                                                     (OP T)))))))))))))))
+  (DEFDENOMINATIVES WALKER WALK-NODE WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS WALK-LINK)
+  (DEFDENOMINATIVES NODE-OPERATOR WALK-NODE)
+  (DEFDENOMINATIVES NODE-PREDECESSOR-NAVIGATOR WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS)
+  (DEFDENOMINATIVES NODE-SUCCESSOR-NAVIGATOR WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS)
+  (DEFDENOMINATIVES PREORDER-NODE-WALKER WALK-NODE WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS)
+  (DEFDENOMINATIVES SYMMETRIC-NODE-WALKER WALK-NODE WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS)
+  (DEFDENOMINATIVES ENDORDER-NODE-WALKER WALK-NODE WALK-NODE-PREDECESSORS
+   WALK-NODE-SUCCESSORS)
+  (DEFDENOMINATIVES LINK-NAVIGATOR WALK-LINK)
+  (DEFDENOMINATIVES LINK-RELATION-OPERATOR WALK-LINK)
+  (DEFDENOMINATIVES PREORDER-LINK-WALKER WALK-LINK)
+  (DEFDENOMINATIVES ENDORDER-LINK-WALKER WALK-LINK))</div><div class='source'>:EOF</div>
+<hr />
+
+<div class='file'><div class='DOCUMENTATION'><dl><dt>description</dt><dd><p>
+  this file implements a generic graph walker for use with data models.
+  it operates on both acyclic and cyclic directed graphs, and performs either preorder,
+  endorder, or symmetric order traversal.
+  the behaviour is factored into distinct classes for node and link traversal and manipulation.
+  the application controls the behaviour by providing a walker which combines the requisite
+  methods.</p><p>
+  the terminology follows from knuth (section 2.3 of "fundamental algorithms"), as does the test example.
+  his discussion concentrates on the graph nodes and relegates the links to representational artifacts,
+  so the terms "initial" and "final" node are adopted from truss ("discrete methematics for computer scientists").</p><p>
+  a test example demonstrates how the abstract components are combined to define a walker.
+  the literal test model does not agree with knuth's list notation (p 334 of the 1968 edition), as this latter 
+  is ambiguous and incomplete, but that does not affect the results.</p></dd><dt>copyright</dt><dd>&#160;2003, james adam anderson<br/>
+  all rights reserved. no warranty.
+  [<a href='http://www.setf.de/library/ncsl.html'>0</a>]
+  [<a href='ncsl.html'>1</a>]</dd><dt>20021214</dt><dd>JAA: []<br/>rewritten based on what was originally a DOM walker.</dd><dt>20030902</dt><dd>jaa@setf.de: []<br/> added missing walk-link-qualifiers</dd><dt>20031020</dt><dd>jaa@setf.de: []<br/> rearranged the class constituency to clarify the node-link symmetry</dd></dl></div></div >
+<hr /><div class='footer'><span class='copyright'>&#169;</span> <span class='logo'>setf.de</span> 20031111T230006 = <a href='./walker.lisp' type='text/plain'>walker.lisp</a></div>
+</body></html>

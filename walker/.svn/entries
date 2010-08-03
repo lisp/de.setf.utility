@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="1"
+   name=""
+   committed-date="2006-08-09T18:47:39.806190Z"
+   url="file:///Volumes/yoda-ext-fw/Development/Source/Repository/svnroot/dev/Library/trunk/de/setf/utility/walker"
+   last-author="janson"
+   kind="dir"
+   uuid="5c69cada-db8f-48ca-8610-988f9f4d2d05"
+   repos="file:///Volumes/yoda-ext-fw/Development/Source/Repository/svnroot/dev/Library"
+   revision="1"/>
+<entry
+   committed-rev="1"
+   name="package-graph.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="103e4dd6f8989c6aaa638cc2af5b057c"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="mcl.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="b88a32509841ca55c3ff2888c3d78e64"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="package.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="0245648733948ccf01a9179607d2cdcd"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="ncsl.html"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="66678a1a70268fab82f9a047bcdcec76"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="test.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="69df41c87e4b620b4146a315a6a66a57"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="sysdcl.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="0bf2968ba3cf724330f883daf9ac7a05"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="walker.html"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="63b815b27c17c9f3d82cee781fe1293f"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="class-graph.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="7c48c3702689a77d6761ab174483a3ec"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="function-graph.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="a85ac2f4bdb3bd7e11f4b7ed6a22cb76"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="walker.lisp"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="784bf5a37a66c29b39d5eb4b60fba969"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+<entry
+   committed-rev="1"
+   name="mcl.html"
+   text-time="2006-08-09T21:17:59.000000Z"
+   committed-date="2006-08-09T18:47:39.806190Z"
+   checksum="be628d1efcc85fb45e25cb7f2837112a"
+   last-author="janson"
+   kind="file"
+   prop-time="2006-08-09T21:17:59.000000Z"/>
+</wc-entries>

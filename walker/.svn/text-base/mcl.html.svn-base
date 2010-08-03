@@ -1,0 +1,316 @@
+<html><head><title>mcl.lisp</title><style type='text/css'>
+body {background-color: #f4f4f8;}
+hr { clear: left;}
+ *.logo { color: rgb(50%, 9%, 5%);}
+ *.header {
+  background-color: #f0f0f0;
+  margin-bottom: 1ex;
+  border: 1px solid;
+  border-bottom-color: #d8d8d8; border-right-color: #d8d8d8;
+  border-top-color: #ffffff; border-left-color: #ffffff;
+  }
+ *.footer {
+  background-color: #f0f0f0;
+  margin-top: 1ex;
+  border: 1px solid;
+  border-top-color: #d8d8d8; border-left-color: #d8d8d8;
+  border-bottom-color: #ffffff; border-right-color: #ffffff;
+  }
+
+div.text { margin: 1ex; width: 30%; padding: 0; float:left; clear: left; }
+div.definition {
+  width: 65%; margin-left: auto; margin-right:1em; margin-top: .5ex; margin-bottom: .5ex; padding-left: 1em;
+  border: solid; border-width: 1px;
+  border-top-color: #e0e0e0; border-left-color: #e0e0e0; border-right-color: #ffffff; border-bottom-color: #ffffff;
+  background-color: #f6f6fa;
+  }
+div.definition div.signature {
+  margin-top: .1ex; margin-bottom: 0ex; font-family: 'courier';
+  }
+span.nature { float: right; }
+div.definition div.documentation {
+  visibility: visible; margin-left: 2em; margin-top: .1ex; margin-bottom: 0ex;
+  }
+div.definition div.form {
+  visibility: hidden; height: 0;
+  margin-left: 2em; margin-top: 0ex; margin-bottom: 0ex;  white-space: pre;
+  border-color: #e0e0e0;  border: solid; border-width: 1px;
+  font-family: 'courier';
+  background-color: #ffffff;
+  }
+div.source {
+  width: 65%; margin-top: 1ex; margin-bottom: 1ex;  white-space: pre;  clear:left;
+  border-color: #e0e0e0;  border: solid; border-width: 1px;
+  font-family: 'courier';
+  background-color: #ffffff;
+  }
+div.file div.DOCUMENTATION { background-color: #f8f6fa; clear:left;
+                    border: solid; border-width: 1px;
+                    border-color: #e0e0e0;}
+</style>
+<script type='text/javascript'>
+  function showElement(target) {
+    target.style.visibility='visible';
+    target.style.height='auto';
+  }
+  function hideElement(target) {
+    target.style.visibility='hidden';
+    target.style.height='0';
+  }
+  function toggleDefinitionVisibility(name) {
+    formTarget = document.getElementById(name+'_form');
+    docTarget = document.getElementById(name+'_documentation');
+    if ( formTarget != undefined) {
+      if ( formTarget.style.visibility == 'visible' )
+        hideElement(formTarget);
+      else
+        showElement(formTarget);
+    }
+    if ( docTarget != undefined) {
+      if ( docTarget.style.visibility == 'hidden' )
+        showElement(docTarget);
+      else
+        hideElement(docTarget);
+    }
+  }
+  
+</script><meta name='copyright' content='james anderson, setf.de'/><meta name='author' content='james anderson'/><meta name='date' content='20031210T143653'/></head>
+<body>
+<table border='0' cellpadding='.1ex' cellspacing='0' width='100%'><tr><td style='font-size: 16pt; font-weight: bold;' class='logo'>setf.de:</td></tr><tr><td><a href='./mcl.lisp' type='text/plain'>mcl.lisp</a></td></tr><tr><td><hr/></td></tr></table>
+<div class='definition' ID='def_1'>
+  <div class='signature' ><span>*GRAPH-MENU-PACKAGES*</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_1")'>Parameter</a></span></div>
+  <div class='documentation' ID='def_1_documentation'>binds a list of known packages. this set of packages is compared with
+the result of list-all-packages when updating the graph menu. when
+they differ the set of menu entires is rebuilt.</div>
+  <div class='form' ID='def_1_form' onclick='javascript: toggleDefinitionVisibility("def_1")'>(DEFPARAMETER *GRAPH-MENU-PACKAGES* ()
+  "binds a list of known packages. this set of packages is compared with
+the result of list-all-packages when updating the graph menu. when
+they differ the set of menu entires is rebuilt.")</div></div>
+<div class='definition' ID='def_2'>
+  <div class='signature' ><span>*GRAPH-PACKAGES*</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_2")'>Parameter</a></span></div>
+  <div class='documentation' ID='def_2_documentation'>binds the list of packages for the symbols which name objects to be
+included in in graph output. the initial value is a list which contains the 
+common-lisp package. the constituency is modified according to selections
+from the entries in the packages submenu of the graphs menu.</div>
+  <div class='form' ID='def_2_form' onclick='javascript: toggleDefinitionVisibility("def_2")'>(DEFPARAMETER *GRAPH-PACKAGES* (LIST (FIND-PACKAGE :COMMON-LISP))
+  "binds the list of packages for the symbols which name objects to be
+included in in graph output. the initial value is a list which contains the 
+common-lisp package. the constituency is modified according to selections
+from the entries in the packages submenu of the graphs menu.")</div></div>
+<div class='definition' ID='def_3'>
+  <div class='signature' ><span>GRAPH-PACKAGE-MENU</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_3")'>Class</a></span></div>
+  <div class='documentation' ID='def_3_documentation'>a specialized menu class to support an update method which rebuilds
+the menu to reflect the set of all known packages.</div>
+  <div class='form' ID='def_3_form' onclick='javascript: toggleDefinitionVisibility("def_3")'>(DEFCLASS GRAPH-PACKAGE-MENU (MENU)
+  NIL
+  (:DOCUMENTATION
+   "a specialized menu class to support an update method which rebuilds
+the menu to reflect the set of all known packages."))</div></div><div class='text'>
+ add a subment to the Tools menu with entries for graphing classes,
+packages and functions, and a final entry for a further submenu which
+displays all known packages and lets one specify whether they should be
+included in graphs.
+ </div>
+<div class='definition' ID='def_4'>
+  <div class='signature' ><span>*GRAPH-PACKAGE-MENU*</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_4")'>Parameter</a></span></div>
+  <div class='form' ID='def_4_form' onclick='javascript: toggleDefinitionVisibility("def_4")'>(DEFPARAMETER *GRAPH-PACKAGE-MENU* (MAKE-INSTANCE 'GRAPH-PACKAGE-MENU
+                                    :MENU-TITLE "Packages"))</div></div>
+<div class='definition' ID='def_5'>
+  <div class='signature' ><span>*GRAPH-MENU*</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_5")'>Parameter</a></span></div>
+  <div class='form' ID='def_5_form' onclick='javascript: toggleDefinitionVisibility("def_5")'>(DEFPARAMETER *GRAPH-MENU* (MAKE-INSTANCE 'MENU :MENU-TITLE "Graph" :MENU-ITEMS
+                            (LIST (MAKE-INSTANCE
+                                    'WINDOW-MENU-ITEM
+                                    :MENU-ITEM-TITLE
+                                    "Classes"
+                                    :MENU-ITEM-ACTION
+                                    'IDE-GRAPH-CLASSES)
+                                  (MAKE-INSTANCE
+                                    'WINDOW-MENU-ITEM
+                                    :MENU-ITEM-TITLE
+                                    "Packages"
+                                    :MENU-ITEM-ACTION
+                                    'IDE-GRAPH-PACKAGES)
+                                  (MAKE-INSTANCE
+                                    'WINDOW-MENU-ITEM
+                                    :MENU-ITEM-TITLE
+                                    "Functions"
+                                    :MENU-ITEM-ACTION
+                                    'IDE-GRAPH-FUNCTIONS)
+                                  (MAKE-INSTANCE
+                                    'MENU-ITEM
+                                    :MENU-ITEM-TITLE
+                                    "-")
+                                  *GRAPH-PACKAGE-MENU*)))</div></div>
+<div class='definition' ID='def_6'>
+  <div class='signature' ><span>MENU-UPDATE ((MENU GRAPH-PACKAGE-MENU))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_6")'>Method</a></span></div>
+  <div class='documentation' ID='def_6_documentation'>check of the set of known packages has changed. if so, then rebuild the
+packages submenu. continue with the general method in order to update the
+individual menu entries.</div>
+  <div class='form' ID='def_6_form' onclick='javascript: toggleDefinitionVisibility("def_6")'>(DEFMETHOD MENU-UPDATE ((MENU GRAPH-PACKAGE-MENU))
+  "check of the set of known packages has changed. if so, then rebuild the
+packages submenu. continue with the general method in order to update the
+individual menu entries."
+  (LET ((PACKAGES (LIST-ALL-PACKAGES)))
+    (WHEN (OR (/= (LENGTH PACKAGES) (LENGTH *GRAPH-MENU-PACKAGES*))
+              (/= (LENGTH PACKAGES)
+                  (LENGTH (INTERSECTION PACKAGES *GRAPH-MENU-PACKAGES*))))
+      (SETF *GRAPH-MENU-PACKAGES*
+            (SORT (COPY-LIST PACKAGES) #'STRING-LESSP :KEY #'PACKAGE-NAME))
+      (APPLY #'REMOVE-MENU-ITEMS MENU (MENU-ITEMS MENU))
+      (APPLY #'ADD-MENU-ITEMS
+             MENU
+             (MAPCAR #'(LAMBDA (PACKAGE)
+                         (MAKE-INSTANCE
+                           'MENU-ITEM
+                           :MENU-ITEM-TITLE
+                           (PACKAGE-NAME PACKAGE)
+                           :MENU-ITEM-ACTION
+                           #'(LAMBDA NIL
+                               (IF (FIND PACKAGE *GRAPH-PACKAGES*)
+                                   (SETF *GRAPH-PACKAGES*
+                                         (REMOVE PACKAGE *GRAPH-PACKAGES*))
+                                   (PUSH PACKAGE *GRAPH-PACKAGES*)))
+                           :UPDATE-FUNCTION
+                           #'(LAMBDA (ITEM)
+                               (SET-MENU-ITEM-CHECK-MARK
+                                 ITEM
+                                 (IF (FIND PACKAGE *GRAPH-PACKAGES*) T NIL)))))
+                     *GRAPH-MENU-PACKAGES*))))
+  (CALL-NEXT-METHOD))</div></div>
+<div class='source' >(LET* ((MENU (FIND-MENU "Tools")))
+  (UNLESS (FIND-MENU-ITEM MENU "Graph") (ADD-MENU-ITEMS MENU *GRAPH-MENU*)))</div><div class='text'>
+ allow two alternative means to specify the initial designator.
+ if the active window exhibits a selected symbol, use that.
+ otherwise prompt the user for a symbol.
+ </div>
+<div class='definition' ID='def_7'>
+  <div class='signature' ><span>WINDOW-SELECTED-SYMBOL ((WINDOW WINDOW))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_7")'>Method</a></span></div>
+  <div class='documentation' ID='def_7_documentation'>read the current selection and require that it be a symbol.</div>
+  <div class='form' ID='def_7_form' onclick='javascript: toggleDefinitionVisibility("def_7")'>(DEFMETHOD WINDOW-SELECTED-SYMBOL ((WINDOW WINDOW))
+  "read the current selection and require that it be a symbol."
+  (MULTIPLE-VALUE-BIND (START END)
+      (SELECTION-RANGE WINDOW)
+    (UNLESS (= START END)
+      (LET ((DATUM
+             (IGNORE-ERRORS
+               (CCL::STREAM-POSITION WINDOW START)
+               (READ WINDOW))))
+        (WHEN (AND DATUM (SYMBOLP DATUM)) DATUM)))))</div></div>
+<div class='definition' ID='def_8'>
+  <div class='signature' ><span>GET-SYMBOL-FROM-USER (&OPTIONAL (PROMPT enter a symbol))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_8")'>Function</a></span></div>
+  <div class='documentation' ID='def_8_documentation'>prompt the user for a symbol and read the returned string</div>
+  <div class='form' ID='def_8_form' onclick='javascript: toggleDefinitionVisibility("def_8")'>(DEFUN GET-SYMBOL-FROM-USER (&amp;OPTIONAL (PROMPT "enter a symbol"))
+  "prompt the user for a symbol and read the returned string"
+  (READ-FROM-STRING (GET-STRING-FROM-USER PROMPT)))</div></div><div class='text'>
+ provide an abstract mechanism to save a result in a temporary file
+and start a program to present the graph. if no application is provided
+the os makes the choice. omnigraffle works well with .dot files.
+<br/>
+each of the ide-graph-* functions extracts a symbol and invokes the
+respective graphing function to generate a graph file which is then
+opened.
+ </div>
+<div class='definition' ID='def_9'>
+  <div class='signature' ><span>CALL-WITH-APPLICATION-FILE (FUNCTION &KEY APPLICATION TYPE)</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_9")'>Function</a></span></div>
+  <div class='form' ID='def_9_form' onclick='javascript: toggleDefinitionVisibility("def_9")'>(DEFUN CALL-WITH-APPLICATION-FILE (FUNCTION &amp;KEY APPLICATION TYPE)
+  (LET* ((PATHNAME
+          (MAKE-PATHNAME
+            :HOST
+            "home"
+            :NAME
+            (MULTIPLE-VALUE-BIND (SEC MIN HOUR DAY MONTH YEAR)
+                (DECODE-UNIVERSAL-TIME (GET-UNIVERSAL-TIME))
+              (FORMAT NIL
+                      "~@[~a-~]~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d"
+                      TYPE
+                      YEAR
+                      MONTH
+                      DAY
+                      HOUR
+                      MIN
+                      SEC))
+            :TYPE
+            "dot")))
+    (PROG1 (FUNCALL FUNCTION PATHNAME)
+           (SET-MAC-FILE-CREATOR
+             PATHNAME
+             (INTERN (MAKE-STRING 4 :INITIAL-ELEMENT #\Null) :KEYWORD))
+           (SETF PATHNAME (NAMESTRING (TRUENAME PATHNAME)))
+           (SETF PATHNAME (SUBSEQ PATHNAME (1+ (POSITION #\: PATHNAME))))
+           (BSD:SYSTEM-COMMAND
+             (FORMAT NIL
+                     "open ~@[-a ~a~] '/~a'"
+                     APPLICATION
+                     (SUBSTITUTE #\/ #\: PATHNAME))))))</div></div>
+<div class='definition' ID='def_10'>
+  <div class='signature' ><span>IDE-GRAPH-CLASSES ((WINDOW FRED-WINDOW))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_10")'>Method</a></span></div>
+  <div class='form' ID='def_10_form' onclick='javascript: toggleDefinitionVisibility("def_10")'>(DEFMETHOD IDE-GRAPH-CLASSES ((WINDOW FRED-WINDOW))
+  (LET* ((*PACKAGE* (WINDOW-PACKAGE WINDOW))
+         (CLASS-SYMBOL
+          (OR (WINDOW-SELECTED-SYMBOL WINDOW)
+              (GET-SYMBOL-FROM-USER "enter class name"))))
+    (CALL-WITH-APPLICATION-FILE
+      #'(LAMBDA (PATHNAME)
+          (LET ((*CLASS-WALK-DEPTH-LIMIT* 10))
+            (GRAPH-CLASSES
+              :STREAM
+              PATHNAME
+              :CLASS
+              CLASS-SYMBOL
+              :PACKAGES
+              (CONS (SYMBOL-PACKAGE CLASS-SYMBOL) *GRAPH-PACKAGES*))))
+      :TYPE
+      'CLASS)))</div></div>
+<div class='definition' ID='def_11'>
+  <div class='signature' ><span>IDE-GRAPH-FUNCTIONS ((WINDOW FRED-WINDOW))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_11")'>Method</a></span></div>
+  <div class='form' ID='def_11_form' onclick='javascript: toggleDefinitionVisibility("def_11")'>(DEFMETHOD IDE-GRAPH-FUNCTIONS ((WINDOW FRED-WINDOW))
+  (LET* ((*PACKAGE* (WINDOW-PACKAGE WINDOW))
+         (FUNCTION-SYMBOL
+          (OR (WINDOW-SELECTED-SYMBOL WINDOW)
+              (GET-SYMBOL-FROM-USER "enter function name"))))
+    (CALL-WITH-APPLICATION-FILE
+      #'(LAMBDA (PATHNAME)
+          (LET ((*FUNCTION-WALK-DEPTH-LIMIT* 5))
+            (GRAPH-FUNCTIONS
+              :STREAM
+              PATHNAME
+              :FUNCTION
+              FUNCTION-SYMBOL
+              :PACKAGES
+              (CONS (SYMBOL-PACKAGE FUNCTION-SYMBOL) *GRAPH-PACKAGES*)
+              :DEPTH-LIMIT
+              3)))
+      :TYPE
+      'FUNCTION)))</div></div>
+<div class='definition' ID='def_12'>
+  <div class='signature' ><span>IDE-GRAPH-PACKAGES ((WINDOW FRED-WINDOW))</span><span class='nature'><a href='javascript:toggleDefinitionVisibility("def_12")'>Method</a></span></div>
+  <div class='form' ID='def_12_form' onclick='javascript: toggleDefinitionVisibility("def_12")'>(DEFMETHOD IDE-GRAPH-PACKAGES ((WINDOW FRED-WINDOW))
+  (LET* ((PACKAGE-DESIGNATOR
+          (OR (WINDOW-SELECTED-SYMBOL WINDOW)
+              (GET-STRING-FROM-USER
+                "package-name"
+                :INITIAL-STRING
+                (PACKAGE-NAME (WINDOW-PACKAGE WINDOW))))))
+    (TYPECASE PACKAGE-DESIGNATOR
+      (STRING (SETF PACKAGE-DESIGNATOR (FIND-PACKAGE PACKAGE-DESIGNATOR)))
+      (SYMBOL (SETF PACKAGE-DESIGNATOR (SYMBOL-PACKAGE PACKAGE-DESIGNATOR))))
+    (CALL-WITH-APPLICATION-FILE
+      #'(LAMBDA (PATHNAME)
+          (GRAPH-PACKAGES
+            :STREAM
+            PATHNAME
+            :ROOT
+            PACKAGE-DESIGNATOR
+            :PACKAGES-TO-WALK
+            (CONS PACKAGE-DESIGNATOR *GRAPH-PACKAGES*)))
+      :TYPE
+      'PACKAGE)))</div></div><div class='source'>:EOF</div>
+<hr />
+
+<div class='file'><div class='DOCUMENTATION'><dl><dt>description</dt><dd><p>
+  mcl ide tools to use the class/function/package grapher</p></dd><dt>copyright</dt><dd>&#160;2003, james adam anderson<br/>
+  all rights reserved. no warranty.
+  [<a href='http://www.setf.de/library/ncsl.html'>0</a>]
+  [<a href='ncsl.html'>1</a>]</dd><dt>20031101</dt><dd>combined ide interface to various graphers</dd></dl></div></div >
+<hr /><div class='footer'><span class='copyright'>&#169;</span> <span class='logo'>setf.de</span>  = <a href='./20031210T143654' type='text/plain'>mcl.lisp</a></div>
+</body></html>

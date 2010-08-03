@@ -1,0 +1,63 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+
+;;;
+;;; packages for generic walker
+;;;
+;;; (c)2003 james anderson
+;;;         all rights reserved
+;;;         see ncsl.html or http://www.setf.de/library/ncsl.html
+
+(in-package :common-lisp-user)
+
+(modPackage :de.setf.utility.walker
+  (:use-only )
+  (:ensure :de.setf.utility.dot)
+  (:ensure :de.setf.utility.clos)
+  (:use-by :de.setf.utility.implementation)
+  (:export-only
+   :*walker*
+   :caching-walker
+   :cyclic-walker
+   :endorder-node-walker
+   :link-navigator
+   :link-relation-operator
+   :make-walker-cache-entry
+   :map-walk-link
+   :node-navigator
+   :node-operator
+   :node-predecessor-navigator
+   :node-successor-navigator
+   :preorder-link-walker
+   :preorder-node-walker
+   :symmetric-node-walker
+   :walk-link
+   :walk-link-qualifier
+   :walk-link-relation
+   :walk-model
+   :walk-navigate-link
+   :walk-navigator
+   :walk-node
+   :walk-node-predecessors
+   :walk-node-qualifier
+   :walk-node-self
+   :walk-node-successors
+   :walk-operator
+   :walk-qualifiers
+   :walker
+   :walker-clear-cache
+   :walker-entry
+   :walker-entry-node
+   :walker-entry-properties
+   :walker-entry-visited
+   :walker-initialize-cache
+   :walker-link-qualifiers
+   :walker-node-cache-entry
+   :walker-node-properties
+   :walker-node-qualifiers
+   :walker-node-visited
+   :walker-node-visited-p
+   :walker-relations
+   ))
+
+
+:EOF

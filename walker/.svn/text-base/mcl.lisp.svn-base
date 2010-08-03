@@ -1,0 +1,176 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+;;;
+
+(in-package :de.setf.utility.implementation)
+
+<DOCUMENTATION>
+ <DESCRIPTION>
+  <p>
+  mcl ide tools to use the class/function/package grapher</p>
+  </DESCRIPTION>
+ <COPYRIGHT YEAR='2003' AUTHOR='james adam anderson'>
+  all rights reserved. no warranty.
+  [<a href='http://www.setf.de/library/ncsl.html'>0</a>]
+  [<a href='ncsl.html'>1</a>]</COPYRIGHT>
+ <CHRONOLOGY>
+  <DELTA DATE='20031101'>combined ide interface to various graphers</DELTA>
+  </CHRONOLOGY>
+ </DOCUMENTATION>
+
+(defparameter *graph-menu-packages* nil
+  "binds a list of known packages. this set of packages is compared with
+the result of list-all-packages when updating the graph menu. when
+they differ the set of menu entires is rebuilt.")
+
+(defparameter *graph-packages* (list (find-package :common-lisp))
+  "binds the list of packages for the symbols which name objects to be
+included in in graph output. the initial value is a list which contains the 
+common-lisp package. the constituency is modified according to selections
+from the entries in the packages submenu of the graphs menu." )
+
+(defClass graph-package-menu (menu) ()
+  (:documentation
+   "a specialized menu class to support an update method which rebuilds
+the menu to reflect the set of all known packages."))
+
+
+<div>
+ add a subment to the Tools menu with entries for graphing classes,
+packages and functions, and a final entry for a further submenu which
+displays all known packages and lets one specify whether they should be
+included in graphs.
+ </div>
+
+(defparameter *graph-package-menu*
+  (make-instance 'graph-package-menu
+    :menu-title "Packages"))
+
+(defParameter *graph-menu*
+  (make-instance 'menu
+    :menu-title "Graph"
+    :menu-items (list (make-instance 'window-menu-item
+                        :menu-item-title "Classes"
+                        :menu-item-action 'ide-graph-classes)
+                      (make-instance 'window-menu-item
+                        :menu-item-title "Packages"
+                        :menu-item-action 'ide-graph-packages)
+                      (make-instance 'window-menu-item
+                        :menu-item-title "Functions"
+                        :menu-item-action 'ide-graph-functions)
+                      (make-instance 'menu-item
+                        :menu-item-title "-")
+                      *graph-package-menu*)))
+
+
+(defMethod menu-update ((menu graph-package-menu))
+  "check of the set of known packages has changed. if so, then rebuild the
+packages submenu. continue with the general method in order to update the
+individual menu entries."
+  (let ((packages (list-all-packages)))
+    (when (or (/= (length packages) (length *graph-menu-packages*))
+              (/= (length packages) (length (intersection packages *graph-menu-packages*))))
+      (setf *graph-menu-packages* (sort (copy-list packages)
+                                        #'string-lessp :key #'package-name))
+      (apply #'remove-menu-items menu
+             (menu-items menu))
+      (apply #'add-menu-items menu
+             (mapcar #'(lambda (package)
+                         (make-instance 'menu-item
+                           :menu-item-title (package-name package)
+                           :menu-item-action #'(lambda ()
+                                                 (if (find package *graph-packages*)
+                                                   (setf *graph-packages* (remove package *graph-packages*))
+                                                   (push package *graph-packages*)))
+                           :update-function #'(lambda (item)
+                                                (set-menu-item-check-mark item (if (find package *graph-packages*) t nil)))))
+                     *graph-menu-packages*))))
+  (call-next-method))
+
+(let* ((menu (find-menu "Tools")))
+  (unless (find-menu-item menu "Graph")
+    (add-menu-items menu *graph-menu*)))
+
+;(remove-menu-items (find-menu "Tools") (find-menu-item (find-menu "Tools") "Graph"))
+
+<div>
+ allow two alternative means to specify the initial designator.
+ if the active window exhibits a selected symbol, use that.
+ otherwise prompt the user for a symbol.
+ </div>
+
+(defMethod window-selected-symbol ((window window))
+  "read the current selection and require that it be a symbol."
+  (multiple-value-bind (start end) (selection-range window)
+    (unless (= start end)
+      (let ((datum (ignore-errors (ccl::stream-position window start) (read window))))
+        (when (and datum (symbolp datum))
+          datum)))))
+
+(defun get-symbol-from-user (&optional (prompt "enter a symbol"))
+  "prompt the user for a symbol and read the returned string"
+  (read-from-string (get-string-from-user prompt)))
+
+<div>
+ provide an abstract mechanism to save a result in a temporary file
+and start a program to present the graph. if no application is provided
+the os makes the choice. omnigraffle works well with .dot files.
+<br />
+each of the ide-graph-* functions extracts a symbol and invokes the
+respective graphing function to generate a graph file which is then
+opened.
+ </div>
+
+(defun call-with-application-file (function &key application type)
+  (let* ((pathname (make-pathname :host "home"
+                                  :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                          (format nil "~@[~a-~]~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d"
+                                                  type year month day hour min sec))
+                                  :type "dot")))
+    (prog1 (funcall function pathname)
+      (set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+      (setf pathname (namestring (truename pathname)))
+      (setf pathname (subseq pathname (1+ (position #\: pathname))))
+      (bsd:system-command (format nil  "open ~@[-a ~a~] '/~a'" application (substitute #\/ #\: pathname))))))
+
+(defMethod ide-graph-classes ((window fred-window))
+  (let* ((*package* (window-package window))
+         (class-symbol (or (window-selected-symbol window) (get-symbol-from-user "enter class name"))))
+    (call-with-application-file
+     #'(lambda (pathname)
+         (let ((*class-walk-depth-limit* 10))
+           (graph-classes :stream pathname :class class-symbol
+                          :packages (cons (symbol-package class-symbol) *graph-packages*)
+                          ; :packages (list-all-packages)
+                          )))
+     :type 'class)))
+
+(defMethod ide-graph-functions ((window fred-window))
+  (let* ((*package* (window-package window))
+         (function-symbol (or (window-selected-symbol window) (get-symbol-from-user "enter function name"))))
+    (call-with-application-file
+     #'(lambda (pathname)
+         (let ((*function-walk-depth-limit* 5))
+           (graph-functions :stream pathname :function function-symbol
+                            :packages (cons (symbol-package function-symbol) *graph-packages*)
+                            ; :packages (list-all-packages)
+                            :depth-limit 3)))
+     :type 'function)))
+
+(defMethod ide-graph-packages ((window fred-window))
+  (let* ((package-designator (or (window-selected-symbol window)
+                                 (get-string-from-user "package-name"
+                                                       :initial-string (package-name (window-package window))))))
+    (typecase package-designator
+      (string (setf package-designator (find-package package-designator)))
+      (symbol (setf package-designator (symbol-package package-designator))))
+    (call-with-application-file
+     #'(lambda (pathname)
+         (graph-packages :stream pathname
+                         :root package-designator
+                         :packages-to-walk (cons package-designator *graph-packages*)))
+     :type 'package)))
+
+
+    
+
+:EOF

@@ -1,0 +1,474 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+
+(in-package de.setf.utility.implementation)
+
+<DOCUMENTATION>
+ <DESCRIPTION>
+  <p>
+  this file implements a generic graph walker for use with data models.
+  it operates on both acyclic and cyclic directed graphs, and performs either preorder,
+  endorder, or symmetric order traversal.
+  the behaviour is factored into distinct classes for node and link traversal and manipulation.
+  the application controls the behaviour by providing a walker which combines the requisite
+  methods.</p>
+  <p>
+  the terminology follows from knuth (section 2.3 of "fundamental algorithms"), as does the test example.
+  his discussion concentrates on the graph nodes and relegates the links to representational artifacts,
+  so the terms "initial" and "final" node are adopted from truss ("discrete methematics for computer scientists").</p>
+  <p>
+  a test example demonstrates how the abstract components are combined to define a walker.
+  the literal test model does not agree with knuth's list notation (p 334 of the 1968 edition), as this latter 
+  is ambiguous and incomplete, but that does not affect the results.</p>
+  </DESCRIPTION>
+ <COPYRIGHT YEAR='2003' AUTHOR='james adam anderson'>
+  all rights reserved. no warranty.
+  [<a href='http://www.setf.de/library/ncsl.html'>0</a>]
+  [<a href='ncsl.html'>1</a>]</COPYRIGHT>
+ <CHRONOLOGY>
+  <DELTA DATE='20021214' AUTHOR='JAA'>rewritten based on what was originally a DOM walker.</DELTA>
+  <DELTA DATE='20030902' AUTHOR='jaa@setf.de'> added missing walk-link-qualifiers</DELTA>
+  <DELTA DATE='20031020' AUTHOR='jaa@setf.de'> rearranged the class constituency to clarify the node-link symmetry</DELTA>
+  </CHRONOLOGY>
+ </DOCUMENTATION>
+
+
+(defParameter *walker* nil
+  "binds the current walker within walk-model.")
+
+<h3>class structure</h3>
+<div>
+ the abstract walker classes distinguish the aspects
+ <ul>
+  <li><code>walker</code> is the abstract class for which the elementary interface functions - <code>walk-model</code>
+   <code>walk-node</code>, and <code>walk-link</code>, are defined.</li>
+  <li><code>walk-operator</code> distinguished classes intended to operate on nodes and links.</li>
+  <li><code>walk-navigator</code> distinguishes classes intended to traverse nodes and links.</li>
+  <li><code>caching-walker</code> binds a cache and implements operations to record properties for nodes and links.</li>
+  <li><code>cyclic-walker</code> uses recorded node properties to limit node operations to once only.</li>
+  <li><code>acyclic-walker</code> distinguishes classes intended to traverse nodes and links.</li>
+  </ul>
+
+these abstract classes are specialized to distinguish constituents in walking patterns
+ <ul>
+  <li><code>node-operator</code> operates on nodes</li>
+  <li><code>node-predecessor-navigator</code> traverses a node's predecessors</li>
+  <li><code>node-successor-navigator</code> traverses a node's successors</li>
+  <li><code>link-navigator</code> traverse from a links origin to its target</li>
+  <li><code>link-relation-operator</code> operates on a named link relation</li>
+  <li><code>walk-qualifier</code> computes qualification constraints for the actions of the other pattern constituent classes</li>
+  </ul>
+
+these, in turn, are combined in classes which implement concrete walking patterns
+ <ul>
+  <li><code>node-walker</code></li>
+  <li><code>preorder-node-walker</code> operates on the node, then walks predecessors, then successors</li>
+  <li><code>symmetric-node-walker</code> traverses predecessors, then operates, then traverses the successors</li>
+  <li><code>endorder-node-walker</code> walks predecessors, then successors, then operates on the node</li>
+  <li><code>node-navigator</code>  walks predecessors, then successors, but does not operate on a node </li>
+  <li><code>preorder-link-walker</code> operates on a links relation then traverses from origin to target</li>
+  <li><code>endorder-link-walker</code> traversed from origin to target, then operates on a links relation</li>
+  </ul>
+
+ </div>
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defparameter *packages-to-walk* nil)
+
+(defun coerce-to-package (datum)
+  (etypecase datum
+    (symbol (coerce-to-package (string datum)))
+    (string (or (find-package datum)
+                (error "package not found: ~s." datum)))
+    (package datum)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defAbstractClass walker () ()
+  (:documentation
+   "the abstract class of all walker controls."))
+
+(defAbstractClass walk-navigator (walker) ()
+  (:documentation
+   "the abstract class of walker controls which control navigation."))
+
+(defAbstractClass walk-operator (walker) ()
+  (:documentation
+   "the abstract class of walker controls which control manipulation."))
+
+(defAbstractClass caching-walker (walker)
+  ((cache :initform nil))
+  (:documentation
+   "an abstract class of walker controls which bind a node cache and implement
+    walker-node-cache-entry walker-node-properties and walker-node-visited."))
+
+(defAbstractClass cyclic-walker (caching-walker)
+  ()
+  (:documentation
+   "an abstract class of walker controls which uses a node cache to constrain node operations to once only."))
+
+(defClass acyclic-walker (walker) ())
+
+
+(defClass node-operator (walk-operator) ()
+  (:documentation
+   "a node-operator implements walk-node-self methods to effect operator application to the node proper."))
+
+(defClass node-predecessor-navigator (walk-navigator) ()
+  (:documentation
+   "a node-pre-navigator implements walk-node-predecessors methods to effect traversal of links which preceed the node proper."))
+
+(defClass node-successor-navigator (walk-navigator) ()
+  (:documentation
+   "a node-post-navigator implements walk-node-successors methods to effect traversal of links which succeed the node proper."))
+
+
+(defClass link-navigator (walk-navigator) ()
+  (:documentation
+   "a link-navigator implements walk-link-other to effect traversal to the link's target node. the default method ignores the initial node."))
+
+(defClass link-relation-operator (walk-operator) ()
+  (:documentation
+   "a link-relation-operator implements walk-link-relation methods to effect operator application to the (relation X initial-node X target-node) combination."))
+
+
+(defClass walk-qualifier (walker)
+  ((walk-qualifiers
+    :initform nil  ;; no initarg :initarg :qualifiers
+    :allocation :class
+    :accessor walk-qualifiers
+    :documentation
+    "a list of method qualifiers which constrain the selection and order of
+     methods for a given denominated method combination. by default it is
+     shared by the combinations for the functions walk-node, walk-link,
+     walk-navigate-nde-predecessors, and walk-node-successors. should there
+     be some reason to need to treat identical qualifiers differently for the
+     respective methods, the immediate source in each case is the respective
+     function -qualifiers, which can be specialized by walker. note that the
+     literal source is an allocated instance, which means that the reference
+     must suceed on an uninitialized instance; thus the class allocation."))
+  (:documentation
+   "a mixin class for walkers which explicitly qualified the operations for a node."))
+
+(defGeneric walker-node-qualifiers (walker)
+  (:method ((walker walk-qualifier)) (walk-qualifiers walker)))
+
+(defGeneric walker-node-predecessor-qualifiers (walker)
+  (:method ((walker walk-qualifier)) (walk-qualifiers walker)))
+
+(defGeneric walker-node-successor-qualifiers (walker)
+  (:method ((walker walk-qualifier)) (walk-qualifiers walker)))
+
+(defGeneric walker-link-qualifiers (walker)
+  (:method ((walker walk-qualifier)) (walk-qualifiers walker)))
+
+
+;;;
+;;; idiomatic combinations
+
+(defClass preorder-node-walker (node-operator node-predecessor-navigator  node-successor-navigator) ()
+  (:documentation
+   "a preorder-node-walker combines walk-node methods so as to implement preorder traversal."))
+
+(defClass symmetric-node-walker (node-predecessor-navigator node-operator node-successor-navigator) ()
+  (:documentation
+   "a symmetric-order-node-walker combines walk-node methods so as to implement symmetric (postorder) traversal."))
+
+(defClass endorder-node-walker (node-predecessor-navigator node-successor-navigator node-operator) ()
+  (:documentation
+   "a endorder-node-walker combines walk-node methods so as to implement endorder traversal."))
+
+(defClass node-navigator (node-predecessor-navigator node-successor-navigator) ()
+  (:documentation
+   "a node-navigator combines walk-node methods so as to implement navigation without manipulation."))
+
+(defClass preorder-link-walker (link-relation-operator link-navigator) ()
+  (:documentation
+   "a preorder-link-walker combines walk-link methods so as to implement link traversal as a relation operation followed by navigation to the target."))
+
+(defClass endorder-link-walker (link-navigator link-relation-operator) ()
+  (:documentation
+   "a endorder-link-walker combines walk-link methods so as to implement link traversal as navigation to the target followed by a relation operation."))
+
+
+<h3>cache management</h3>
+<div>
+ a caching-walker maintaines a record for nodes. the specialization
+ cyclic-walker implements and :around method for walk-node which cuts off
+ the walk if the respective cache entry indicates that the node has already
+ been visited. it does not, however, either add the cache entry or set the
+ indicator. this is left to the application in order that it can specify
+ when it is through with the respective node.</div>
+
+(defstruct walker-entry
+  "each walker cache entry binds the node, a visited flag, and a property list"
+  (visited nil :type (member nil t))
+  (node nil :type t)
+  (properties nil :type list))
+
+(defGeneric make-walker-cache-entry (navigator node)
+  (:method ((navigator caching-walker) (node t))
+           (make-walker-entry :node node)))
+
+(defGeneric walker-node-cache-entry (navigator node)
+  (:method ((navigator t) (node t)) nil)
+  (:method ((navigator caching-walker) (node t))
+           (with-slots (cache) navigator
+             (or (gethash node cache)
+                 (setf (gethash node cache) (make-walker-cache-entry navigator node))))))
+
+(defGeneric walker-node-properties (navigator node)
+  (:method ((navigator t) (node t)) nil)
+  (:method ((navigator caching-walker) (node t))
+           (walker-entry-properties (walker-node-cache-entry navigator node))))
+
+(defGeneric (setf walker-node-properties) (properties navigator node)
+  (:method ((properties list) (navigator caching-walker) (node t))
+           (setf (walker-entry-properties (walker-node-cache-entry navigator node)) properties)))
+
+(defGeneric walker-node-visited-p (navigator node)
+  (:method ((navigator t) (node t)) nil)
+  (:method ((navigator caching-walker) (node t))
+           (walker-entry-visited (walker-node-cache-entry navigator node))))
+
+(defGeneric (setf walker-node-visited) (visited navigator node)
+  (:method ((visited t) (navigator caching-walker) (node t))
+           (setf (walker-entry-visited (walker-node-cache-entry navigator node)) visited)))
+
+(defGeneric walker-initialize-cache (navigator)
+  (:method ((navigator t)) nil)
+  (:method ((navigator caching-walker))
+           (with-slots (cache) navigator (setf cache (make-hash-table)))))
+
+(defGeneric walker-clear-cache (navigator)
+  (:method ((navigator t)) nil)
+  (:method ((navigator caching-walker))
+           (with-slots (cache) navigator
+             (if cache (clrhash cache) (walker-initialize-cache navigator)))))
+
+
+<h3>generic traversal</h3>
+<div>
+ traversal exhibits an iterative symmetry between nodes and links involving
+ four distinct operations
+ <ul>
+  <li>operate on the node</li>
+  <li>navigate from the node through the links</li>
+  <li>operate on the link</li>
+  <li>navigate from the link through the nodes</li>
+  </ul>
+
+ the implementation is expressed in distinct qualified methods for walk-node
+ and walk-link. each method is qualifed to indicate its role in a general
+ traversal - from nodes: self, predecessors, and successors - from links: 
+ other, and relations.</div>
+<div> in both cases, the order of combination is determined for the respective
+ navigator class through the method combination, in that it combines the
+ denominated methods as specified by the walker through the various forms of
+ walker-*-qualifiers. each of the abstract classes node-operator, 
+ node-predecessor-navigator, node-successor-navigator,
+ link-relation-operator, and link-navigator contribute a qualifier and the
+ abstract idiomatic classes like endorder-node-walker cause these to be
+ ordered appropriately.
+ an application is also free to define and specify entirely different
+ walk-node and walk-link components</div>
+
+(defGeneric walk-model (model walker operator)
+  (:documentation
+   "iterate over a model graph using a navigator instance to control link traversal and operator application. the operator should be both polymorphic and multivalent to the extent required by the nodes and node pairs. this includes children as well as class-specific dependants, such as definitional aspects of a document, element, or annotation. a before method is defined for caching walker to clear the cache and a general base method is defined which combines the navigator, model, and function in call to walk-node to start navigation.
+    where the navigator caches, the cache is cleared at the outset.")
+  (:method :before ((model t) (walker caching-walker) (operator t))
+           (walker-clear-cache walker))
+  (:method ((model t) (*walker* t) (operator t))
+           (walk-node *walker* model operator)))
+
+
+(defGeneric walk-node (navigator node operator)
+  (:documentation
+   "walk within the node proper.
+    the primary navigation methods distinguish pre- and post-order navigation.
+    the method combination, denominated, is declared to use the function
+    walk-node-qualifiers to determine which qualifiers apply to a given walker
+    instance and in which order. the initial generic definition defines an
+    :around methods for cyclic-walker and for a nullnode to filter traversal,
+    and the qualified methods self - for walk-node-self, predecessors - for
+    walk-node-predecessors, and successors - for walk-node-successors.")
+  (:method-combination denominated :order :most-specific-first :operator and :qualifiers walk-node-qualifiers :verbose nil)
+  (:method :around ((navigator cyclic-walker) (node t) (operator t))
+           (unless (walker-node-visited-p navigator node)
+             (call-next-method)))
+  (:method :around ((navigator walker) (node null) (operator t))
+           nil)
+  (:method t ((navigator walker) (node t) (operator t))
+           node)
+  (:method self ((navigator walker) (node t) (operator t))
+           (walk-node-self node navigator operator))
+  (:method self ((navigator caching-walker) (node t) (operator t))
+           (let ((result (call-next-method)))
+             (when result (setf (walker-node-visited navigator node) t))
+             result))
+  (:method predecessors ((navigator walker) (node t) (operator t))
+           (walk-node-predecessors navigator node operator)
+           node)
+  (:method successors ((navigator walker) (node t) (operator t))
+           (walk-node-successors navigator node operator)
+           node))
+
+(defGeneric walk-node-qualifiers (function navigator node operator)
+  (:documentation
+   "computes the qualifiers which govern the effective navigation from a given node using a given walker. these are used by the denominated method combination when computing the effective method for a given operation. the default implementation relies the either on the superclasses of the walker only (node-predecessor-navigator, node-successor-navigator, and node-operator) and determines the applicable qualifiers and their order from the class precedence, or relies on the sequence yielded by the walker-node-qualifiers method. it does not take the generic function, node, and operator in to account.")
+  (:method ((function t) (navigator walker) (node t) (operator t))
+           nil)
+  (:method ((function t) (navigator node-operator) (node t) (operator t))
+           (cons 'self (call-next-method)))
+  (:method ((function t) (navigator node-predecessor-navigator) (node t) (operator t))
+           (cons 'predecessors (call-next-method)))
+  (:method ((function t) (navigator node-successor-navigator) (node t) (operator t))
+           (cons 'successors (call-next-method)))
+  (:method ((function t) (navigator class) (node t) (operator t))
+           (walk-node-qualifiers function (class-prototype navigator) node operator))
+  (:method ((function t) (navigator walk-qualifier) (node t) (operator t))
+           (append (walker-node-qualifiers navigator) (call-next-method))))
+
+  
+
+(defGeneric walk-node-self (node navigator function)
+  (:method ((node t) (navigator node-operator) (function t))
+           (funcall function node))
+  (:method ((node t) (navigator t) (function t))
+           node))
+
+(defGeneric walk-node-predecessors (navigator node operator)
+  (:method-combination denominated :order :most-specific-first :operator and :qualifiers walk-node-predecessor-qualifiers)
+  (:documentation
+   "concrete specializations of node-successor-navigator must implement named
+    methods to walk predecessor links for each node class by calling walk-link
+    with arguments navigator, relation, outgoing node, and incident node. the
+    effective method is a most-specific-last and method combination."))
+
+(defGeneric walk-node-successors (navigator node operator)
+  (:method-combination denominated :order :most-specific-first :operator and :qualifiers walk-node-successor-qualifiers)
+  (:documentation
+   "concrete specializations of node-successor-navigator must implement named
+    methods to walk predecessor links for each initial node class. they
+    effective method is a most-specific-last and method combination."))
+
+(defGeneric walk-node-successor-qualifiers (function navigator node operator)
+  (:documentation
+   "computes the qualifiers which govern the effective navigation from a given
+    node using a given walker to its successors. the general method delegates
+    to walker-node-successors-qualifiers (navigator).")
+  (:method ((function t) (navigator t) (node t) (operator t))
+           nil)
+  (:method ((function t) (navigator node-predecessor-navigator) (node t) (operator t))
+           (cons 'predecessors (call-next-method)))
+  (:method ((function t) (navigator node-successor-navigator) (node t) (operator t))
+           (cons 'successors (call-next-method)))
+  (:method ((function t) (navigator class) (node t) (operator t))
+           (walk-node-successor-qualifiers function (class-prototype navigator) node operator))
+  (:method ((function t) (navigator walk-qualifier) (node t) (operator t))
+           (append (walker-node-successor-qualifiers navigator) (call-next-method))))
+
+(defGeneric walk-node-predecessor-qualifiers (function navigator node operator)
+  (:documentation
+   "computes the qualifiers which govern the effective navigation from a given
+    node using a given walker to its predecessors. the general method delegates
+    to walker-node-predecessor-qualifiers (navigator).")
+  (:method ((function t) (navigator t) (node t) (operator t))
+           nil)
+  (:method ((function t) (navigator node-predecessor-navigator) (node t) (operator t))
+           (cons 'predecessors (call-next-method)))
+  (:method ((function t) (navigator node-successor-navigator) (node t) (operator t))
+           (cons 'successors (call-next-method)))
+  (:method ((function t) (navigator class) (node t) (operator t))
+           (walk-node-predecessor-qualifiers function (class-prototype navigator) node operator))
+  (:method ((function t) (navigator walk-qualifier) (node t) (operator t))
+           (append (walker-node-predecessor-qualifiers navigator) (call-next-method))))
+
+
+
+
+(defGeneric walk-link (navigator relation from to operator)
+  (:documentation
+   "walk a relation link between a node from and a node to
+    controlled by navigator and using operator.")
+  (:method-combination denominated :order :most-specific-first :operator and :qualifiers walk-link-qualifiers)
+  (:method t ((navigator walker) (relation t) (from t) (to t) (op t))
+           to)
+  (:method other ((navigator walker) (relation t) (from t) (to t) (op t))
+           (walk-link-other navigator from to op))
+  (:method relations ((navigator walker) (relation t) (from t) (to t) (op t))
+           (walk-link-relation navigator relation from to op)))
+
+(defGeneric walk-link-qualifiers (function navigator relation from to operator)
+  (:documentation
+   "computes the qualifiers which govern the effective navigation for a given
+    link. these are used by the nominated method combination when computing
+    the effective method for a given operation. the qualifiers are distinguished
+    by the class of the walker only. the generic function, node, and operator do
+    not signify.")
+  (:method ((function t) (navigator walker) (relation t) (from t) (to t) (op t))
+           nil)
+  (:method ((function t) (navigator link-navigator) (relation t) (from t) (to t) (operator t))
+           (cons 'other (call-next-method)))
+  (:method ((function t) (navigator link-relation-operator) (relation t) (from t) (to t) (operator t))
+           (cons 'relations (call-next-method)))
+  (:method ((function t) (navigator class) (relation t) (from t) (to t) (op t))
+           (walk-link-qualifiers function (class-prototype navigator) relation from to op))
+  (:method ((function t) (navigator walk-qualifier) (relation t) (from t) (to t) (op t))
+           (append (walker-link-qualifiers navigator) (call-next-method))))
+
+(defGeneric walk-link-other (navigator from to op)
+  (:method ((navigator t) (from t) (to t) (op t))
+           to)
+  (:method ((navigator link-navigator) (from t) (to t) (op t))
+           (walk-node navigator to op)))
+
+(defGeneric walk-link-relation (navigator relation from-node to-node operator)
+  (:method ((navigator link-relation-operator) (relation t) (from t) (to t) (operator t))
+           (funcall operator from to relation)
+           (call-next-method))
+  (:method ((navigator t) (relation t) (from t) (to t) (operator t))
+           to))
+
+(defGeneric map-walk-link (to-node-sequence navigator relation from-node operator)
+  (:method ((to t) (navigator t) (relation t) (from t) (operator t))
+           (walk-link navigator relation from to operator))
+  (:method ((to null) (navigator t) (relation t) (from-node t) (operator t))
+           nil)
+  (:method ((to-nodes cons) (navigator t) (relation t) (from-node t) operator)
+           (dolist (to to-nodes) (walk-link navigator relation from-node to operator)))
+  (:method ((to-nodes hash-table) (navigator t) (relation t) (from-node t) operator)
+           (maphash #'(lambda (key to) (declare (ignore key)) (walk-link navigator relation from-node to operator)) to-nodes))
+  (:method ((to-nodes sequence) (navigator t) (relation t) (from-node t) operator)
+           (map nil #'(lambda (to) (walk-link navigator relation from-node to operator)) to-nodes)))
+
+
+
+;;;
+;;; default denominative methods
+
+(macrolet ((defDenominatives (class &rest methods)
+             `(progn ,@(when (find 'walk-node methods)
+                         `((defmethod walk-node :denominative ((navigator ,class) (node t) (operator t)))))
+                     ,@(when (find 'walk-node-predecessors methods)
+                         `((defmethod walk-node-predecessors :denominative ((navigator ,class) (node t) (operator t)))))
+                     ,@(when (find 'walk-node-successors methods)
+                         `((defmethod walk-node-successors :denominative ((navigator ,class) (node t) (operator t)))))
+                     ,@(when (find 'walk-link methods)
+                         `((defmethod walk-link :denominative ((walker ,class) (relation t) (from t) (to t) (op t))))))))
+  (defDenominatives walker walk-node walk-node-predecessors walk-node-successors walk-link)
+  (defDenominatives node-operator walk-node)
+  (defDenominatives node-predecessor-navigator walk-node-predecessors walk-node-successors)
+  (defDenominatives node-successor-navigator walk-node-predecessors walk-node-successors)
+  (defDenominatives preorder-node-walker walk-node walk-node-predecessors walk-node-successors)
+  (defDenominatives symmetric-node-walker walk-node walk-node-predecessors walk-node-successors)
+  (defDenominatives endorder-node-walker walk-node walk-node-predecessors walk-node-successors)
+  (defDenominatives link-navigator walk-link)
+  (defDenominatives link-relation-operator walk-link)
+  (defDenominatives preorder-link-walker walk-link)
+  (defDenominatives endorder-link-walker walk-link))
+
+
+:EOF

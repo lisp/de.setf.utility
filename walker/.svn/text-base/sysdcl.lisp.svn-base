@@ -1,0 +1,17 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: common-lisp-user; -*-
+
+(in-package :common-lisp-user)
+
+(define-system
+    (:walker)
+    ()
+    "library:de;setf;utility;walker;package"
+    "library:de;setf;utility;walker;walker"
+    "library:de;setf;utility;walker;package-graph"
+    "library:de;setf;utility;walker;class-graph"
+    "library:de;setf;utility;walker;function-graph"
+    #+mcl "library:edu;umass;cs;bburns;bsd"
+    #+mcl "library:de;setf;utility;walker;mcl"
+    )
+          
+:EOF

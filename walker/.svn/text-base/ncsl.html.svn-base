@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+
+<HEAD>
+	<META HTTP-EQUIV="Content-Type" CONTENT="text/html;CHARSET=iso-8859-1">
+        <LINK REV="made" HREF="mailto:james.anderson@setf.de">
+	<TITLE>setf.de LISP Library Noncommercial Source License</TITLE>
+</HEAD>
+
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#1F00FF" VLINK="#9900DD" ALINK="#FF0000">
+
+<P>
+<TABLE BORDER="0" WIDTH="100%">
+	<TR>
+		<TD WIDTH="78%" VALIGN="TOP"><B>NONCOMMERCIAL SOURCE LICENSE<BR>
+			<BR>
+			</B>setf.de LISP Library Noncommercial Source License<BR>
+			20031102T0000</TD>
+		<TD WIDTH="22%" VALIGN="TOP">
+			<P ALIGN="RIGHT">setf.de
+		</TD>
+	</TR>
+</TABLE>
+</P>
+<P>
+<HR>
+</P>
+
+<UL>
+	<LI><A HREF="#PEAMBLE">PREAMBLE</A>
+	<LI><A HREF="#TERMS">TERMS AND CONDITIONS FOR COPYING AND DISTRIBUTION</A>
+</UL>
+
+<P>
+<HR>
+</P>
+<PRE></PRE>
+<H2><A NAME="PREAMBLE"></A>PREAMBLE</H2>
+<P>This license is intended for parties who wish to use components from the <A HREF="http://www.setf.de/index.html">setf.de</A>
+library for noncommercial applications. It permits one to copy and use the library
+to develop noncommercial applications only. If one intends to use these components
+in a commercial application, a commectial source license or a commercial binary license
+is required instead.</P>
+<P>Subclasses and additional methods are freely distributable. Distribution of Library
+classes and functions themselves and changes to those functions and classes is subject
+to restrictions.</P>
+<P>The precise terms and conditions for copying follow.</P>
+<P>
+<HR>
+</P>
+<H2><A NAME="TERMS"></A>TERMS AND CONDITIONS FOR COPYING AND MODIFICATION</H2>
+<P><STRONG>TERMS OF USE</STRONG></P>
+<P><STRONG>0.</STRONG> This License applies to the <A HREF="http://www.setf.de/index.html">setf.de</A>
+library software (the &quot;Library&quot;). The Library is made available as a source
+archive (.tar file), and as individual source (.lisp) files. the Library comprises
+Common Lisp functions and classes in various packages with the prefix <CODE>de.setf</CODE>.
+The &quot;Library&quot;, below, refers to this software, and a &quot;work based on
+the Library&quot; means any Program or any derivative work which contains the Library
+or a portion of it, either verbatim or as a linked component. Each licensee is addressed
+as &quot;you&quot;.</P>
+<P><STRONG>1.</STRONG> You have a non-exclusive right to copy the Library source
+code as you receive it, in any medium, for your own noncommercial use, provided that
+you conspicuously and appropriately either retain on each copy an appropriate copyright
+notice and disclaimer of warranty, and keep intact all the notices that refer to
+this License and to the absence of any warranty.</P>
+<P><STRONG>2.</STRONG> You may modify your copy or copies of the Library or any portion
+of it, thus forming a work based on the Library, and copy such modifications or work
+under the terms of Section 1 above, provided that you also meet all of these conditions:</P>
+
+<UL>
+	<LI><STRONG>a)</STRONG> the source code may not be distributed, neither as verbatim
+	copies nor as derivative works.
+	<LI><B>b)</B> if the copy is a compilation of the Library, it is distributed under
+	the terms of Section 3, below.
+	<LI><B>c)</B> if the copy is a derivative work, it is distributed as an integral
+	part of an end-user application, in binary form only, under the terms of Section
+	3, below.
+	<LI><B>d)</B> isolated, specialized functions and classes are not restricted by this
+	license if they specialize the Library classes or functions through their public
+	interfaces and function when linked with the Library's original binary form.<BR>
+	Thus, it is not the intent of this section to claim rights or contest your rights
+	to work written entirely by you; rather, the intent is to exercise the right to control
+	the distribution of the Library and of derivative works based on the Library.
+</UL>
+
+<P><STRONG>3.</STRONG> You have a non-exclusive right to copy the Library in binary
+form, as you receive it or as modified by you, in any medium, provided that it is
+an integral part of a noncommercial, end-user application, and provided that you
+conspicuously and appropriately publish on each copy an appropriate copyright notice,
+assume full responsibility for any warranty; keep intact all the notices that refer
+to this License, and give any other recipients of the Library a copy of this License
+along with the Library.</P>
+<P><STRONG>4. </STRONG>You may not aggregate the Library with of another work for
+distribution - whether the other work is based on the Library or not, except under
+the terms of Section 3, above.</P>
+<P><STRONG>5.</STRONG>You may not charge a fee for a copy of the Library and you
+may not offer services and/or programs and/or offer warranty protection whether directly
+or indirectly related to the Library in exchange for a fee.</P>
+<P><STRONG>6.</STRONG> You may not copy, modify, sublicense, or distribute the Library
+except as expressly provided under this License. Any attempt otherwise to copy, modify,
+sublicense or distribute the Library is void, and will automatically terminate your
+rights under this License.</P>
+<P><STRONG>7.</STRONG> If any portion of this license is held invalid or unenforceable
+under any particular circumstance, the balance of the license is intended to apply.</P>
+<P><STRONG>NO WARRANTY</STRONG></P>
+<P><STRONG>A.</STRONG>THERE IS NO WARRANTY FOR THE LIBRARY, TO THE EXTENT PERMITTED
+BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS
+AND/OR OTHER PARTIES PROVIDE THE PROGRAM &quot;AS IS&quot; WITHOUT WARRANTY OF ANY
+KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. YOU ACKNOWLEDGE THAT THE
+PROGRAM IS NOT DESIGNED OR INTENDED FOR USE IN THE DESIGN CONSTRUCTION OF ANY NUCLEAR
+FACILITY AND THE AUTHOR DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR
+SUCH USES.THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH
+YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,
+REPAIR OR CORRECTION.</P>
+<P><STRONG>B.</STRONG> IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO
+IN WRITING WILL THE COPYRIGHT HOLDER BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY
+GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY
+TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED
+INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM
+TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</P>
+<P>
+<HR>
+</P>
+<H2>END OF LICENSE
+
+
+</BODY>
+
+</HTML>

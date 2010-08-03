@@ -1,0 +1,164 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+;;;
+
+#|
+<DOCUMENTATION>
+ <DESCRIPTION>
+  <p>a simple package grapher
+   </p>
+  </DESCRIPTION>
+ <CHRONOLOGY>
+  <DELTA DATE='20021120' />
+  <DELTA DATE='20031101'> cleaned up and adjusted for denominated methods</DELTA>
+  <DELTA DATE='20031210'> corrected qualifier slot name for walker class</DELTA>
+  </CHRONOLOGY>
+ </DOCUMENTATION>
+|#
+
+(in-package :de.setf.utility.implementation)
+
+(modPackage :de.setf.utility.package.graph
+  (:use-only )
+  (:use-by :de.setf.utility.implementation)
+  (:export
+   :package-walker
+   :walk-packages
+   :graph-packages
+   :print-packages
+   ))
+
+
+
+;; dot-graphing for packages
+
+(defparameter *package-print-level* 0)
+
+
+(defun read-file-package-names (pathname &aux names form (eof (gensym)) (error (gensym)))
+  (labels ((extract-name (form)
+             (let ((operator (first form)))
+               (cond ((eq operator 'eval-when)
+                      (mapcar #'extract-name (cddr form)))
+                     ((and (search "package" (string operator) :test #'char-equal)
+                           (symbolp (second form)))
+                      (pushnew (string (second form)) names :test #'string=))))))
+    (with-open-file (stream pathname :direction :input)
+      (loop (setf form (handler-case (read stream nil eof)
+                         (error () error)))
+            (when (or (eq eof form) (eq form error)) (return))
+            (when (consp form) (extract-name form)))
+      names)))
+
+;(mapcar #'read-file-package-names (directory "packages:de;**;*.lisp"))
+
+(defClass package-walker (preorder-node-walker
+                          preorder-link-walker
+                          cyclic-walker
+                          walk-qualifier)
+  ((walk-qualifiers :initform '(used-by imports uses relations other) :allocation :class)))
+
+(defmethod walk-node-predecessors uses
+           ((walker package-walker) (package package) (op t))
+  (dolist (uses (package-use-list package))
+    (unless (find package (getf (walker-node-properties walker uses) 'used-by))
+      (push uses (getf (walker-node-properties walker package) 'uses))
+      (walk-link walker 'uses package uses op)))
+  package)
+
+(defmethod walk-node-predecessors imports
+           ((walker package-walker) (package package) (op t))
+  (let ((imports nil))
+    (with-package-iterator (next-symbol package :internal :external)
+      (loop (multiple-value-bind (more symbol) (next-symbol)
+              (unless more (return))
+              (unless (eq (symbol-package symbol) package)
+                (pushnew (symbol-package symbol) imports)))))
+    (when imports (map-walk-link imports walker 'imports package op)))
+  package)
+
+(defmethod walk-node-successors used-by
+           ((walker package-walker) (package package) (op t))
+  (dolist (used-by (package-used-by-list package))
+    (unless (find package (getf (walker-node-properties walker used-by) 'uses))
+      (push used-by (getf (walker-node-properties walker package) 'used-by))
+      (walk-link walker 'used-by package used-by op)))
+  package)
+
+(defMethod walk-link :around
+           ((walker package-walker) (relation t) (from package) (to package) (op t))
+  (when (find to *packages-to-walk*)
+    (let ((*package-print-level* (1+ *package-print-level*)))
+      (call-next-method)
+      to)))
+
+(defmethod walk-node :denominative ((navigator package-walker) (node t) (operator t)))
+(defmethod walk-node-predecessors :denominative ((navigator package-walker) (node t) (operator t)))
+(defmethod walk-node-successors :denominative ((navigator package-walker) (node t) (operator t)))
+(defmethod walk-link :denominative ((walker package-walker) (relation t) (from t) (to t) (op t)))
+
+
+(defGeneric walk-packages (root packages op &key &allow-other-keys)
+  (:argument-precedence-order packages root op)
+  (:method ((root t) (packages pathname) op &rest options)
+           (apply #'walk-packages root
+                  (remove-duplicates (apply #'append
+                                            (mapcar #'read-file-package-names
+                                                    (if (directory-pathname-p packages)
+                                                      (directory (make-pathname :name :wild :type :wild :defaults packages)
+                                                                 :files t :directories nil)
+                                                      (list packages)))))
+                  op
+                  options))
+  (:method ((root t) (packages t) op &rest options)
+           (apply #'walk-packages (coerce-to-package root) packages op options))
+  (:method ((root null) (packages t) (op t) &rest options)
+           (apply #'walk-packages (find-package "COMMON-LISP") packages op options))
+  (:method ((root t) (packages null) op &rest options)
+           (apply #'walk-packages root (list-all-packages) op options))
+  (:method ((root t) (package-predicate function) op &rest options)
+           (apply #'walk-packages root (remove-if-not package-predicate (list-all-packages)) op options))
+  (:method ((root package) (*packages-to-walk* cons) op &rest options)
+           (setf *packages-to-walk* (mapcar #'coerce-to-package *packages-to-walk*))
+           (walk-model root (apply #'make-instance 'package-walker options) op)))
+            
+
+(defun write-package-graph-node (package &optional (other-package nil op-p) relation)
+  (cond (op-p
+         ;; a link
+         (dot:dot-write-edge-statement dot:*dot-output*
+                                      (package-name package) (package-name other-package)
+                                      `(( "label" . ,(string relation)))))
+        (t
+         (dot:dot-write-node-statement dot:*dot-output* (package-name package) nil))))
+
+(defun graph-packages (&key packages-to-walk (stream *standard-output*) root)
+  (dot:dot-write-graph stream
+                          #'(lambda (grapher)
+                              (declare (ignore grapher))
+                              (dot-write-attribute *dot-output* "size" "8.5,11")
+                              (write-string "; " *dot-output*)
+                              (dot-write-attribute *dot-output* "ratio" "compress")
+                              (write-string "; " *dot-output*)
+                              (dot-write-attribute *dot-output* "rankdir" "LR")
+                              (write-string "; " *dot-output*)
+                              (dot-write-attribute *dot-output* "margin" ".5")
+                              (write-string "; " *dot-output*)
+                              (walk-packages root packages-to-walk #'write-package-graph-node))))
+
+(defun print-packages (&key packages (stream *standard-output*) root)
+  (flet ((print-package-node (package &optional (other-package nil op-p) relation)
+           (cond (op-p
+                  (terpri stream)
+                  (dotimes (x (+ 5 (* 5 *package-print-level*))) (write-char #\space stream))
+                  (format stream "~a: ~a" relation (package-name other-package)))
+                 (t
+                  (terpri stream)
+                  (dotimes (x (* 5 *package-print-level*)) (write-char #\space stream))
+                  (format stream "~a~@[ ~a~]" (package-name package) (package-nicknames package))))
+           package))
+    (walk-packages root packages #'print-package-node)))
+
+
+
+
+:EOF

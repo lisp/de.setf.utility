@@ -1,0 +1,254 @@
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
+
+<DOCUMENTATION>
+ <DESCRIPTION>
+  <p>
+  this file contains tests for the generic walker.
+  the first section demonstrates the variations for the graph example from knuth.
+  the successive sections generate dot graps for the function, class, and packages walkers.</p>
+  </DESCRIPTION>
+ <COPYRIGHT YEAR='2003' AUTHOR='james adam anderson'>
+  <a href='http://www.setf.de/code/license.txt'>all rights reserved</a>.</COPYRIGHT>
+ <CHRONOLOGY>
+  <DELTA DATE='20021214' AUTHOR='JAA'> rewritten based on what was originally a DOM walker. </DELTA>
+  <DELTA DATE='20030902' AUTHOR='james.anderson@setf.de'> added missing walk-link-qualifiers. </DELTA>
+  </CHRONOLOGY>
+ </DOCUMENTATION>
+
+(in-package de.setf.utility.implementation)
+
+<div>
+ a test example from section 2.3 of knuth's "fundamental algorithms".
+ it defines classes which combine the abstract graph navigation classes so as to effect pre/post/symmetric navigation.
+ </div>
+
+(defClass list-walker () ())
+
+(defClass list------navigator (list-walker walker) ())
+(defClass list--npl-navigator (list-walker node-navigator preorder-link-walker) ()) ; (list-sym-walker node-navigator preorder-link-walker) ())
+(defClass list--nel-navigator (list-walker node-navigator endorder-link-walker) ()) ; (list-sym-walker node-navigator endorder-link-walker) ())
+(defClass list-pn-l-navigator (list-walker preorder-node-walker link-navigator) ())
+(defClass list-pnpl-navigator (list-walker preorder-node-walker preorder-link-walker) ())
+(defClass list-pnel-navigator (list-walker preorder-node-walker endorder-link-walker) ())
+(defClass list-sn-l-navigator (list-walker symmetric-node-walker link-navigator) ())
+(defClass list-snpl-navigator (list-walker symmetric-node-walker preorder-link-walker) ())
+(defClass list-snel-navigator (list-walker symmetric-node-walker endorder-link-walker) ())
+(defClass list-en-l-navigator (list-walker endorder-node-walker link-navigator) ())
+(defClass list-enpl-navigator (list-walker endorder-node-walker preorder-link-walker) ())
+(defClass list-enel-navigator (list-walker endorder-node-walker endorder-link-walker) ())
+
+
+(defMethod walk-node-successors successors ((navigator list-walker) (node list) (op t)  &aux (position 1))
+  (when node
+    (destructuring-bind (label . links) node
+      (declare (ignore label))
+      (when links
+        (destructuring-bind (first . rest) links
+          (declare (ignore first))
+          (dolist (to rest node) (walk-link navigator position node to op) (incf position))))))
+  node)
+
+(defMethod walk-node-predecessors predecessors ((navigator list-walker) (node list) (op t))
+  (when node
+    (destructuring-bind (label . links) node
+      (declare (ignore label))
+      (when links
+        (destructuring-bind (first . rest) links
+          (declare (ignore rest))
+          (walk-link navigator 0 node first op)))))
+  node)
+
+
+(flet ((walk-op (node &optional (to nil to-p) position)
+         (cond (to-p ; applied to link
+                (format *trace-output* "~% ~s (~d-> ~s)" (first node) position to))
+               (t ; applied to node
+                (format *trace-output* "~%@ ~s" (first node))))
+         t))
+  (let ((model '(a (b () (c (k))) (d (e (h) (f (j)) (g)))))
+        (x 16) (y 40) (width 256) (height 322))
+    (dolist (type '(;list------navigator
+                    list--npl-navigator list--nel-navigator
+                    list-pn-l-navigator list-pnpl-navigator list-pnel-navigator
+                    list-sn-l-navigator list-snpl-navigator list-snel-navigator
+                    list-en-l-navigator list-enpl-navigator list-enel-navigator
+                    ))
+      (let ((*trace-output* #+(and mcl digitool)
+                            (make-instance 'fred-window 
+                              :window-title (string type) :scratch-p t
+                              :view-size (make-point width height)
+                              :view-position (make-point x y))
+                            #-(and mcl digitool)
+                            *trace-output*))
+        (format *trace-output* "~s:~%" type)
+        (pprint model *trace-output*)
+        (terpri *trace-output*)
+        (handler-case (walk-model model (make-instance type) #'walk-op)
+          (error (condition) (format *trace-output* "~%~a" condition) (return)))
+        (format *trace-output* "~%~%" type)
+        (finish-output *trace-output*)
+        (when (> (incf x (+ 4 width)) 1024) (setf x 16) (incf y (+ height 32)))))))
+
+
+<div>
+ generate a class graph
+ </div>
+
+(print-classes :stream *trace-output* :class 'class-walker
+               :packages `(:common-lisp ,*package* :de.setf.utility.clos.graph :de.setf.utility.walker))
+
+#+digitool
+(let ((pathname (make-pathname :host "home"
+                               :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                       (format nil "classes-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" year month day hour min sec))
+                               :type "dot"))
+      (count nil)
+      (*class-walk-depth-limit* 10))
+  (setf count (graph-classes :stream pathname :class 'class-walker
+                             :packages `(:common-lisp ,*package* :de.setf.utility.clos.graph :de.setf.utility.walker)
+                            ; :packages (list-all-packages)
+                             ))
+  (set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (print (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+  count)
+
+
+
+<div>
+ generate a package graph
+ </div>
+
+(print-packages :stream *trace-output* :root :de.setf.utility.walker
+                :packages `(:common-lisp ,*package* :de.setf.utility.clos.graph :de.setf.utility.walker))
+
+#+digitool
+(let ((pathname (make-pathname :host "home"
+                               :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                       (format nil "packages-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" year month day hour min sec))
+                               :type "dot")))
+  (graph-packages :stream pathname
+                  :packages-to-walk #'(lambda (package) (or (search "COMMON-LISP" (package-name package))
+                                                            (search "DE.SETF" (package-name package))
+                                                            (find-if #'(lambda (name) (search "DE.SETF" name))
+                                                                     (package-nicknames package)))))
+  (set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+
+
+<div>
+ generate a function call graph
+ </div>
+
+
+(print-functions :stream *trace-output* :function 'walk-functions
+                 :packages `(:common-lisp ,*package* :de.setf.utility.clos.graph :de.setf.utility.walker :dot)
+                 :depth-limit 3)
+
+#+digitool
+(let ((pathname (make-pathname :host "home"
+                               :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                       (format nil "functions-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" year month day hour min sec))
+                               :type "dot"))
+      (count nil)
+      (*function-walk-depth-limit* 5))
+  (setf count (graph-functions :stream pathname :function 'walk-functions
+                             :packages `(:common-lisp ,*package* :de.setf.utility.clos.graph :de.setf.utility.walker)
+                             ; :packages (list-all-packages)
+                             :depth-limit 3))
+  (set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (print (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+  count)
+
+
+
+#|
+
+(let ((pathname (make-pathname :host "home"
+                               :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                       (format nil "functions-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" year month day hour min sec))
+                               :type "dot"))
+      (count nil)
+      (de.setf.utility.implementation::*function-walk-depth-limit* 4))
+  (setf count (de.setf.utility.implementation::graph-functions :stream pathname :function 'line*3
+                             :packages `(:og.impl :og)
+                             ;; :packages (list-all-packages)
+                             :depth-limit 4
+                             :options '(:qualifiers (de.setf.utility.implementation::calls de.setf.utility.implementation::relations de.setf.utility.implementation::other))))
+  (ccl:set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (print (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+  count)
+
+(let* ((function 'tsl:+)
+      (pathname (make-pathname :host "home"
+                               :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                       (format nil "~a-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" function year month day hour min sec))
+                               :type "dot"))
+      (count nil)
+      (de.setf.utility.implementation::*function-walk-depth-limit* 4))
+  (setf count (de.setf.utility.implementation::graph-functions :stream pathname :function function
+                             :packages `(:ei :cl :tsl
+                                             :com.ravenpack.econoraven.tsl.delay
+                                             :com.ravenpack.econoraven.tsl.resolve
+                                             :com.ravenpack.econoraven.tsl.series)
+                             ;; :packages (list-all-packages)
+                             :depth-limit 4
+                             :options '(:qualifiers (de.setf.utility.implementation::calls
+                                                     de.setf.utility.implementation::relations
+                                                     de.setf.utility.implementation::other))))
+  (ccl:set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (print (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+  count)
+
+(let* ((class 'com.ravenpack.utils:external-mediator)
+       ;;(class 'ei:time-series)
+       ;;(class 'vc:condition)
+       (pathname (make-pathname :host "home"
+                                :name (multiple-value-bind (sec min hour day month year) (decode-universal-time (get-universal-time))
+                                        (format nil "~a-~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d" class year month day hour min sec))
+                                :type "dot"))
+       (count nil))
+  (setf count (de.setf.utility.implementation::graph-classes :stream pathname :class class
+                             :packages `(:vc :com.ravenpack.utils :com.ravenpack.econoraven.database :ei :cl)
+                             :depth-limit 6
+                             :options '(:qualifiers (de.setf.utility.implementation::subclass
+                                                     de.setf.utility.implementation::binds
+                                                     de.setf.utility.implementation::relations
+                                                     de.setf.utility.implementation::other))
+                             ))
+  (ccl:set-mac-file-creator pathname (intern (make-string 4 :initial-element #\null) :keyword))
+  (setf pathname (namestring (truename pathname)))
+  (setf pathname (subseq pathname (1+ (position #\: pathname))))
+  (bsd:system-command (print (format nil  "open  '/~a'" (substitute #\/ #\: pathname))))
+  count)
+
+
+
+
+
+(function-calls #'tsl:+) (trace function-calls) (function-calls #'COM.RAVENPACK.ECONORAVEN.TSL.DELAY::+)
+(function-calls (ccl:top-inspect-form))
+(ccl::disassemble-list (ccl:top-inspect-form))
+
+
+(trace walk-node-qualifiers walk-node-predecessor-qualifiers walk-node-successor-qualifiers walk-link-qualifiers)
+(labels ((print-qualifiers (class generic qualifier)
+           (print (list (class-name class) (funcall qualifier generic (class-prototype class) t t)))
+           (dolist (class (class-direct-subclasses class))
+             (print-qualifiers class generic qualifier))))
+  (print-qualifiers (find-class 'walker) #'walk-node #'walk-node-qualifiers)
+  (print-qualifiers (find-class 'walker) #'walk-link #'walk-link-qualifiers))
+|#
+
+
+
+:EOF
