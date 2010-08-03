@@ -88,7 +88,9 @@
  list.
  NB. Requires that source code is ordered to such that the class has been defined."
 
-  (let* ((lambda-list (if (and options (not (keywordp (caar options))))
+  (let* ((lambda-list (if (and options 
+                               (not (or (keywordp (caar options))
+                                        (eq (caar options) 'declare))))
                         (pop options)
                         '(designator &rest args)))
          (package (or (second (assoc :package options)) (symbol-package class-name)))
@@ -98,7 +100,10 @@
          (make-function-name (cons-symbol package :make- class-name))
          (class-variable-name (cons-symbol package :*class. class-name "*"))
          (predicate-name (or (second (assoc :predicate options))
-                             (cons-symbol package class-name :-p))))
+                             (cons-symbol package class-name :-p)))
+         (rest-arg (second (member '&rest lambda-list)))
+         (declaration (when (and rest-arg (not (assoc 'declare options)))
+                        `((declare (dynamic-extent ,rest-arg))))))
     ;; iff the keyword parameters are specified, (at least for mcl) one must specify
     ;; &allow-other-keys in order to permit varied argument forms to the symbol
     ;; method
@@ -121,6 +126,7 @@
          (:method ((datum t)) nil)
          (:method ((datum ,class-name)) t))
        (defgeneric ,constructor-name ,lambda-list
+         ,@declaration
          ,(or (assoc :documentation options)
              `(:documentation
                ,(format nil "Construct a ~a given initialization arguments. The
