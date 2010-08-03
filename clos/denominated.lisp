@@ -208,11 +208,15 @@
            (append (cond ((plusp value) '(plus)) ((minusp value) '(minus)) (t '(zero)))
                    (call-next-method))))
 
-(assert (equalp (list (.test-denominated. -1) (.test-denominated. 0) (.test-denominated. 1)
-                      (.test-denominated. "a") (.test-denominated. " ")
-                      (.test-denominated. 'x))
-                '((:around . :minus) (:around . :zero) 
-                      (:around . :plus) (:around) (:around . :blank) (:around))))
+(handler-case
+  (assert (equalp (list (.test-denominated. -1) (.test-denominated. 0) (.test-denominated. 1)
+                        (.test-denominated. "a") (.test-denominated. " ")
+                        (.test-denominated. 'x))
+                  '((:around . :minus) (:around . :zero) 
+                    (:around . :plus) (:around) (:around . :blank) (:around))))
+  (error (c)
+    (warn "denominated combination test signaled an error: ~a" c)))
+
 (makunbound '.test-denominated.)
   
 
