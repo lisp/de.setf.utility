@@ -3,8 +3,7 @@
 (in-package :de.setf.utility.implementation)
 
 
-(document :file
- (description "This file defines stream/buffer character set codecs for the 'de.setf.utility.mime.' library")
+(:documentation "This file defines stream/buffer character set codecs for the 'de.setf.utility.mime.' library"
  
  (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
@@ -42,9 +41,10 @@ from de.setf.xml suffice."))
    (encoded-code-point-size
     :initform (error "encoded-code-point-size required.") :initarg :encoded-code-point-size
     :reader content-encoding-encoded-code-point-size
-    :type (or integer null)
+    :type (or integer function null)
     :documentation "Specified the number of octets required to encode a code point with this
- encoding iff that is a constant. Otherwise nil.")
+ encoding. If that is a constant, this is the byte count. Otherwise a function to compute the size from a
+ character.")
    (byte-decoder
     :initarg :byte-decoder :initform (error "byte-decoder required")
     :reader content-encoding-byte-decoder
@@ -129,9 +129,16 @@ from de.setf.xml suffice."))
                            (ash (logand #x3f (read-byte-code)) 6)
                            (logand (read-byte-code) #x3f)))
                   (t
-                   (error "Illegal UTF-8 data: x~2,'0x." byte1)))))))
+                   (error "Illegal UTF-8 data: x~2,'0x." byte1))))))
+       (utf8-code-point-size (char)
+         (let ((code (char-code char)))
+             (declare (type (mod #x100) code))
+             (cond ((<= code 255)    1)
+                   ((<= code #x03ff) 2)
+                   ((<= code #xffff) 3)
+                   (t                4)))))
   (content-encoding :name :utf-8
-                    :encoded-code-point-size nil
+                    :encoded-code-point-size #'utf8-code-point-size
                     :byte-decoder #'utf-8-decode
                     :byte-encoder #'utf-8-encode
                     :documentation "http://en.wikipedia.org/wiki/Utf-8"))
@@ -168,3 +175,28 @@ from de.setf.xml suffice."))
   (:method ((encoding content-encoding))
     (values (content-encoding-byte-decoder encoding)
             (content-encoding-byte-encoder encoding))))
+
+
+(defgeneric encode-string (string encoding)
+  (:method ((string t) (encoding symbol))
+    (encode-string string (content-encoding encoding)))
+
+  (:method ((string string) (encoding content-encoding))
+    (let* ((byte-sizer (content-encoding-encoded-code-point-size encoding))
+           (encoder (content-encoding-byte-encoder encoding))
+           (size (etypecase byte-sizer
+                   (null (length string))
+                   (integer (* (length string) byte-sizer))
+                   (function (loop for char across string
+                                   sum (funcall byte-sizer char)))))
+           (result (make-array size :element-type '(unsigned-byte 8)))
+           (position 0))
+      (flet ((put-byte (buffer byte)
+               (setf (aref buffer position) byte)
+               (incf position)))
+        (declare (dynamic-extent #'put-byte))
+        (loop for char across string
+              do (funcall encoder char #'put-byte result)))
+      result)))
+
+;;; (map 'string #'code-char (encode-string "asdf" :utf-8))

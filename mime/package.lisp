@@ -39,6 +39,7 @@
    :def-mime-type-key
    :defmimetype
    :defmimetypekey
+   :encode-string
    :intern-mime-type-key
    :major-mime-type
    :mime-type
