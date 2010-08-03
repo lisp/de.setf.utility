@@ -29,9 +29,14 @@
 ;;; 2010-02-02  janderson  updated to use (possible null) system-source-file
 ;;; 2010-03-18  janderson  adjusted sysdef-hierarchical-search-function to look for -test systems in the
 ;;;  respective base system's directory
-
+;;; 2040-04-05 janderson : cmucl acts similar to sbcl
+;;;  (see http://common-lisp.net/project/cmucl/doc/cmu-user/extensions.html#toc50)
 
 (in-package :cl-user)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (intersection '(:allegro :ccl :clisp :cmu :sbcl :ecl) *features*)
+    (cerror "Continue anyway." "This file must be conditionalized for ~a." (lisp-implementation-type))))
 
 (eval-when (:load-toplevel :compile-toplevel :execute)
   (export '(asdf::component-description
@@ -114,46 +119,58 @@
                              (subseq name 0 (- (length name) 5))
                              name)))
       (flet ((make-wild-directory-component (name)
-               #+allegro :wild
-               #+ccl (concatenate 'string name "*")
-               #+sbcl (sb-impl::make-pattern `(,name :MULTI-CHAR-WILD))))
+               :wild                    ; the default for allegro, cmucl, ecl
+               #+(or ccl clisp ecl lispworks) (concatenate 'string name "*")
+               #+cmu (lisp::make-pattern `(,name :MULTI-CHAR-WILD))
+               #+sbcl (sb-impl::make-pattern `(,name :MULTI-CHAR-WILD)))
+             (ensure-pathname-directory (pathname)
+               (or (pathname-directory pathname) '(:absolute))))
         (map-registry-roots #'(lambda (root-path)
                                 (when (typep root-path 'logical-pathname)
                                   (setf root-path (translate-logical-pathname root-path)))
-                                (flet ((explicit-file-name ()
-                                         (merge-pathnames
-                                          (make-pathname  :directory `(:relative ,@(butlast tokens)
-                                                                                 ,directory-name)
-                                                          :name name
-                                                          :type "asd")
-                                          root-path))
+                                (when (and verbose-p asdf::*verbose-out*)
+                                  (format asdf::*verbose-out* "~&asdf >search: [ ~s ] ... " root-path))
+                                (flet ((direct-file-name ()
+                                         ;; look for it immediately in the registry
+                                         (make-pathname :name name :type "asd" :defaults root-path))
+                                       (indirect-file-name ()
+                                         ;; look for it at a path implicit in the name
+                                         (make-pathname  :directory (append (ensure-pathname-directory root-path)
+                                                                            `(,@(butlast tokens) ,directory-name))
+                                                         :name name :type "asd"
+                                                         :defaults root-path))
                                        (versioned-file-pattern ()
                                          ;; add a wildcard to the end the final path element to permit
                                          ;; versioned directories release tar files.
-                                         (merge-pathnames
-                                          (make-pathname  :directory `(:relative ,@(butlast tokens)
-                                                                                 ,(make-wild-directory-component
-                                                                                   directory-name)
-                                                                                 ,@(when wild-p '(:wild-inferiors)))
-                                                          :name name
-                                                          :type "asd")
-                                          root-path))
+                                         (make-pathname  :directory (append (ensure-pathname-directory root-path)
+                                                                            `(,@(butlast tokens)
+                                                                              ,(make-wild-directory-component
+                                                                                directory-name)
+                                                                              ,@(when wild-p '(:wild-inferiors))))
+                                                         :name name :type "asd"
+                                                         :defaults root-path))
                                        (wild-file-names (wild-file-pattern)
                                          #+ccl (directory wild-file-pattern :directories nil :files t)
                                          #+lispworks (directory wild-file-pattern :directories nil)
                                          #+(or sbcl allegro) (directory wild-file-pattern)))
-                                  (let* ((explicit-file-name (explicit-file-name))
+                                  (let* ((direct-file-name (direct-file-name))
+                                         (indirect-file-name (indirect-file-name))
                                          (versioned-file-names nil)
-                                         (result (or (probe-file explicit-file-name)
+                                         (result (or (probe-file direct-file-name)
+                                                     (probe-file indirect-file-name)
                                                      ;; if there are multiple versions, take the one with the
                                                      ;; most recent write time rather than just the higher version
                                                      (first (setf versioned-file-names
                                                                   (sort (wild-file-names (versioned-file-pattern))
                                                                         #'> :key #'file-write-date))))))
                                     (when (and verbose-p asdf::*verbose-out*)
-                                      (format asdf::*verbose-out* "~&asdf search: [ ~s ] [ ~s, ~s ] -> ~s"
-                                              root-path
-                                              explicit-file-name versioned-file-names
+                                      (format asdf::*verbose-out* "~&... direct: ~s -> ~s"
+                                              direct-file-name (probe-file direct-file-name))
+                                      (format asdf::*verbose-out* "~&... indirect: ~s -> ~s"
+                                              indirect-file-name (probe-file indirect-file-name))
+                                      (format asdf::*verbose-out* "~&... versioned: ~s -> ~s"
+                                              (versioned-file-pattern) versioned-file-names )
+                                      (format asdf::*verbose-out* "~&... -> ~s"
                                               result))
                                     (when result
                                       (return-from asdf::sysdef-hierarchical-search-function result))))))))))
