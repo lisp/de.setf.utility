@@ -15,7 +15,7 @@
 ;;;  GNU Lesser General Public License for more details.
 ;;;
 ;;;  You should have received a copy of the GNU Lesser General Public License
-;;;  along with 'de.setf.utility'.  If not, see the GNU <a href='http://www.gnu.org/licenses/'>site</a>.
+;;;  along with 'de.setf.utility'.  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
 ;;;
 ;;; 2010-02-03  janderson  independent file
