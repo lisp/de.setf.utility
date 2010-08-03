@@ -2,12 +2,11 @@
 
 (in-package :de.setf.utility.implementation)
 
-(document :file
-  (description "Define class and predicate definitions for an abstract graph model
+(:documentation "Define class and predicate definitions for an abstract graph model
   
   The definitions bind very few methods and serve instead as abstract interfaces to
   indicate a class's support for the minimal x-path-like navigation interface.
-  see xml:code;*;*-generate.lisp and xml:code;*;*-walk.lisp.")
+  see xml:code;*;*-generate.lisp and xml:code;*;*-walk.lisp."
 
   (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"

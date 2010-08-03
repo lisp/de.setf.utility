@@ -2,8 +2,7 @@
 
 (in-package :de.setf.utility.implementation)
 
-(document :file
-  (description "iterative-form model navigation operators for an abstract graph model")
+(:documentation  "iterative-form model navigation operators for an abstract graph model"
 
   (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"

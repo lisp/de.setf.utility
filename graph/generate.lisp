@@ -2,9 +2,7 @@
 
 (in-package :de.setf.utility.implementation)
 
-(document :file
-  (description "generative-form model navigation operators for an abstract graph model")
-
+(:documentation  "generative-form model navigation operators for an abstract graph model"
   (copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
   "'de.setf.utility' is free software: you can redistribute it and/or modify
@@ -55,9 +53,9 @@
    "each parent class implementation must include a method for <code>generate-children</CODE>.
     return a function which returns the children of a node in document order.
     an parent specialization must implement this function.")
-  (:method ((node t)) *null-generator*)
+  (:method generate-children ((node t)) *null-generator*)
   (:method ((node sg:parent)) (abstract-method-error #'generate-children node))
-  (:method ((node sg:leaf)) *null-generator*))
+  (:method generate-children ((node sg:leaf)) *null-generator*))
 
 (defgeneric generate-children-reversed (node)
   (:documentation
