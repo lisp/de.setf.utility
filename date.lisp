@@ -62,6 +62,7 @@
    :decode-month-name
    :encode
    :format-iso-time
+   :format-excel-time
    :iso
    :leap-p
    :month-days
@@ -546,6 +547,8 @@
 (date::define-date-conversion-function "yyyy-MM-ddTHH:mm:ssZZ")
 (date::define-date-conversion-function "EEE, dd.MM.yyyy")
 (date::define-date-conversion-function "dddddddd MMM yyyy")
+(date::define-date-conversion-function "yyyy.MM.dd HH:mm:ss")
+
 
 (defGeneric date::find-date-format (name &key if-does-not-exist)
   (:method ((name string) &key (if-does-not-exist :error))
@@ -586,16 +589,21 @@
            (funcall (date::find-date-format format :if-does-not-exist :error)
                     time)))
 
-#+(or)                                  ; one version only
-(defun format-iso-time (&optional (time (get-universal-time)) stream)
-  (date:|yyyyMMddTHHmmssZZ| time stream))
+                                  ; one version only
+;;(defun format-iso-time (&optional (time (get-universal-time)) stream)
+;;  (date:|yyyyMMddTHHmmssZZ| time stream))
 
 (defgeneric date::format-iso-time (time stream &optional colon at var)
   (:method ((stream stream) (time integer) &optional colon at var)
     (declare (ignore colon at var))
     (date:|yyyyMMddTHHmmssZZ| time stream)))
 
-;;; (let ((time (get-universal-time))) (format *trace-output* ">>~/date:format-iso-time/<<" time))
+(defgeneric date::format-excel-time (time stream &optional colon at var)
+  (:method ((stream stream) (time integer) &optional colon at var)
+    (declare (ignore colon at var))
+    (date::|yyyy.MM.dd HH:mm:ss| time stream)))
+
+;;; (let ((time (get-universal-time))) (format nil ">>~/date:format-excel-time/<<" time))
 ;;; (let ((time (get-universal-time))) (format nil ">>~/date:format-iso-time/<<" time))
 
 
@@ -605,6 +613,7 @@
     (date:|yyyyMMddTHHmmss| string)))
 
 (defun iso-time (&optional (time (get-universal-time))) (date:|yyyyMMddTHHmmss| time))
+
 
 ;(let ((time (get-universal-time))) (= (decode-iso-time (iso-time time)) time))
 
