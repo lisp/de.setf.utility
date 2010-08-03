@@ -31,9 +31,8 @@
   :components ((:file "package")
                (:file "pathnames")
                (:file "modpackage")
-               (:module :documentation
-                :depends-on ("modpackage")
-                :components ((:file "null")))
+               (:file "documentation-stub"
+                      :depends-on ("modpackage"))
                (:file "string")
                (:file "conditions")
                (:module "clos"          ; minimal clos utilities
@@ -42,8 +41,7 @@
                (:module "test"          ; minimal test unit utilities
                 :components ((:file "package")
                              (:file "test-unit" :depends-on ("package"))))
-               (:file "date")
-               (:file "list")))
-
-
-(pushnew :de.setf.utility *features*)
+               (:file "date"
+                      :depends-on ("modpackage"))
+               (:file "list"
+                      :depends-on ("modpackage"))))
