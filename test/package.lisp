@@ -32,6 +32,7 @@
    :*test-unit-mode*
    :*test-output*
    :*test-unit*
+   :define-test
    :deftest
    :deftests
    :execute-test
@@ -39,13 +40,17 @@
    :find-monitor
    :find-tests
    :find-test
-   :define-test
+   :function-monitor
+   :generic-function-monitor
+   :ignored-error
    :initialize-monitor
    :make-test-unit
+   :method-monitor
    :monitor
    :report-monitor
    :test-unit
    :test-unit-path
+   :test-unit-status
    :test-unit-verbose-p
    :unintern-test
    :unmonitor

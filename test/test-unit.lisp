@@ -390,7 +390,7 @@
   (:method ((unit null) &key &allow-other-keys)
            nil)
 
-  (:method ((unit test-unit) &key (mode *test-unit-mode*) (force-p nil) (stream *trace-output*))
+  (:method ((unit test-unit) &key (mode *test-unit-mode*) (force-p nil) (stream *trace-output*) debug)
     (cond ((and (eq (test-unit-status unit) :passed) (not force-p))
            (when (eq mode :verbose)
              (format stream "~%~{~s~^.~}: skipped (passed)." (test-unit-path unit)))
@@ -404,7 +404,7 @@
              (format stream "~%~{~s~^.~}: skipped (situation)." (test-unit-path unit)))
            :skipped)
           (t
-           (%execute-test unit :mode mode :stream stream)))))
+           (%execute-test unit :mode mode :stream stream :debug debug)))))
 
 (defun unintern-test (test) (set-tests (test-unit-path test) nil))
 
@@ -540,32 +540,39 @@
 
 (defgeneric %execute-test (unit &key &allow-other-keys)
   (:method ((unit test-unit) &key ((:mode *test-unit-mode*) (or (test-unit-mode unit) *test-unit-mode*))
-            (stream *trace-output*)
+            (stream *trace-output*) (debug nil)
             &aux results (*test-unit* unit))
      (handler-bind ((error (lambda (condition)
                              (format stream "~&signaled condition: ~a." condition)
                              (return-from %execute-test (values :failed condition)))))
              
        (when (eq *test-unit-mode* :verbose)
-         (format stream "~%~s: ~s ... "
+         (format stream "~%~s:~%~:W ... "
                  (test-unit-path unit) (test-unit-form unit)))
        (case (test-unit-status unit)
          (:known-failed )
          (t (setf (test-unit-status unit) nil)))
        (setf results
-             (multiple-value-list (handler-case (funcall (test-unit-function unit))
-                                    (error (condition) (values condition)))))
-       (cond ((apply (test-unit-predicate-function unit) results)
+             (block :run-test
+               (multiple-value-list (handler-bind
+                                      ((error (lambda (condition)
+                                                (when debug (break "~%test ~s signaled:~%~a"
+                                                                   (test-unit-path unit) condition))
+                                                (return-from :run-test (list condition)))))
+                                      (funcall (test-unit-function unit))))))
+       (cond ((member (first results) '(:skipped :nyi))
+              :skipped)
+             ((apply (test-unit-predicate-function unit) results)
               (setf (test-unit-status unit) :passed)
               (case *test-unit-mode*
                 (:silent )
                 (:verbose
-                 (format stream "~%~{~a~^/~} passed with results:~% ~s"
+                 (format stream "~%~{~a~^.~} passed with results:~% ~s"
                          (or (test-unit-path unit) (test-unit-form unit))
                          results)
                  (finish-output stream))
                 (:report
-                 (format stream "+(~s)" (test-unit-name unit))
+                 (format stream " +(~s)" (test-unit-name unit))
                  (finish-output stream))
                 (:terse
                  ;; nothing (write-char #\+ stream)
@@ -578,19 +585,21 @@
               (case *test-unit-mode*
                 (:silent )
                 (:verbose
-                 (format stream "~&test failed: ~{~a~^/~}" (test-unit-path unit))
+                 (format stream "~&test failed: ~{~a~^.~}" (test-unit-path unit))
                  (format stream "~@[~%----------------------------------------~%~a~%----------------------------------------~]"
                          (test-unit-documentation unit))
                  (format stream
-                         "~%~%form: ~s~%produced: ~:W~%~@[expected: ~:W~]~@[predicate: ~s~]"
+                         "~%~%form: ~s~%produced:~%~:W~%~@[expected: ~:W~]~@[predicate: ~s~]"
                          (test-unit-form unit)
                          results
                          (test-unit-predicate-form unit)
                          (test-unit-predicate unit))
+                 (when (typep (first results) 'error)
+                   (format stream "~%~a" (first results)))
                  (terpri stream)
                  (finish-output stream))
-                (:terse
-                 (format stream "-(~s)" (test-unit-name unit))
+                ((:terse :report)
+                 (format stream " -(~s)" (test-unit-name unit))
                  (finish-output stream))
                 (t
                  (warn "invalid test unit mode: ~s." *test-unit-mode*)))
@@ -608,6 +617,9 @@
          (test-and ,@rest)
          (values nil ',first)))
     t))
+
+(defmacro test:ignored-error (&rest forms)
+  `(nth-value 1 (ignore-errors ,@forms)))
 
 #|
 (deftests

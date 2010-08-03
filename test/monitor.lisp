@@ -1,44 +1,38 @@
 ;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
 
-;;;  This file is part of the 'de.setf.utility' library component.
-;;;  (c) 2002, 2009 james anderson
-;;;
-;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
-;;;  it under the terms of the GNU Lesser General Public License as published by
-;;;  the Free Software Foundation, either version 3 of the License, or
-;;;  (at your option) any later version.
-;;;
-;;;  'de.setf.utility' is distributed in the hope that it will be useful,
-;;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;;  GNU Lesser General Public License for more details.
-;;;
-;;;  You should have received a copy of the GNU Lesser General Public License
-;;;  along with 'de.setf.utility'.  If not, see the GNU <a href='http://www.gnu.org/licenses/'>site</a>.
-
-
 (in-package :de.setf.utility.implementation)
 
 
-#|
+(:documentation "This file defines call monitoring utilities for the test module of the 'de.setf.utility'
+ library."
+ 
+ (copyright
+  "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
+  "'de.setf.utility' is free software: you can redistribute it and/or modify
+ it under the terms of version 3 of the GNU Lesser General Public License as published by
+ the Free Software Foundation.
 
-test coverage monitoring:
+ 'de.setf.utility' is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ See the GNU Lesser General Public License for more details.
 
-record test coverage on a per-entry basis an generate reports in various forms.
-- a .dot graph of coverage status, which depicts immediate call dependency and the test dependency;
-- a .html tree, which depicts the coverage status with a source-file-per-page documents.
-- a list of tests to run when a source file changes
+ A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
+ If not, see the GNU [site](http://www.gnu.org/licenses/).")
 
+ (description "test coverage monitoring:
 
-there are three primary operators
+ record test coverage on a per-entry basis and generate reports in various forms.
+ - a .dot graph of coverage status, which depicts immediate call dependency and the test dependency;
+ - a .html tree, which depicts the coverage status with a source-file-per-page documents.
+ - a list of tests to run when a source file changes
+
+ there are three primary operators
 
  monitor (operator)
  unmonitor (operator)
  find-monitor (operator)
  initialize-monitor (monitor)
- report-monitor (monitor)
-
-|#
+ report-monitor (monitor)"))
 
 
 
@@ -50,6 +44,9 @@ there are three primary operators
 (defvar *color.no-call* "red")
 (defvar *style.called* "color: green;")
 (defvar *color.called* "green")
+(defvar *style.passed* "color: green;")
+(defvar *style.failed* "color: red;")
+(defvar *style.unknown* "color: black;")
 
 (defclass monitor ()
   ((object
@@ -154,8 +151,12 @@ there are three primary operators
     (ecase (first name)
       (setf name)
       (ccl::advised (second (second name)))))
+  #+ccl
   (:method ((entry method))
-    (generic-function-name (method-generic-function entry))))
+    (ccl::method-name entry))
+  #-ccl
+  (:method ((entry method))
+    (monitor-name (method-generic-function entry))))
 
 
 (defgeneric monitor-designator (monitor)
@@ -208,7 +209,7 @@ there are three primary operators
     (monitor-calls (ccl::find-unencapsulated-definition (monitor-object monitor))))
 
   (:method ((entry function))
-    (de.setf.utility.clos.graph:function-calls entry)))
+    (dsw:function-calls entry)))
     
 
 (defmethod monitor-calls-called-p ((monitor monitor))
@@ -228,7 +229,7 @@ there are three primary operators
                       (symbol name)
                       (cons (second name))))))
 
-#+digitool
+#+ccl
 (defgeneric monitor-pathname (monitor)
   (:method :around ((monitor monitor))
     (or (slot-value monitor 'pathname)
@@ -240,12 +241,15 @@ there are three primary operators
     (let ((name (function-name object)))
       (rest (assoc (if (consp name) 'setf 'function)
                    (ccl:edit-definition-p object)))))
+
   (:method ((object generic-function))
     (let ((name (generic-function-name object)))
       (rest (assoc (if (consp name) 'setf 'function)
                    (ccl:edit-definition-p object)))))
+
   (:method ((object method))
     (rest (first (ccl:edit-definition-p object))))
+
   (:method ((object ccl:method-function))
     (or (rest (first (ccl:edit-definition-p object)))
         (let* ((method (function-name object))
@@ -277,6 +281,13 @@ there are three primary operators
 ;;;
 ;;; install / remove monitors
 
+(defun clear-monitors ()
+  (maphash #'(lambda (k m)
+               (unmonitor (monitor-object m))
+               (remhash k *monitor-registry*))
+           *monitor-registry*))
+;; (clear-monitors)
+
 (defgeneric find-monitor (entry)
   (:method ((entry function))
     (find-monitor (monitor-designator entry)))
@@ -289,6 +300,7 @@ there are three primary operators
 
 (defgeneric (setf find-monitor) (monitor entry)
   ;; installing
+  #+digitool
   (:method ((monitor monitor) (entry generic-function))
     (let* ((advice-name (gensym "MONITOR"))
            (designator (monitor-designator entry))
@@ -300,6 +312,16 @@ there are three primary operators
                                            nil)))
       (ccl::advise-2 (eval advice) advice-name nil designator :around 'call-monitor nil)
       (setf (find-monitor designator) monitor)))
+  #+clozure
+  (:method ((monitor monitor) (entry generic-function))
+    (let* ((designator (monitor-designator entry)))
+      (eval `(ccl:advise ,designator
+                         (progn (record-call ,monitor) (let ((*monitor* ,monitor)) (:do-it)))
+                         :when :around
+                         :name test::monitor-advice))
+      (setf (find-monitor designator) monitor)))
+
+  #+digitool
   (:method ((monitor monitor) (entry function))
     (let* ((advice-name (gensym "MONITOR"))
            (designator (monitor-designator entry))
@@ -311,7 +333,19 @@ there are three primary operators
                                            nil)))
       (ccl::advise-2 (eval advice) advice-name nil designator :around 'call-monitor nil)
       (setf (find-monitor designator) monitor)))
+  #+clozure
+  (:method ((monitor monitor) (entry function))
+    (let* ((designator (monitor-designator entry)))
+      (eval `(ccl:advise ,designator
+                         (progn (record-call ,monitor) (let ((*monitor* ,monitor)) (:do-it)))
+                         :when :around
+                         :name test::monitor-advice))
+      (setf (find-monitor designator) monitor)))
+
+  #+digitool
   (:method ((monitor method-monitor) (entry method))
+    "NB. this leaves the method in a state where it cannot be added to the fg, as its lambda
+     list is specified as &rest."
     (let* ((advice-name (gensym "MONITOR"))
            (designator (monitor-designator entry))
            (advice (ccl::advise-global-def designator
@@ -320,8 +354,18 @@ there are three primary operators
                                            `(progn (record-call ,monitor)
                                                    (let ((*monitor* ,monitor)) (:do-it)))
                                            t)))
-        (ccl::advise-2 (eval advice) advice-name nil designator :around 'call-monitor nil)
-        (setf (find-monitor designator) monitor)))
+      (ccl::advise-2 (eval advice) advice-name nil designator :around 'call-monitor nil)
+      (setf (find-monitor designator) monitor)))
+  #+clozure
+  (:method ((monitor method-monitor) (entry method))
+    "NB. this leaves the method in a state where it cannot be added to the fg, as its lambda
+     list is specified as &rest."
+    (let* ((designator (monitor-designator entry)))
+      (eval `(ccl:advise ,designator
+                         (progn (record-call ,monitor) (let ((*monitor* ,monitor)) (:do-it)))
+                         :when :around
+                         :name test::monitor-advice))
+      (setf (find-monitor designator) monitor)))
 
   (:method ((monitor monitor) (designator symbol))
     (setf (gethash designator *monitor-registry*) monitor))
@@ -330,18 +374,41 @@ there are three primary operators
 
 
   ;; removing
+  (:method :around ((monitor null) (object t))
+    (handler-case (call-next-method)
+      (error (c)
+        (warn "Attempt to unmonitor failed: ~s, ~s:~%~a"
+              object monitor c)
+        nil)))
+
+  #+digitool
   (:method ((monitor null) (entry function))
     ;; both generic and not
     (let ((monitor (find-monitor entry)))
       (when monitor
         (ccl::unadvise-1 (monitor-designator monitor) :around 'call-monitor)
         (setf (find-monitor (monitor-designator monitor)) nil))))
-
+  #+digitool
   (:method ((monitor null) (entry method))
     (let* ((monitor (find-monitor entry)))
       (when monitor
             (ccl::unadvise-1 (monitor-designator monitor) :around 'call-monitor)
             (setf (find-monitor (monitor-designator monitor)) nil))))
+
+  #+clozure
+  (:method ((monitor null) (entry function))
+    ;; both generic and not
+    (let ((monitor (find-monitor entry)))
+      (when monitor
+        (eval `(ccl:unadvise ,(monitor-designator monitor) :when :around :name test::monitor-advice))
+        (remhash (monitor-designator monitor) *monitor-registry*))))
+  #+clozure
+  (:method ((monitor null) (entry method))
+    (let ((monitor (find-monitor entry)))
+      (when monitor
+        (eval `(ccl:unadvise ,(monitor-designator monitor) :when :around :name test::monitor-advice))
+        (remhash (monitor-designator monitor) *monitor-registry*))))
+
 
   (:method ((monitor null) (designator symbol))
     (remhash designator *monitor-registry*)
@@ -354,17 +421,25 @@ there are three primary operators
 (defun record-call (monitor)
   (when *monitor*
     (let ((position (position monitor (monitor-calls-monitors *monitor*))))
-      (if position
-        (setf (aref (monitor-calls-called-p *monitor*) position) t)
-        (when *monitor-verbose*
-          (warn "monitor w/o entry: ~a/~a."
-                (monitor-designator *monitor*) (monitor-designator monitor))))))
+      (cond (position
+             (princ #\. *trace-output*)
+             (setf (aref (monitor-calls-called-p *monitor*) position) t))
+            (*monitor-verbose*
+             (warn "monitor w/o entry: ~a/~a."
+                   (monitor-designator *monitor*) (monitor-designator monitor))))))
   (when *test-unit*
     (pushnew *test-unit* (monitor-tests monitor)))
   (setf (monitor-called-p monitor) t))
 
 
 (defgeneric monitor (object)
+  (:method :around ((object t))
+    (handler-bind
+      ((error (lambda (c)
+                (warn "Attempt to monitor failed: ~s:~%~a" object c)
+                (return-from monitor nil))))
+      (call-next-method)))
+
   (:method ((object function))
     (when (find (monitor-package object) *monitor-packages*)
       (let ((designator (monitor-designator object)))
@@ -381,14 +456,14 @@ there are three primary operators
      function itself."
     (when (find (monitor-package object) *monitor-packages*)
       (let ((designator (monitor-designator object)))
+        ;; always continue with the methods
+        (map nil #'monitor (generic-function-methods object))
         (or (and (ccl::advisedp-1 designator :around 'call-monitor)
                  (find-monitor designator))
-            (prog1
-              (setf (find-monitor object)
-                    (make-instance 'generic-function-monitor
-                      :object object
-                      :designator designator))
-              (map nil #'monitor (generic-function-methods object)))))))
+            (setf (find-monitor object)
+                  (make-instance 'generic-function-monitor
+                    :object object
+                    :designator designator))))))
 
   (:method ((object method))
     (when (find (monitor-package object) *monitor-packages*)
@@ -396,6 +471,8 @@ there are three primary operators
         (or (and (ccl::advisedp-1 designator :around 'call-monitor)
                  (find-monitor designator))
             (let ((original (ccl::find-unencapsulated-definition object)))
+              ;; ensure that the changes appear in effective methods
+              (ccl::remove-obsoleted-combined-methods object)
               (setf (find-monitor object) (make-instance 'method-monitor
                                             :object original
                                             :designator designator)))))))
@@ -421,20 +498,25 @@ there are three primary operators
       count))
 
   (:method ((object symbol))
-    (if (keywordp object)
-      (monitor (or (find-package object)
-                   (error "Invalid package designator: ~s." object)))
-      (when (and (find (symbol-package object) *monitor-packages*)
-                 (fboundp object)
-                 ;; skip macros
-                 (not (macro-function object)))
-          (monitor (fdefinition object)))))
+    (cond ((keywordp object)
+           (monitor (or (find-package object)
+                        (error "Invalid package designator: ~s." object))))
+          ((and (find (symbol-package object) *monitor-packages*)
+                (fboundp object)
+                ;; skip macros
+                (not (macro-function object)))
+           (monitor (fdefinition object)))))
 
   (:method ((object cons))
-    (when (and (eq (first object) 'setf)
-               (find (symbol-package (second object)) *monitor-packages*)
-               (fboundp object))
-      (monitor (fdefinition object)))))
+    (let ((op (first object)))
+      (cond ((or (stringp op) (keywordp op))
+             (dolist (op object) (monitor op)))
+            ((and (eq (first object) 'setf)
+                  (find (symbol-package (second object)) *monitor-packages*)
+                  (fboundp object))
+             (monitor (fdefinition object)))
+            (t
+             (error "Invalid monitor object: ~s." object))))))
 
 (defgeneric unmonitor (object)
   (:method ((object function))
@@ -459,13 +541,19 @@ there are three primary operators
     (if (keywordp object)
       (unmonitor (or (find-package object)
                      (error "Invalid package designator: ~s." object)))
-      (when (fboundp object)
+      (when (and (fboundp object)
+                 (not (macro-function object)))
         (unmonitor (fdefinition object)))))
 
   (:method ((object cons))
-    (when (and (eq (first object) 'setf)
-               (fboundp object))
-      (unmonitor (fdefinition object)))))
+    (let ((op (first object)))
+      (cond ((or (stringp op) (keywordp op))
+             (dolist (op object) (unmonitor op)))
+            ((and (eq (first object) 'setf)
+                  (fboundp object))
+             (unmonitor (fdefinition object)))
+            (t
+             (error "Invalid monitor object: ~s." object))))))
 
 
 (defgeneric initialize-monitor (object)
@@ -553,10 +641,21 @@ there are three primary operators
                        (write-string ,(format nil "~%</~a>" name) stream)))))
 
   (defgeneric report-monitor (monitor to as &key test name)
+
+    (:method ((designator (eql t)) (to t) (as t) &rest args)
+      (apply #'report-monitor *monitor-registry* to as args))
+
+    (:method ((designator string) (to t) (as t) &rest args)
+      (apply #'report-monitor (or (find-package designator) (error "Package not found: ~s." designator))
+             to as args))
+
+    (:method ((designator symbol) (to t) (as t) &rest args)
+      (apply #'report-monitor (or (find-package designator) (error "Package not found: ~s." designator))
+             to as args))
+
     (:method ((monitored-package package) (to t) (as t) &rest args)
-      (apply #'report-monitor *monitor-registry* as
-             #'(lambda (monitor)
-                 (eq (monitor-package monitor) monitored-package))
+      (apply #'report-monitor *monitor-registry* to as
+             :test #'(lambda (monitor) (eq (monitor-package monitor) monitored-package))
              args))
     
     (:method ((monitors t) (to pathname) (as t) &rest args)
@@ -571,7 +670,7 @@ there are three primary operators
           (maphash #'(lambda (name monitor)
                        (declare (ignore name))
                        (when (funcall test monitor)
-                         (setf.dot:node monitor :title (monitor-namestring monitor)
+                         (setf.dot:node monitor :label (monitor-namestring monitor)
                                         :color (if (monitor-called-p monitor) *color.called* *color.no-call*))
                          (loop for calls-monitor across (monitor-calls-monitors monitor)
                                for called-p across (monitor-calls-called-p monitor)
@@ -612,7 +711,8 @@ there are three primary operators
                                                                 :key #'monitor-namestring)
                                                           (make-pathname :name (pathname-name pathname)
                                                                          :type "html"
-                                                                         :directory (append (pathname-directory to)
+                                                                         :directory (append (or (pathname-directory to)
+                                                                                                '(:absolute))
                                                                                             (rest (pathname-directory pathname)))
                                                                          :defaults to)
                                                           as
@@ -688,7 +788,7 @@ there are three primary operators
                                             :key #'first))
                     (do-node (first host.entries) (rest host.entries)))
                   (let ((unknowns (gethash "unknown" by-pathname)))
-                    (do-leaf "unknown" unknowns 0))
+                    (when unknowns (do-leaf "unknown" unknowns 0)))
                   (with-element "tr"
                     (with-element ("td" ("colspan" "5") ("style" "background-color: lightgray")) "totals"))
                   (with-element ("tr" ("style" "background-color: lightgray"))
@@ -698,7 +798,7 @@ there are three primary operators
                     (with-element "td" (format stream "~a" total-out-count))
                     (with-element "td" (format stream "~a" 
                                                (if (zerop total-out-count) 0 (float (/ total-out-call-count total-out-count)))))))))
-            (values total-count total-call-count total-out-count total-out-call-count)))))
+            (values to total-count total-call-count total-out-count total-out-call-count)))))
                         
 
     (:method ((monitors hash-table) (stream stream) (as mime:*/html)
@@ -713,8 +813,9 @@ there are three primary operators
           (with-element ("body")
             (with-element ("table")
               (with-element ("tr")
-                (with-element ("td" ("style" "border-right: solid black 1px")) "entry")
-                (with-element ("td" ("colspan" "10")) "calls out"))
+                (with-element ("td" ("style" "border: solid black 1px; width: 4in;")) "entry")
+                (with-element ("td" ("style" "border: solid black 1px; width: 2in;")) "calls out")
+                (with-element ("td" ("style" "border: solid black 1px; width: 4in;")) "tests"))
               (dolist (monitor (sort monitors #'string-lessp
                                      :key #'monitor-namestring))
                 (report-monitor monitor stream as)))))))
@@ -732,8 +833,9 @@ there are three primary operators
           (with-element ("body")
             (with-element ("table")
               (with-element ("tr")
-                (with-element ("td" ("style" "border-right: solid black 1px")) "entry")
-                (with-element ("td" ("colspan" "10")) "calls out"))
+                (with-element ("td" ("style" "border: solid black 1px; width: 4in;")) "entry")
+                (with-element ("td" ("style" "border: solid black 1px; width: 2in;")) "calls out")
+                (with-element ("td" ("style" "border: solid black 1px; width: 4in;")) "tests"))
               (dolist (monitor monitors)
                 (multiple-value-bind (called o-count o-call-count)
                                      (report-monitor monitor stream as)
@@ -748,17 +850,23 @@ there are three primary operators
             (out-count 0)
             (out-call-count 0))
         (with-element ("tr")
-          (with-element ("td" ("style" (format nil "~a; border-right: solid black 1px"
+          (with-element ("td" ("style" (format nil "~a; border-right: solid black 1px; border-left: solid black 1px"
                                                (if called-p *style.called* *style.no-call*))))
             (format stream "~a" (monitor-namestring monitor)))
-          (loop for calls-monitor across (monitor-calls-monitors monitor)
-                for called-p across (monitor-calls-called-p monitor)
-                do (with-element ("td"
-                                  ("style" (if called-p
-                                             *style.called* *style.no-call*)))
-                     (when called-p (incf out-call-count))
-                     (incf out-count)
-                     (format stream "~a" (monitor-namestring calls-monitor)))))
+          (with-element ("td" ("style" "border-right: solid black 1px"))
+            (loop for calls-monitor across (monitor-calls-monitors monitor)
+                  for called-p across (monitor-calls-called-p monitor)
+                  do (with-element ("span" ("style" (if called-p *style.called* *style.no-call*)))
+                       (when called-p (incf out-call-count))
+                       (incf out-count)
+                       (format stream " ~a" (monitor-namestring calls-monitor)))))
+          (with-element ("td" ("style" "border-right: solid black 1px"))
+            (loop for test-unit in (monitor-tests monitor)
+                  do (with-element ("div" ("style" (case (test:test-unit-status test-unit)
+                                                     (:passed *style.passed*)
+                                                     (:failed *style.failed*)
+                                                     (t *style.unknown*))))
+                       (format stream " ~{~a~^.~}" (test:test-unit-path test-unit))))))
         (values called-p out-count out-call-count))))
 
   )

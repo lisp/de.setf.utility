@@ -10,7 +10,8 @@
   :serial t
   :components ((:file "package")
                (:file "test-unit")
-               (:file "monitor")))
+               #+(or digitool clozure) (:file "monitor")
+               #+(or digitool clozure) (:file "profiler")))
 
 
 :de.setf.utility.test
