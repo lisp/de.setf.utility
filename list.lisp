@@ -12,7 +12,7 @@
 ;;;  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ;;;  See the GNU Lesser General Public License for more details.
 ;;;
-;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
+;;;  A copy of the GNU Lesser General Public License should be included with `de.setf.utility`, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
 
@@ -86,14 +86,15 @@
   (let ((list (gensym "LIST-"))
         (end (gensym "END-")))
     `(let* ((,list (list nil)) (,end ,list))
-       (flet ((,collector (datum)
-                ,@(when key `((setf datum (,key datum))))
-                ,(case predicate
-                   ((nil) `(setf (rest ,end) (list datum) ,end (rest ,end)))
-                   (identity `(when datum (setf (rest ,end) (list datum) ,end (rest ,end))))
-                   (t `(when (funcall ,predicate datum) (setf (rest ,end) (list datum) ,end (rest ,end)))))))
-         ,@body
-         (,finally ,list)))))
+       (block nil
+         (flet ((,collector (datum)
+                  ,@(when key `((setf datum (,key datum))))
+                  ,(case predicate
+                     ((nil) `(setf (rest ,end) (list datum) ,end (rest ,end)))
+                     (identity `(when datum (setf (rest ,end) (list datum) ,end (rest ,end))))
+                     (t `(when (funcall ,predicate datum) (setf (rest ,end) (list datum) ,end (rest ,end)))))))
+           ,@body))
+       (,finally ,list))))
 
 #+digitool
 (setf (ccl:assq 'collect-list *fred-special-indent-alist*) 1)
