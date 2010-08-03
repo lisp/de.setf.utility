@@ -338,8 +338,7 @@
     (excl:source-file object)))
 
     
-(assert (typep (dsw:object-source-information 'de.setf.utility:bound-slot-value 'function)
-               '(or string pathname))
+(assert (dsw:object-source-information 'de.setf.utility:bound-slot-value 'function)
         ()
         "No source information.")
 
