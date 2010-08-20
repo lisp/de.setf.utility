@@ -85,6 +85,7 @@
    :|yyyy-MM-ddTHH:mm:ss|
    :|ddMMyy.HHmm|
    :|yyyy-MM-ddTHH:mm:ssZZ|
+   :|yyyy.MM.dd HH:mm:ss|
    ))
 
 (modPackage :de.setf.utility
