@@ -173,5 +173,9 @@
             (values nil (copy-seq name)))
         (make-symbol (copy-seq name))))))
 
+(unless (find-package "_")
+  (defpackage "_" (:use)
+    (:documentation "An isolated package for macro definition symbols.")))
+
 
 :de.setf.utility
