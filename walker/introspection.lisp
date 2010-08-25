@@ -163,7 +163,7 @@
 
   #+sbcl
   (:method ((function function))
-    (remove-duplicates (mapcar #'sb-impl::fun-name (sb-introspect:find-function-callees x))))
+    (remove-duplicates (mapcar #'sb-impl::fun-name (sb-introspect:find-function-callees function))))
 
   #-allegro
   (:method ((x cons))
@@ -299,7 +299,7 @@
 
   (:method ((function function) (type-specification (eql 'function)))
     ;;; this is what describe does
-    (let* ((info (sb-kernel:%code-debug-info (fun-code-header (%fun-fun function))))
+    (let* ((info (sb-kernel:%code-debug-info (sb-kernel:fun-code-header (sb-kernel:%fun-fun function))))
            (source (when info (sb-c::debug-info-source info))))
       (when source (sb-c::debug-source-namestring source))))
 
