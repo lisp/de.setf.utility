@@ -39,7 +39,9 @@
                 :direct-slot-definition-class
                 :effective-slot-definition-class
                 :finalize-inheritance
+                :find-method-combination
                 :funcallable-standard-class
+                :generic-function-lambda-list
                 :generic-function-methods
                 :generic-function-method-class
                 :generic-function-name
@@ -67,7 +69,9 @@
                 :direct-slot-definition-class
                 :effective-slot-definition-class
                 :finalize-inheritance
+                :find-method-combination
                 :funcallable-standard-class
+                :generic-function-lambda-list
                 :generic-function-method-class
                 :generic-function-methods
                 :generic-function-name
@@ -96,7 +100,9 @@
                 :direct-slot-definition-class
                 :effective-slot-definition-class
                 :finalize-inheritance
+                :find-method-combination
                 :funcallable-standard-class
+                :generic-function-lambda-list
                 :generic-function-name
                 :generic-function-method-class
                 :generic-function-methods
@@ -154,7 +160,9 @@
                 :direct-slot-definition-class
                 :effective-slot-definition-class
                 :finalize-inheritance
+                :find-method-combination
                 :funcallable-standard-class
+                :generic-function-lambda-list
                 :generic-function-name
                 :generic-function-method-class
                 :generic-function-methods
@@ -209,7 +217,9 @@
    :encode-instance-as
    :finalize-if-needed
    :finalize-inheritance
+   :find-method-combination
    :funcallable-standard-class
+   :generic-function-lambda-list
    :generic-function-method-class
    :generic-function-methods
    :generic-function-name

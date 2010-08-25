@@ -415,7 +415,7 @@ methods, which it removes from the effective method."))
             #+allegro (mp:make-process-lock :name (generic-function-name instance))
             #+(or clozure digitool) (ccl::make-lock (generic-function-name instance))
             #+lispworks (mp:make-lock :name (generic-function-name instance))
-            #+sbcl (sb-thread:make-mutex :name (string lock-designator))
+            #+sbcl (sb-thread:make-mutex :name (generic-function-name instance))
             ))))
 
 
@@ -559,7 +559,7 @@ methods, which it removes from the effective method."))
   (:method ((type class)) nil)
 
   (:method ((type cons))
-   (or (and (memq (first type) '(and or not))
+   (or (and (member (first type) '(and or not))
             (every #'built-in-type-p (rest type)))
        (let ((type (first type)))
          (and (symbolp type) (built-in-type-p type))))))
