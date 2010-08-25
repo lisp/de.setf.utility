@@ -21,9 +21,9 @@
 
  The constants bind the extremes and a subset of the special values for positive/negative infinity and NAN.
  If there are use-cases for others, the set can be extended. The implementation is repackaged from the AMQP
- wire codecs, with the tests still just in that library. A copy of
+ wire codecs, with the tests still just in that library. See
  [Vickery's](http://babbage.cs.qc.cuny.edu/IEEE-754/References.xhtml#tables) reference for boundary/test
- values in among the readmes.
+ values.
 
  The operators implement the combinations for destination (stream / buffer), direction (read / write), and
  size (single / double). The buffer operators require an additional position argument and return the new
