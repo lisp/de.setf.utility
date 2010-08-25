@@ -98,7 +98,7 @@
 (defun map-registry-roots (function)
   (dolist (root asdf:*central-registry*)
     (when (and (pathnamep (setf root (eval root)))
-               (asdf::directory-pathname-p root))
+               (directory-pathname-p root))
       (funcall function (eval root)))))
 
 (defgeneric asdf::sysdef-hierarchical-search-function (name &key verbose-p wild-p)
