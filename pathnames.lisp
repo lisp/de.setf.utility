@@ -106,6 +106,12 @@
            (position #\space (lisp-implementation-type)))))
 
 
+#-ccl
+(defun directory-pathname-p (path)
+  (let ((name (pathname-name path))(type (pathname-type path)))
+    (and  (or (null name) (eq name :unspecific) (zerop (length name)))
+          (or (null type) (eq type :unspecific)))))
+
 (defun make-hosted-pathname (host namestring)
   (format nil "~a:~a" host namestring))
 
