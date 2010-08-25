@@ -46,6 +46,7 @@
             asdf::system-qualified-component-name)
           :asdf))
 
+
 ;;; ensure support for de.setf.utility.implementation::translate-physical-pathname
 
 (eval-when (:execute :load-toplevel :compile-toplevel)
@@ -96,10 +97,14 @@
   (format nil "~{~a~^.~}" path))
 
 (defun map-registry-roots (function)
-  (dolist (root asdf:*central-registry*)
-    (when (and (pathnamep (setf root (eval root)))
-               (directory-pathname-p root))
-      (funcall function (eval root)))))
+  (flet ((directory-pathname-p (path)
+           (let ((name (pathname-name path))(type (pathname-type path)))
+             (and  (or (null name) (eq name :unspecific) (zerop (length name)))
+                   (or (null type) (eq type :unspecific))))))
+    (dolist (root asdf:*central-registry*)
+      (when (and (pathnamep (setf root (eval root)))
+                 (directory-pathname-p root))
+        (funcall function (eval root))))))
 
 (defgeneric asdf::sysdef-hierarchical-search-function (name &key verbose-p wild-p)
   (:method ((datum t)  &key verbose-p wild-p)
@@ -194,21 +199,23 @@
     (setf (asdf::component-property component 'asdf::system-nicknames) nicknames)))
 
 
-(defmethod pathname-qualified-path ((pathname pathname) (root-path pathname))
-  "Iff the pathname is dominated by the root path, return the relative directory path."
+(defgeneric pathname-qualified-path (pathname root-path)
+  (:method ((pathname pathname) (root-path pathname))
+    "Iff the pathname is dominated by the root path, return the relative directory path."
+    
+    (when (typep pathname 'logical-pathname)
+      (setf pathname (translate-logical-pathname pathname)))
+    (when (typep root-path 'logical-pathname)
+      (setf root-path (translate-logical-pathname root-path)))
+    
+    (let ((pathname-directory (pathname-directory pathname))
+          (root-directory (pathname-directory root-path)))
+      (when (and (> (length root-directory) 1)
+                 (< (length root-directory) (length pathname-directory))
+                 (equalp (subseq pathname-directory 0 (length root-directory))
+                         root-directory))
+        (last pathname-directory (- (length pathname-directory) (length root-directory)))))))
 
-  (when (typep pathname 'logical-pathname)
-    (setf pathname (translate-logical-pathname pathname)))
-  (when (typep root-path 'logical-pathname)
-    (setf root-path (translate-logical-pathname root-path)))
-  
-  (let ((pathname-directory (pathname-directory pathname))
-        (root-directory (pathname-directory root-path)))
-    (when (and (> (length root-directory) 1)
-               (< (length root-directory) (length pathname-directory))
-               (equalp (subseq pathname-directory 0 (length root-directory))
-                       root-directory))
-      (last pathname-directory (- (length pathname-directory) (length root-directory))))))
 
 (assert (and (equal '("d1" "d2") (pathname-qualified-path (make-pathname :directory '(:absolute "base" "d1" "d2"))
                                                           (make-pathname :directory '(:absolute "base"))))
@@ -230,6 +237,34 @@
 
 (assert (let ((asdf::*central-registry* (list (make-pathname :directory '(:absolute "base")))))
           (equal '("d1" "d2") (registry-qualified-path (make-pathname :directory '(:absolute "base" "d1" "d2"))))))
+
+
+(defgeneric pathname-qualified-component-name (system-name pathname)
+  (:documentation "Given a system name or a pathname and a root pathname, return the minimal path as an relative
+ to the root.")
+  
+  (:method ((designator symbol) (pathname t))
+    (pathname-qualified-component-name (string designator) pathname))
+
+  (:method ((system-name string) (pathname pathname))
+    (when (typep pathname 'logical-pathname)
+      (setf pathname (translate-logical-pathname pathname)))
+    (let* ((system-name-list (system-namestring-to-list system-name))
+           (pathname-name-list (registry-qualified-path pathname))
+           (system-name-position (search system-name-list  pathname-name-list :test
+                                         #'(lambda (sn pn)
+                                             (and (<= (length sn) (length pn))
+                                                  (string-equal sn pn :end2 (length sn)))))))
+      #+(or )
+      (print (list :system-name system-name
+                   :pathname-name-list pathname-name-list :system-name-list system-name-list
+                   :system-name-position system-name-position))
+      (format nil "~(~{~a.~}~{~a~^.~}~)"
+              ;; (butlast pathname-name-list (length system-name-list))
+              (if system-name-position
+                (butlast pathname-name-list (- (length pathname-name-list) system-name-position))
+                pathname-name-list)
+              system-name-list))))
 
 
 (defgeneric asdf::system-qualified-component-name (system)
@@ -272,33 +307,6 @@
 #+(or)
 (asdf::system-qualified-component-name :de.setf.amqp)
 
-
-(defgeneric pathname-qualified-component-name (system-name pathname)
-  (:documentation "Given a system name or a pathname and a root pathname, return the minimal path as an relative
- to the root.")
-  
-  (:method ((designator symbol) (pathname t))
-    (pathname-qualified-component-name (string designator) pathname))
-
-  (:method ((system-name string) (pathname pathname))
-    (when (typep pathname 'logical-pathname)
-      (setf pathname (translate-logical-pathname pathname)))
-    (let* ((system-name-list (system-namestring-to-list system-name))
-           (pathname-name-list (registry-qualified-path pathname))
-           (system-name-position (search system-name-list  pathname-name-list :test
-                                         #'(lambda (sn pn)
-                                             (and (<= (length sn) (length pn))
-                                                  (string-equal sn pn :end2 (length sn)))))))
-      #+(or )
-      (print (list :system-name system-name
-                   :pathname-name-list pathname-name-list :system-name-list system-name-list
-                   :system-name-position system-name-position))
-      (format nil "~(~{~a.~}~{~a~^.~}~)"
-              ;; (butlast pathname-name-list (length system-name-list))
-              (if system-name-position
-                (butlast pathname-name-list (- (length pathname-name-list) system-name-position))
-                pathname-name-list)
-              system-name-list))))
 
 (assert (let ((asdf::*central-registry* (list (make-pathname :directory '(:absolute "base")))))
           (and (equal "d1.d2" (pathname-qualified-component-name "d2" (make-pathname :directory '(:absolute "base" "d1" "d2"))))
