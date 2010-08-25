@@ -1,6 +1,7 @@
 ;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: cl-user; -*-
 
-;;;  This file is the core package definition for the 'de.setf.utility' Common Lisp library.
+;;;  This file is the package definition for the walker module for 'de.setf.utility'
+;;;  Common Lisp library.
 ;;;
 ;;;  Copyright 2003, 2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
 ;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
