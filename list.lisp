@@ -82,7 +82,7 @@
       form
       `(let ((,l-var ,list)) ,form))))
 
-(defmacro collect-list ((collector &key (predicate 'identity) (finally 'rest) key) &rest body)
+(defmacro collect-list ((collector &key (predicate 'identity) (finally 'rest) key last) &rest body)
   (let ((list (gensym "LIST-"))
         (end (gensym "END-")))
     `(let* ((,list (list nil)) (,end ,list))
@@ -92,7 +92,10 @@
                   ,(case predicate
                      ((nil) `(setf (rest ,end) (list datum) ,end (rest ,end)))
                      (identity `(when datum (setf (rest ,end) (list datum) ,end (rest ,end))))
-                     (t `(when (funcall ,predicate datum) (setf (rest ,end) (list datum) ,end (rest ,end)))))))
+                     (t `(when (funcall ,predicate datum) (setf (rest ,end) (list datum) ,end (rest ,end))))))
+                ,@(when last
+                    `(((setf ,last) (datum)
+                       (setf (rest ,end) datum)))))
            ,@body))
        (,finally ,list))))
 
