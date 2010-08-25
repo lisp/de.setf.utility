@@ -17,7 +17,6 @@
 ;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
-
 (asdf:defsystem :de.setf.utility.walker
   :depends-on (:de.setf.utility.dot
                :de.setf.utility.clos
