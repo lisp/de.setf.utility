@@ -51,14 +51,6 @@
 
  shows the magnitudes."))
 
-#-sbcl
-(declaim (double-float double-float-positive-infinity
-                       double-float-negative-infinity)
-         (single-float single-float-positive-infinity
-                       single-float-negative-infinity))
-
-(declaim (double-float double-float-nan)
-         (single-float single-float-nan))
 
 (declaim (ftype (function (stream double-float) t) stream-write-double)
          (ftype (function (stream single-float) t) stream-write-float)
@@ -71,66 +63,6 @@
          (ftype (function (stream fixnum) (values single-float fixnum)) buffer-get-float))
 
 
-
-#+mcl
-(unless (boundp 'double-float-positive-infinity)
-  (eval-when (:compile-toplevel :load-toplevel :execute)
-    (defconstant double-float-positive-infinity
-      (unwind-protect
-        (progn
-          (ccl::set-fpu-mode :division-by-zero nil)
-          (funcall '/ 0d0))
-        (ccl::set-fpu-mode :division-by-zero t)))
-    
-    (defconstant double-float-negative-infinity
-      (unwind-protect
-        (progn
-          (ccl::set-fpu-mode :division-by-zero nil)
-          (funcall '/ -0d0))
-        (ccl::set-fpu-mode :division-by-zero t)))))
-
-#+(or mcl (and clozure (not ccl-1.4)))
-(unless (boundp 'double-float-nan)
-  (defconstant double-float-nan
-    (unwind-protect
-      (locally (declare (special double-float-positive-infinity double-float-negative-infinity))
-        (ccl::set-fpu-mode :invalid nil)
-        (funcall '+ double-float-positive-infinity double-float-negative-infinity))
-      (ccl::set-fpu-mode :invalid t))))
-
-#+(or mcl clozure)
-(unless (boundp 'single-float-positive-infinity)
-  (eval-when (:compile-toplevel :load-toplevel :execute)
-    (defconstant single-float-positive-infinity
-      (unwind-protect
-        (progn
-          (ccl::set-fpu-mode :division-by-zero nil)
-          (funcall '/ 0f0))
-        (ccl::set-fpu-mode :division-by-zero t)))
-    
-    (defconstant single-float-negative-infinity
-      (unwind-protect
-        (progn
-          (ccl::set-fpu-mode :division-by-zero nil)
-          (funcall '/ -0f0))
-        (ccl::set-fpu-mode :division-by-zero t)))))
-
-#+(or mcl clozure)
-(unless (boundp 'single-float-nan)
-  (defconstant single-float-nan
-    (unwind-protect
-      (locally (declare (special single-float-positive-infinity single-float-negative-infinity))
-        (ccl::set-fpu-mode :invalid nil)
-        (funcall '+ single-float-positive-infinity single-float-negative-infinity))
-      (ccl::set-fpu-mode :invalid t))))
-
-#+sbcl  ;; works on osx and linux
-(unless (boundp 'single-float-nan)
-  (sb-vm::with-float-traps-masked (:invalid)
-    (defconstant single-float-nan
-      (eval '(+ single-float-positive-infinity single-float-negative-infinity)))
-    (defconstant double-float-nan
-      (eval '(+ double-float-positive-infinity double-float-negative-infinity)))))
 
 
 ;;;
