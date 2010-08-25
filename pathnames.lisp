@@ -324,7 +324,8 @@
        (production (make-pathname :directory (append (butlast (pathname-directory library) 2)
                                                      '("production" "Library"))
                                   :name nil :type nil :defaults library)))
-  (when (#-clisp probe-file #+clisp ext:probe-directory production)
+  (when (and (#-clisp probe-file #+clisp ext:probe-directory production)
+             (not (equalp production library)))
     (set-relative-logical-pathname-translations "P-LIBRARY" :absolute-pathname production)))
            
 
