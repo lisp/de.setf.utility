@@ -90,7 +90,6 @@
 (defmethod stream-writer ((stream t))
   (values #'(lambda (stream byte)
               ;; loud tracing
-              (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-                (format console " [~3,'0d]" byte))
+              ;; (sb-posix:syslog 0 " [~3,'0d]" byte)
               (write-byte byte stream))
           stream))

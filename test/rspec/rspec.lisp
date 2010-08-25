@@ -32,6 +32,14 @@
 (defparameter +rspec-unable-to-read-header+ 1)
 (defparameter +rspec-unable-to-read-data+ 2)
 
+#+sbcl
+(defun rspec-log (format-control &rest args)
+  (apply #'sb-posix:syslog 0 format-control args))
+
+#+digitool
+(defun rspec-log (format-control &rest args)
+  (apply #'warn format-control args))
+
 (defun rspec-run-test (path &key debug)
   (let ((test-unit (find-test path)))
     (cond (test-unit
@@ -44,10 +52,7 @@
                     (let ((message (format nil "test ~s signaled:~%~a"
                                            (test-unit-name test-unit) condition)))
                       (when debug
-                        (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-                          (multiple-value-bind (sec min hr day mon year) (get-decoded-time)
-                            (format console "~%~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d rspec : ~s"
-                                    year mon day hr min sec message))))
+                        (rspec-log "rspec : ~s" message))
                       (vector :|error| (vector :|user| 100
                                                (symbol-name (type-of condition))
                                                message
@@ -71,10 +76,7 @@
                     (let ((message (format nil "function ~s signaled:~%~a"
                                            symbol condition)))
                       (when debug
-                        (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-                          (multiple-value-bind (sec min hr day mon year) (get-decoded-time)
-                            (format console "~%~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d rspec : ~s"
-                                    year mon day hr min sec message))))
+                        (rspec-log "rspec : ~s" message))
                       (vector :|error| (vector :|user| 100
                                                (symbol-name (type-of condition))
                                                message
@@ -94,10 +96,7 @@
     (loop
       (unless (listen input) (return))
       (let ((request (etf:decode-term input)) (response nil))
-        (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-          (multiple-value-bind (sec min hr day mon year) (get-decoded-time)
-            (format console "~%~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d rspec -> ~s"
-                    year mon day hr min sec request)))
+        (rspec-log "rspec -> ~s" request)
         (cond ((and (vectorp request)
                     (symbolp (aref request 0))
                     (string-equal (aref request 0) "call")
@@ -110,16 +109,10 @@
                                                        "PROTOCOL-ERROR"
                                                        (format nil "Invalid request: ~s." request)
                                                        nil)))))
-        (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-          (multiple-value-bind (sec min hr day mon year) (get-decoded-time)
-            (format console "~%~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d rspec <- ~s"
-                    year mon day hr min sec response)))
+        (rspec-log "rspec <- ~s" response)
         (etf:encode-term response output)))
     (error (c)
-           (with-open-file (console "/dev/console" :direction :output :if-exists :append)
-             (multiple-value-bind (sec min hr day mon year) (get-decoded-time)
-               (format console "~%~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0d rspec : ~a"
-                       year mon day hr min sec c))))))
+           (rspec-log "rspec : ~a" c))))
 
 #+sbcl
 (defun cl-user::rspec-repl ()
