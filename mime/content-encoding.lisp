@@ -88,9 +88,10 @@ from de.setf.xml suffice."))
 
 
 (flet ((utf-8-encode (char put-byte destination)
+         (declare (optimize (speed 3) (safety 0)))
          (macrolet ((emit (code) `(funcall put-byte destination ,code)))
            (let ((code (char-code char)))
-             (declare (type (mod #x100) code))
+             (declare (type (mod #x110000) code))
              (cond ((<= code 255)
                     (emit code))
                    ((<= code #x03ff)
@@ -132,7 +133,7 @@ from de.setf.xml suffice."))
                    (error "Illegal UTF-8 data: x~2,'0x." byte1))))))
        (utf8-code-point-size (char)
          (let ((code (char-code char)))
-             (declare (type (mod #x100) code))
+             (declare (type (mod #x110000) code))
              (cond ((<= code 255)    1)
                    ((<= code #x03ff) 2)
                    ((<= code #xffff) 3)
@@ -198,5 +199,17 @@ from de.setf.xml suffice."))
         (loop for char across string
               do (funcall encoder char #'put-byte result)))
       result)))
+
+(defgeneric size-string (string encoding)
+  (:method ((string t) (encoding symbol))
+    (size-string string (content-encoding encoding)))
+
+  (:method ((string string) (encoding content-encoding))
+    (let* ((byte-sizer (content-encoding-encoded-code-point-size encoding)))
+      (etypecase byte-sizer
+        (null (length string))
+        (integer (* (length string) byte-sizer))
+        (function (loop for char across string
+                        sum (funcall byte-sizer char)))))))
 
 ;;; (map 'string #'code-char (encode-string "asdf" :utf-8))
