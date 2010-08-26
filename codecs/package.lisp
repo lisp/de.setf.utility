@@ -20,8 +20,8 @@
 (defpackage :de.setf.utility.codecs
   (:use )
   (:documentation "The API package for BERT-encoding operators.")
-  (:export :buffer-get-double
-           :buffer-get-float
+  (:export :buffer-get-float-32
+           :buffer-get-float-64
            :buffer-get-signed-byte
            :buffer-get-signed-byte-8
            :buffer-get-signed-byte-16
@@ -38,8 +38,8 @@
            :buffer-get-unsigned-byte-16
            :buffer-get-unsigned-byte-32
            :buffer-get-unsigned-byte-64
-           :buffer-set-double
-           :buffer-set-float
+           :buffer-set-float-32
+           :buffer-set-float-64
            :buffer-set-signed-byte
            :buffer-set-signed-byte-8
            :buffer-set-signed-byte-16
@@ -61,8 +61,8 @@
            :sign-byte-16
            :sign-byte-32
            :sign-byte-64
-           :stream-read-double
-           :stream-read-float
+           :stream-read-float-32
+           :stream-read-float-64
            :stream-read-signed-byte
            :stream-read-signed-byte-8
            :stream-read-signed-byte-16
@@ -80,8 +80,8 @@
            :stream-read-unsigned-byte-16
            :stream-read-unsigned-byte-32
            :stream-read-unsigned-byte-64
-           :stream-write-double
-           :stream-write-float
+           :stream-write-float-32
+           :stream-write-float-64
            :stream-write-signed-byte
            :stream-write-signed-byte-8
            :stream-write-signed-byte-16

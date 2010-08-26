@@ -18,7 +18,7 @@
 
 
 (defpackage :de.setf.utility.etf
-  (:use )
+  (:use :de.setf.utility.codecs)
   (:nicknames :etf)
   (:export :*intern-operator*
            :*package*
@@ -60,5 +60,7 @@
            :buffer-set-term
            :buffer-get-term)
 
-  (:documentation "the home package for the Erlang 'external term format' tag names, and interface
- operators names. It includes all standard names, even though not all are implemented."))
+  (:documentation "The home package for the Erlang 'external term format' tag names, and interface
+ operators names. It includes all tag names, internal and api coding operator names and the
+ also uses the :de.setf.utility.codecs package for abbreviated access to its operator names.
+ It exports the api and all standard term tag names, even though not all are implemented."))

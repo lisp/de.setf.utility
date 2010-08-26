@@ -201,7 +201,7 @@
 ;;;
 ;;; stream/buffer codecs
 
-(defun decode-double-bytes (get-byte)
+(defun decode-float-64-bytes (get-byte)
   (declare (type (function () (unsigned-byte 8)) get-byte)
            (dynamic-extent get-byte))
   (let ((value 0))
@@ -210,28 +210,28 @@
       (setf value (+ (ash value 8) (funcall get-byte))))
     (ieee-754-64-integer-to-float value)))
 
-(defun stream-read-double (stream)
+(defun stream-read-float-64 (stream)
   (multiple-value-bind (function arg) (stream-reader stream)
     (declare (type (function (t) (or (unsigned-byte 8) null)) function))
     (flet ((get-byte ()
              (or (funcall function arg)
                  (error 'end-of-file :stream stream))))
-      (decode-double-bytes #'get-byte))))
+      (decode-float-64-bytes #'get-byte))))
                   
-(defun buffer-get-double (buffer position)
-  (assert-argument-type buffer-get-double buffer byte-buffer)
+(defun buffer-get-float-64 (buffer position)
+  (assert-argument-type buffer-get-float-64 buffer byte-buffer)
   (assert-condition (and (typep position 'fixnum) (<= (+ position 8) (length buffer)))
-                    buffer-get-double "value overflows buffer: (~s + ~s), ~s"
+                    buffer-get-float-64 "value overflows buffer: (~s + ~s), ~s"
                     position 8 (length buffer))
   (flet ((get-byte ()
            (aref buffer (shiftf position (1+ position)))))
     (declare (dynamic-extent #'get-byte)
              (ftype (function () (unsigned-byte 8)) get-byte))
-    (values (decode-double-bytes #'get-byte) position)))
+    (values (decode-float-64-bytes #'get-byte) position)))
 
 
 
-(defun decode-float-bytes (get-byte)
+(defun decode-float-32-bytes (get-byte)
   (declare (type (function () (unsigned-byte 8)) get-byte)
            (dynamic-extent get-byte))
   (let ((value 0))
@@ -240,28 +240,28 @@
       (setf value (+ (ash value 8) (funcall get-byte))))
     (ieee-754-32-integer-to-float value)))
 
-(defun stream-read-float (stream)
+(defun stream-read-float-32 (stream)
   (multiple-value-bind (function arg) (stream-reader stream)
     (declare (type (function (t) (or (unsigned-byte 8) null)) function))
     (flet ((get-byte ()
              (or (funcall function arg)
                  (error 'end-of-file :stream stream))))
-      (decode-float-bytes #'get-byte))))
+      (decode-float-32-bytes #'get-byte))))
 
-(defun buffer-get-float (buffer position)
-  (assert-argument-type buffer-get-double buffer byte-buffer)
+(defun buffer-get-float-32 (buffer position)
+  (assert-argument-type buffer-get-float-32 buffer byte-buffer)
   (assert-condition (and (typep position 'fixnum) (<= (+ position 4) (length buffer)))
-                    buffer-get-float "value overflows buffer: (~s + ~s), ~s"
+                    buffer-get-float-32 "value overflows buffer: (~s + ~s), ~s"
                     position 4 (length buffer))
   (flet ((get-byte ()
            (aref buffer (shiftf position (1+ position)))))
     (declare (dynamic-extent #'get-byte)
              (ftype (function () (unsigned-byte 8)) get-byte))
-    (values (decode-float-bytes #'get-byte) position)))
+    (values (decode-float-32-bytes #'get-byte) position)))
 
 
 
-(defun encode-double-bytes (put-byte value)
+(defun encode-float-64-bytes (put-byte value)
   (declare (type (function ((unsigned-byte 8)) t) put-byte)
            (dynamic-extent put-byte))
   (let ((int-value (ieee-754-64-float-to-integer value))
@@ -273,7 +273,7 @@
       (funcall put-byte (ldb (byte 8 bit-offset) int-value))
       (decf bit-offset 8))))
 
-(defun stream-write-double (stream value)
+(defun stream-write-float-64 (stream value)
   (multiple-value-bind (function arg) (stream-writer stream)
     (declare (type (function (t (unsigned-byte 8)) t) function))
     (flet ((put-byte (byte)
@@ -281,22 +281,22 @@
              (funcall function arg byte)))
       (declare (dynamic-extent #'put-byte)
                (ftype (function ((unsigned-byte 8)) t) put-byte))
-      (encode-double-bytes #'put-byte value)
+      (encode-float-64-bytes #'put-byte value)
       value)))
 
-(defun buffer-set-double (buffer value position)
-  (assert-argument-type buffer-get-double buffer byte-buffer)
+(defun buffer-set-float-64 (buffer value position)
+  (assert-argument-type buffer-set-float-64 buffer byte-buffer)
   (flet ((put-byte (byte)
            (setf (aref buffer (shiftf position (1+ position))) byte)
            (values)))
     (declare (dynamic-extent #'put-byte)
              (ftype (function ((unsigned-byte 8)) (values)) put-byte))
-    (encode-double-bytes #'put-byte value)
+    (encode-float-64-bytes #'put-byte value)
     position))
 
 
 
-(defun encode-float-bytes (put-byte value)
+(defun encode-float-32-bytes (put-byte value)
   (declare (type (function ((unsigned-byte 8)) t) put-byte)
            (dynamic-extent put-byte))
   (let ((int-value (ieee-754-32-float-to-integer value)))
@@ -308,7 +308,7 @@
     (funcall put-byte (ldb (byte 8 8) int-value))
     (funcall put-byte (ldb (byte 8 0) int-value))))
 
-(defun stream-write-float (stream value)
+(defun stream-write-float-32 (stream value)
   (multiple-value-bind (function arg) (stream-writer stream)
     (declare (type (function (t (unsigned-byte 8)) t) function))
     (flet ((put-byte (byte)
@@ -316,17 +316,17 @@
              (funcall function arg byte)))
       (declare (dynamic-extent #'put-byte)
                (ftype (function ((unsigned-byte 8)) t) put-byte))
-      (encode-float-bytes #'put-byte value)
+      (encode-float-32-bytes #'put-byte value)
       value)))
 
-(defun buffer-set-float (buffer value position)
-  (assert-argument-type buffer-get-double buffer byte-buffer)
+(defun buffer-set-float-32 (buffer value position)
+  (assert-argument-type buffer-set-float-32 buffer byte-buffer)
   (flet ((put-byte (byte)
            (setf (aref buffer (shiftf position (1+ position))) byte)
            (values)))
     (declare (dynamic-extent #'put-byte)
              (ftype (function ((unsigned-byte 8)) (values)) put-byte))
-    (encode-float-bytes #'put-byte value)
+    (encode-float-32-bytes #'put-byte value)
     position))
 
 
