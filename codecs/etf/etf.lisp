@@ -157,10 +157,10 @@
       (setf (aref tuple i) (etf::stream-read-term stream)))
     (decode-bert-standard-format tuple)))
 
-(defun etf::stream-read-string-iso (stream)
-  (de.setf.utility.codecs:stream-read-string-iso-16 stream))
+(defun etf::stream-read-string-16 (stream)
+  (de.setf.utility.codecs:stream-read-string-utf8-16 stream))
 
-(defun etf::stream-read-string-utf8 (stream)
+(defun etf::stream-read-string-32 (stream)
   (de.setf.utility.codecs:stream-read-string-utf8-32 stream))
 
 
@@ -188,11 +188,11 @@
 
   (:method (stream (term string))
     (let* ((length (length term))
-           (size (when (< length 65536) (size-string term (load-time-value (content-encoding :utf-8))))))
+           (size (size-string term (load-time-value (content-encoding :utf-8)))))
       (cond ((eql length size)
-             (etf::stream-write-string-iso stream term))
+             (etf::stream-write-string-16 stream term size))
             (t
-             (etf::stream-write-string-utf8 stream term size)))))
+             (etf::stream-write-string-32 stream term size)))))
 
   (:method (stream (term symbol))
     "Emit an atom for the symbol; distinguish true and false."
@@ -264,11 +264,11 @@
     (dotimes (i count)
       (etf:stream-write-term stream (aref term i)))))
 
-(defun etf::stream-write-string-iso (stream term)
+(defun etf::stream-write-string-16 (stream term &optional (size nil))
   (de.setf.utility.codecs:stream-write-unsigned-byte-8 stream etf:string_ext)
-  (de.setf.utility.codecs:stream-write-string-iso-16 stream term))
+  (de.setf.utility.codecs:stream-write-string-utf8-16 stream term size))
 
-(defun etf::stream-write-string-utf8 (stream term &optional (size nil))
+(defun etf::stream-write-string-32 (stream term &optional (size nil))
   (de.setf.utility.codecs:stream-write-unsigned-byte-8 stream etf:binary_ext)
   (de.setf.utility.codecs:stream-write-string-utf8-32 stream term size))
 
@@ -350,10 +350,10 @@
       (setf (aref tuple i) element))
     (values (decode-bert-standard-format tuple) position)))
 
-(defun etf::buffer-get-string-iso (buffer position)
-  (de.setf.utility.codecs:buffer-get-string-iso-16 buffer position))
+(defun etf::buffer-get-string-16 (buffer position)
+  (de.setf.utility.codecs:buffer-get-string-utf8-16 buffer position))
 
-(defun etf::buffer-get-string-utf8 (buffer position)
+(defun etf::buffer-get-string-32 (buffer position)
   (de.setf.utility.codecs:buffer-get-string-utf8-32 buffer position))
 
 
@@ -381,11 +381,11 @@
 
   (:method (buffer (term string) position)
     (let* ((length (length term))
-           (size (when (< length 65536) (size-string term (load-time-value (content-encoding :utf-8))))))
+           (size (size-string term (load-time-value (content-encoding :utf-8)))))
       (cond ((eql length size)
-             (etf::buffer-set-string-iso buffer term position))
+             (etf::buffer-set-string-16 buffer term position size))
             (t
-             (etf::buffer-set-string-utf8 buffer term position size)))))
+             (etf::buffer-set-string-32 buffer term position size)))))
 
   (:method (buffer (term symbol) position)
     (case term
@@ -491,14 +491,16 @@
         (etf:buffer-set-term buffer (aref term i) position)))
     (values buffer position)))
 
-(defun etf::buffer-set-string-iso (buffer term position)
-  (let* ((new-length (+ position 1 2 (length term))))
+(defun etf::buffer-set-string-16 (buffer term position &optional (size nil))
+  (unless size
+    (setf size (size-string term (load-time-value (content-encoding :utf-8)))))
+  (let* ((new-length (+ position 1 2 size)))
     (setf buffer (ensure-buffer-length buffer new-length))
     (de.setf.utility.codecs:buffer-set-unsigned-byte-8 buffer etf:string_ext position)
-    (de.setf.utility.codecs:buffer-set-string-iso-16 buffer term (1+ position))
+    (de.setf.utility.codecs:buffer-set-string-utf8-16 buffer term (1+ position) size)
     (values buffer new-length)))
 
-(defun etf::buffer-set-string-utf8 (buffer term position &optional (size nil))
+(defun etf::buffer-set-string-32 (buffer term position &optional (size nil))
   (unless size
     (setf size (size-string term (load-time-value (content-encoding :utf-8)))))
   (let* ((new-length (+ position 1 4 size)))
@@ -552,7 +554,7 @@
                `(progn ,@(loop for (tag function) in dispatches
                                collect `(set-dispatch ,tag ,function)))))
     (set-dispatches (etf:atom_ext etf::stream-read-atom)
-                    (etf:binary_ext etf::stream-read-string-utf8)
+                    (etf:binary_ext etf::stream-read-string-32)
                     (etf:integer_ext etf::stream-read-integer)
                     (etf:large_tuple_ext etf::stream-read-large-tuple)
                     (etf:list_ext etf::stream-read-list)
@@ -561,7 +563,7 @@
                     (etf:small_atom_ext etf::stream-read-small-atom)
                     (etf:small_integer_ext etf::stream-read-small-integer)
                     (etf:small_tuple_ext etf::stream-read-small-tuple)
-                    (etf:string_ext etf::stream-read-string-iso))))
+                    (etf:string_ext etf::stream-read-string-16))))
 
 
 (let ((dispatch-table *buffer-decode-dispatch-table*))
@@ -572,7 +574,7 @@
                `(progn ,@(loop for (tag function) in dispatches
                                collect `(set-dispatch ,tag ,function)))))
     (set-dispatches (etf:atom_ext etf::buffer-get-atom)
-                    (etf:binary_ext etf::buffer-get-string-utf8)
+                    (etf:binary_ext etf::buffer-get-string-32)
                     (etf:integer_ext etf::buffer-get-integer)
                     (etf:large_tuple_ext etf::buffer-get-large-tuple)
                     (etf:list_ext etf::buffer-get-list)
@@ -581,7 +583,7 @@
                     (etf:small_atom_ext etf::buffer-get-small-atom)
                     (etf:small_integer_ext etf::buffer-get-small-integer)
                     (etf:small_tuple_ext etf::buffer-get-small-tuple)
-                    (etf:string_ext etf::buffer-get-string-iso))))
+                    (etf:string_ext etf::buffer-get-string-16))))
 
 
 #+(or)
