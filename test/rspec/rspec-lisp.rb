@@ -29,8 +29,13 @@ module RSpec; module Lisp
     ##
     # @private
     def method_missing(method_name, *args, &block)
-      method_name = method_name.to_s.gsub('_', '-').to_sym
-      super # TODO: invoke the corresponding Lisp function
+      function_name = method_name.to_s.gsub('_', '-').to_sym
+      result = call_lisp_(function_name, args);
+      if block_given?
+        block.call(result)
+      else
+        result
+      end
     end
   
   ##
@@ -44,29 +49,34 @@ module RSpec; module Lisp
   # 
   # @param [String] function
   # @param [Array] arguments
-  def call_lisp(function, *arguments)
-    # the BERTRPC interface is not symmetric, but that's the way it is.
-    message = encode_ruby_request(BERT::Tuple[:call, @module_name, function, arguments])
-    pid, stdin, stdout, stderr = Open4.popen4(LISP)
-    stdin.write(message)
-    stdin.flush.close
-    _, status = Process.waitpid2(pid)
-    if ( status.exitstatus.zero? )
-      # decode the response directly from the stream w/o a length header
-      dc = BERT::Decode.new(stdout);
-      response = dc.read_any
-      case response[0]
-        when :reply
-          response[1]
-        when :error
-          error(response[1])
-        else
-          raise
-      end
-    else
-      raise(StandardError, stderr.read())
+    def call_lisp(function, *arguments)
+      call_lisp_(function, arguments)
     end
-  end
+
+
+    def call_lisp_(function, arguments)
+      # the BERTRPC interface is not symmetric, but that's the way it is.
+      message = encode_ruby_request(BERT::Tuple[:call, @module_name, function, arguments])
+      pid, stdin, stdout, stderr = Open4.popen4(LISP)
+      stdin.write(message)
+      stdin.flush.close
+      _, status = Process.waitpid2(pid)
+      if ( status.exitstatus.zero? )
+      # decode the response directly from the stream w/o a length header
+        dc = BERT::Decode.new(stdout);
+        response = dc.read_any
+        case response[0]
+          when :reply
+            response[1]
+          when :error
+            error(response[1])
+          else
+            raise
+        end
+      else
+        raise(StandardError, stderr.read())
+      end
+    end
 
   end
 
@@ -111,9 +121,11 @@ if __FILE__ == $0
   p RSpec::Lisp.evaluate(%q((* 6 (+ 3 4))))   #=> 42
 end
 
-
+## RSpec::Lisp::Proxy.new("CL").call_lisp("lisp-implementation-type")
 ## RSpec::Lisp::Proxy.new("CL").call_lisp("round", 7, 3)
 ## RSpec::Lisp::Proxy.new("keyword").call_lisp("rspec.succeed")
 ## RSpec::Lisp::Proxy.new("keyword").call_lisp("rspec.fail")
 ## RSpec::Lisp::Proxy.new("keyword").call_lisp("rspec.error")
+
+## RSpec::Lisp::Proxy.new("CL").lisp_implementation_type
 
