@@ -4,7 +4,9 @@
 
 (asdf:defsystem :de.setf.utility.test.rspec
   :depends-on (:de.setf.utility.test
-               :de.setf.utility.codecs.etf)
+               :de.setf.utility.codecs.etf
+               #+sbcl
+               :sb-posix)
   :serial t
   :components ((:file "package")
                (:file "rspec")))
