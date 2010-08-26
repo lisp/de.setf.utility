@@ -91,35 +91,35 @@
 ;;; (test:test rspec.1 (+ 1 2) 3)
 ;;; (rspec-run-test "rspec.1")
 
-(defun rspec-run (input output)
+(defun rspec-run (input output  &key debug)
   (handler-case
     (loop
       (unless (listen input) (return))
       (let ((request (etf:decode-term input)) (response nil))
-        (rspec-log "rspec -> ~s" request)
+        (when debug (rspec-log "rspec -> ~s" request))
         (cond ((and (vectorp request)
                     (symbolp (aref request 0))
                     (string-equal (aref request 0) "call")
                     (stringp (aref request 1)))
                (setf response (if (string-equal (aref request 1) "keyword")
-                                (rspec-run-test (elt request 2))
-                                (rspec-apply-function (aref request 1) (aref request 2)
-                                                      (aref request 3)))))
+                                (rspec-run-test (elt request 2) :debug debug)
+                                (rspec-apply-function (aref request 1) (aref request 2) (aref request 3)
+                                                      :debug debug))))
               (t (setf response (vector :|error| (vector :|protocol| +rspec-unable-to-read-header+
                                                        "PROTOCOL-ERROR"
                                                        (format nil "Invalid request: ~s." request)
                                                        nil)))))
-        (rspec-log "rspec <- ~s" response)
-        (etf:encode-term response output)))
+        (when debug (rspec-log "rspec <- ~s" response))
+        (etf:encode-term response output)
+        (finish-output output)))
     (error (c)
            (rspec-log "rspec : ~a" c))))
 
 #+sbcl
-(defun cl-user::rspec-repl ()
+(defun cl-user::rspec-repl (&key debug)
   (let ((input (sb-sys::make-fd-stream 0 :element-type '(unsigned-byte 8) :input t))
         (output (sb-sys::make-fd-stream 1 :element-type '(unsigned-byte 8) :output t)))
-    (de.setf.utility.implementation::rspec-run input output)
-    (finish-output output)))
+    (de.setf.utility.implementation::rspec-run input output :debug debug)))
 
 
 #+(or)
