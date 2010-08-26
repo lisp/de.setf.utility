@@ -28,10 +28,10 @@ The core library and all extensions are available from [GitHub](http://github.co
 `de.set.utility` and its extensions are built with [`asdf`](http://www.common-lisp.net/projects/asdf).
 The core library can be built by adding its the `utility.asd` system definition file to the asdf registry and executing
 
-  (asdf:load-system :de.setf.utility)
+    (asdf:load-system :de.setf.utility)
 
 The extension libraries require support for hierarchical system names in order to locate their prerequistes.
-The file `build-init.lisp` does the necessary to permit build from the command-line. For example
+The file `build-init.lisp` does the necessary to permit a build from the command-line. For example
 
     $ cd $SOURCE_ROOT
     $ sbcl --userinit build-init.lisp \
