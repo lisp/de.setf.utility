@@ -93,3 +93,4 @@
               ;; (sb-posix:syslog 0 " [~3,'0d]" byte)
               (write-byte byte stream))
           stream))
+

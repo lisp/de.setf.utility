@@ -33,11 +33,18 @@
    :collect-list
    :with-gensyms
    :gensym-macrolet
+   :make-weak-hash-table
    :parse-lambda-list
    :permutations
    :partial-order-sort
    ))
 
+
+(defun make-weak-hash-table ()
+  #+clozure (make-hash-table :test 'eq :weak t)
+  #+digitool (make-hash-table :test 'eq :weak t)
+  #+sbcl (make-hash-table :test 'eq :weakness :key)
+  )
 
 (defmacro with-gensyms (variables &rest forms)
   (setf forms

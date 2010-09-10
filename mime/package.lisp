@@ -22,7 +22,7 @@
 ;;; 20100106 james.anderson : added octet-stream
 
 
-(modPackage :de.setf.utility
+(modpackage :de.setf.utility
   (:use-only )
   (:use-by :de.setf.utility.implementation)
   (:export
@@ -53,7 +53,7 @@
    :minor-mime-type
    ))
 
-(defPackage :mime
+(defpackage :mime
   (:nicknames :de.setf.utility.mime.type)
   (:use )
 
@@ -80,6 +80,7 @@
    :application/octet-stream
    :application/xml
    :application/rdf+xml
+   :binary
    :graphviz
    :html
    :image

@@ -20,6 +20,11 @@
 (defpackage :de.setf.utility.codecs
   (:use )
   (:documentation "The API package for BERT-encoding operators.")
+
+  (:import-from :de.setf.utility
+                :stream-reader
+                :stream-writer)
+
   (:export :buffer-get-float-32
            :buffer-get-float-64
            :buffer-get-signed-byte
@@ -80,6 +85,7 @@
            :stream-read-unsigned-byte-16
            :stream-read-unsigned-byte-32
            :stream-read-unsigned-byte-64
+           :stream-reader
            :stream-write-float-32
            :stream-write-float-64
            :stream-write-signed-byte
@@ -99,6 +105,7 @@
            :stream-write-unsigned-byte-16
            :stream-write-unsigned-byte-32
            :stream-write-unsigned-byte-64
+           :stream-writer
            :unsigned-byte-8))
 
 

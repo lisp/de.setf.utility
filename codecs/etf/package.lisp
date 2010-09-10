@@ -22,6 +22,10 @@
   (:nicknames :etf)
   (:export :*intern-operator*
            :*package*
+           :*buffer-get-term-hook*
+           :*buffer-set-term-hook*
+           :*stream-read-term-hook*
+           :*stream-write-term-hook*
            :atom_cache_ref
            :atom_ext
            :binary_ext
@@ -51,7 +55,9 @@
            :false
 
            :decode-term
+           :decode-bert-term
            :encode-term
+           :encode-bert-term
            :term-to-binary              ; NYI - need to promote vector streams
            :binary-to-term              ; NYI 
 

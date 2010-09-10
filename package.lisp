@@ -25,6 +25,10 @@
 (defpackage :de.setf.utility
   (:use )
   (:nicknames :d.s.u :dsu)
+  #+ccl
+  (:import-from :ccl
+                :stream-reader
+                :stream-writer)
   (:export
    :*logical-source-type*
    :*logical-binary-type*
@@ -48,7 +52,9 @@
    :package-version
    :purge-package
    :runtime-directory-name
-   :set-relative-logical-pathname-translations))
+   :set-relative-logical-pathname-translations
+   :stream-reader
+   :stream-writer))
 
 (defpackage :de.setf.utility.implementation
   (:use #+:CCL :ccl

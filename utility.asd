@@ -17,10 +17,6 @@
 ;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
-#+:de.setf.utility                      ; once it has been loaded, loading the system definition
-(eval-when (:compile-toplevel :execute)
-  (when (find-package :de.setf.utility) ; reroots the hosts
-    (de.setf.utility::define-library-host (or *compile-file-pathname* *load-pathname*)))) 
 
 (asdf:defsystem :de.setf.utility
   :version "20100214-1.0"

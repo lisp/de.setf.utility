@@ -351,9 +351,9 @@
 (parse-int "-123")
 (parse-int "-123.")
 (parse-int "-")
+|#
 
-
-(defun parse-float (string &aux (s +1) (es +1) (i 0) (f 0) (e 0) (m #\e) (f-count 0) (i-count 0) (e-count 0) (v 0) d)
+(defun de.setf.utility.implementation::parse-float (string &aux (s +1) (es +1) (i 0) (f 0) (e 0) (m #\e) (f-count 0) (i-count 0) (e-count 0) (v 0) d)
   (with-string-meta (string)
       (and
        (match
@@ -377,7 +377,7 @@
            ((#\F #\f) (float v 0.0s0))
            ((#\L #\l) (float v 0.0s0)))))))
                      
-                            
+#|
 (parse-float "0.0")
 (parse-float "0E0")
 (parse-float "-.0")

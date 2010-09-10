@@ -63,12 +63,7 @@
       #+lispworks #'mp:make-lock
       #+sbcl #'sb-thread:make-mutex)
   
-
-(defVar *instance-locks*
-  #+clozure (make-hash-table :test 'eq :weak t)
-  #+digitool (make-hash-table :test 'eq :weak t)
-  #+sbcl (make-hash-table :test 'eq :weakness :key)
-  )
+(defvar *instance-locks* (make-weak-hash-table))
 
 ;; make a lock for the registry itself
 (setf (gethash *instance-locks* *instance-locks*) (make-lock))

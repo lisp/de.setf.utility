@@ -41,8 +41,8 @@ module RSpec; module Lisp
   ##
   # Proxy a method through BERT-RPC to a lisp process
   #
-  # Accept two arguments, function and call arguments, encode them in a call tuple.
-  # Establish a connection to a LISP process and dispatch the message its stdin.
+  # Accept a function and an arbitrary list of call arguments, encode them in a call tuple.
+  # Establish a connection to a LISP process and dispatch the message to its stdin.
   # Accept the result and decode it as per BERTRPC spec, which either yields
   # the result argument list or raises an error.
   # Should the exchangeitself fail, also signal an error.
@@ -53,18 +53,45 @@ module RSpec; module Lisp
       call_lisp_(function, arguments)
     end
 
+  # Accept two fixed arguments, a function name and call arguments, encode them in a call tuple.
+  # Establish a connection to a LISP process and dispatch the message its stdin.
+  # if a continuation is supplied, it should accept two arguments, stdin and stdout for the remote
+  # process. It receives control to exchange additional data, and to decode any response.
+  # Otherwise, decode the single response.
+  #
+  # @param [String] function
+  # @param [Array] arguments
+  # @param [Function] block
 
-    def call_lisp_(function, arguments)
+    def call_lisp_(function, arguments, &block)
       # the BERTRPC interface is not symmetric, but that's the way it is.
       message = encode_ruby_request(BERT::Tuple[:call, @module_name, function, arguments])
       pid, stdin, stdout, stderr = Open4.popen4(LISP)
       stdin.write(message)
-      stdin.flush.close
-      _, status = Process.waitpid2(pid)
-      if ( status.exitstatus.zero? )
-      # decode the response directly from the stream w/o a length header
-        dc = BERT::Decode.new(stdout);
-        response = dc.read_any
+      
+      # if a block is given, it has control over the data flow, exchanges further data
+      # and returns with the 'result' upon completion.
+      if block_given?
+        stdin.flush
+        response = block.call(stdin, stdout)
+        stdin.close
+        _, status = Process.waitpid2(pid)
+        if ( status.exitstatus.zero? )
+          response
+        else
+          raise(StandardError, stderr.read())
+        end
+      # otherwise, decode a response based on just the encoded call
+      else 
+        stdin.flush.close
+        _, status = Process.waitpid2(pid)
+        if ( status.exitstatus.zero? )
+        # decode the response directly from the stream w/o a length header
+        else
+          dc = BERT::Decode.new(stdout);
+          response = dc.read_any
+        ense
+
         case response[0]
           when :reply
             response[1]

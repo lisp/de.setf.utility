@@ -174,6 +174,17 @@
     :type keyword
     :documentation "See http://www.iana.org/assignments/character-sets")))
 
+(defclass mime:graphviz (mime:*/*)
+  ((file-type :initform "dot" :allocation :class))
+  (:documentation "The abstract graphviz mime type is specialized as
+ TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
+ and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
+
+(defclass mime:binary (mime:*/*)
+  ()
+  (:documentation "The abstract binary mime type is specialized, eg as APPLICATION/OCTET-STREAM, to mark a stream
+ for binary operations rather than text decoding."))
+
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
 (defclass mime:graphviz (mime:*/*)
@@ -187,13 +198,13 @@
 
 (def-mime-type ("APPLICATION" "JSON"))
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
-(def-mime-type (:application :octet-stream))
+(def-mime-type (:application :octet-stream) (mime:binary))
 (def-mime-type ("APPLICATION" "PDF"))
 (def-mime-type ("APPLICATION" "XML"))
 (def-mime-type ("APPLICATION" "RDF+XML") ()
   ((file-type :initform "dot" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
-(def-mime-type ("IMAGE" "JPEG") ()
+(def-mime-type ("IMAGE" "JPEG") (mime:binary)
   ((file-type :initform "jpg" :allocation :class)))
 (def-mime-type ("IMAGE" "SVG") ()
   ((file-type :initform "svg" :allocation :class)))
@@ -210,11 +221,6 @@
   ((file-type :initform "html" :allocation :class)))
 (def-mime-type ("TEXT" "MARKDOWN") ()
   ((file-type :initform "md" :allocation :class)))
-(defclass mime:graphviz (mime:*/*)
-  ((file-type :initform "dot" :allocation :class))
-  (:documentation "The abstract graphviz mime type is specialized as
- TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
- and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
 (def-mime-type ("TEXT" "X-GRAPHVIZ") (mime:graphviz))
 (def-mime-type ("TEXT" "VND.GRAPHVIZ") (mime:graphviz))
 (def-mime-type ("TEXT" "XML") ()

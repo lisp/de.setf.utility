@@ -17,3 +17,13 @@
 
 
 (in-package :cl-user)
+
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (macrolet ((extern (symbol)
+               (let ((name (symbol-name symbol)))
+                 `(export (intern ,name :de.setf.utility.test) :de.setf.utility.test)))
+             (externs (&rest symbols)
+               `(progn ,@(mapcar #'(lambda (s) `(extern ,s)) symbols))))
+               
+    (externs :*rspec-input* :*rspec-output*)))
+

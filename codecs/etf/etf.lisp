@@ -107,33 +107,118 @@
 (defparameter *write-small-atoms* nil
   "BERT.rb does not support them")
 
+(defparameter etf:*buffer-set-term-hook* 'funcall
+  "A function of four arguments, the base setter, the buffer, the term, and the current position,
+ which is called for each invocation of buffer-set-term, passing generic-buffer-set-term as the base
+ encoder. The initial value is funcall.")
 
-;;; BERT 'standard' decoding for _just_ atoms.
+(defparameter etf:*buffer-get-term-hook* 'funcall
+  "A function of three arguments, the base getter, the buffer, and the current position,
+ which is called for each invocation of buffer-get-term, passing an internal operator, buffer-get-tag-and-data,
+ as the base getter. The initial value is funcall.")
+  
+(defparameter etf:*stream-write-term-hook* 'funcall
+  "A function of three arguments, the base writer, the buffer, and the term
+ which is called for each invocation of stream-write-term, passing generic-stream-write-term as the base
+ encoder. The initial value is funcall.")
+
+(defparameter etf:*stream-read-term-hook* 'funcall
+  "A function of two arguments, the base reader, and the term,
+ which is called for each invocation of stream-read-term, passing an internal operator, stream-read-tag-and-data,
+ as the base reader. The initial value is funcall.")
+
+;;; BERT 'standard' coding:
 ;;; as the time has no standard representation, the tagged vector suffices
-;;; as a dict<->hash-table coding makes sense only for large hash tables, it would require
+;;; a dict<->hash-table coding makes sense only for large hash tables, it would require
 ;;; on-the-fly coding to avoid consing the entire map. if there's an immediate meed there is
 ;;; code in the thrift codecs.
 
-(defun decode-bert-standard-format (vector)
-  "Filter tuple vectors to recognize BERT 'standard' formats for atoms."
-  (if (and (= (length vector) 2) (eq (aref vector 0) :|bert|))
-    (case (aref vector 1)
-      (:|nil| etf:nil)
-      (:|true| etf:true)
-      (:|false| etf:false)
-      (t vector))
-    vector))
+(defun etf::bert-stream-read-term-hook (continuation stream)
+  (let ((object (funcall continuation stream)))
+    (if (vectorp object)
+      (case (length object)
+        (2
+         (if (eq (aref object 0) :|bert|)
+           (case (aref object 1)
+             (:|nil| etf:nil)
+             (:|true| etf:true)
+             (:|false| etf:false))
+           object))
+        (3
+         (if (and (eq (aref object 0) :|bert|) (eq (aref object 1) :|dict|))
+           (loop for entry in (aref object 2)
+                 collect (cons (aref entry 0) (aref entry 1)))
+           object))
+        (t object))
+      object)))
+
+(defun etf::bert-stream-write-term-hook (continuation stream object)
+   (funcall continuation stream
+            (typecase object
+              (cons
+               (if (and (consp (car object)) (not (listp (cdar object))))
+                 ;; encode a dictionary
+                 (vector :|bert| :|dict| (loop for (key . value) in object collect (vector key value)))
+                 object))
+              (symbol
+               (case object
+                 (etf:nil #(:|bert| :|nil|))
+                 (etf:true #(:|bert| :|true|))
+                 (etf:false #(:|bert| :|false|))
+                 (t object)))
+              (t
+               object))))
 
 
+(defun etf::bert-buffer-get-term-hook (continuation buffer position)
+  (multiple-value-bind (object position)
+                       (funcall continuation buffer position)
+    (values (if (vectorp object)
+              (case (length object)
+                (2
+                 (if (eq (aref object 0) :|bert|)
+                   (case (aref object 1)
+                     (:|nil| etf:nil)
+                     (:|true| etf:true)
+                     (:|false| etf:false))
+                   object))
+                (3
+                 (if (and (eq (aref object 0) :|bert|) (eq (aref object 1) :|dict|))
+                   (loop for entry in (aref object 2)
+                         collect (cons (aref entry 0) (aref entry 1)))
+                   object))
+                (t object))
+              object)
+            position)))
+
+(defun etf::bert-buffer-set-term-hook (continuation buffer object position)
+   (funcall continuation buffer
+            (typecase object
+              (cons
+               (if (and (consp (car object)) (not (listp (cdar object))))
+                 ;; encode a dictionary
+                 (vector :|bert| :|dict| (loop for (key . value) in object collect (vector key value)))
+                 object))
+              (symbol
+               (case object
+                 (etf:nil #(:|bert| :|nil|))
+                 (etf:true #(:|bert| :|true|))
+                 (etf:false #(:|bert| :|false|))
+                 (t object)))
+              (t
+               object))
+            position))
 
 ;;;
 ;;; stream reading
 
 (defun etf:stream-read-term (stream)
-  (let ((tag (etf::stream-read-unsigned-byte-8 stream)))
-      (funcall (or (aref *stream-decode-dispatch-table* tag)
-                   #'(lambda (stream) (error "Invalid or unsupported tag from stream: ~s; ~s." tag stream)))
-               stream)))
+  (flet ((stream-read-tag-and-data (stream)
+           (let ((tag (etf::stream-read-unsigned-byte-8 stream)))
+             (funcall (or (aref *stream-decode-dispatch-table* tag)
+                          #'(lambda (stream) (error "Invalid or unsupported tag from stream: ~s; ~s." tag stream)))
+                      stream))))
+    (funcall etf::*stream-read-term-hook* #'stream-read-tag-and-data stream)))
 
 (defun etf::stream-read-atom (stream)
   (let ((symbol-name (etf::stream-read-string-iso-16 stream)))
@@ -177,7 +262,7 @@
          (tuple (make-array count)))
     (dotimes (i count)
       (setf (aref tuple i) (etf::stream-read-term stream)))
-    (decode-bert-standard-format tuple)))
+    tuple))
 
 (defun etf::stream-read-vector-16 (stream)
   (let* ((size (etf::stream-read-unsigned-byte-16 stream))
@@ -191,7 +276,7 @@
 ;;;
 ;;; stream writing
 
-(defgeneric etf:stream-write-term (stream term)
+(defgeneric generic-stream-write-term (stream term)
   (:argument-precedence-order term stream)
 
   (:method (stream (term cons))
@@ -215,18 +300,10 @@
 
   (:method (stream (term symbol))
     "Emit an atom for the symbol; distinguish true and false."
-    (case term
-      (etf:nil
-       (etf::stream-write-small-tuple stream #(:|bert| :|nil|)))
-      (etf:true
-       (etf::stream-write-small-tuple stream #(:|bert| :|true|)))
-      (etf:false
-       (etf::stream-write-small-tuple stream #(:|bert| :|false|)))
-      (t
-       (if (and (< (length (symbol-name term)) 256)
-                *write-small-atoms*)
-         (etf::stream-write-small-atom stream term)
-         (etf::stream-write-atom stream term)))))
+    (if (and (< (length (symbol-name term)) 256)
+             *write-small-atoms*)
+      (etf::stream-write-small-atom stream term)
+      (etf::stream-write-atom stream term)))
 
   (:method (stream (term vector))
     (if (typep term 'byte-buffer)
@@ -236,6 +313,9 @@
       (if (< (length term) 256)
         (etf::stream-write-small-tuple stream term)
         (etf::stream-write-large-tuple stream term)))))
+
+(defun etf:stream-write-term (stream term)
+  (funcall etf::*stream-write-term-hook* #'generic-stream-write-term stream term))
 
 
 (defun etf::stream-write-atom (stream term)
@@ -309,11 +389,13 @@
 ;;; buffer getters
 
 (defun etf:buffer-get-term (buffer position)
-  (let* ((tag (etf::buffer-get-unsigned-byte-8 buffer position))
-         (getter (or (aref *buffer-decode-dispatch-table* tag)
-                     (error "Invalid tag from buffer: ~s; ~s." tag buffer))))
-    (funcall getter buffer (1+ position))))
-
+  (flet ((buffer-get-tag-and-data (buffer position)
+           (let* ((tag (etf::buffer-get-unsigned-byte-8 buffer position))
+                  (getter (or (aref *buffer-decode-dispatch-table* tag)
+                              (error "Invalid tag from buffer: ~s; ~s." tag buffer))))
+             (funcall getter buffer (1+ position)))))
+    (funcall etf::*buffer-get-term-hook* #'buffer-get-tag-and-data buffer position)))
+         
 (defun etf::buffer-get-atom (buffer position)
   (multiple-value-bind (symbol-name position)
                        (etf::buffer-get-string-iso-16 buffer position)
@@ -380,7 +462,7 @@
       (multiple-value-setq (element position)
         (etf:buffer-get-term buffer position))
       (setf (aref tuple i) element))
-    (values (decode-bert-standard-format tuple) position)))
+    (values tuple position)))
 
 (defun etf::buffer-get-vector-16 (buffer position)
   (let* ((size (etf::buffer-get-unsigned-byte-16 buffer position))
@@ -398,7 +480,7 @@
 ;;;
 ;;; buffer setters
 
-(defgeneric etf:buffer-set-term (buffer term position)
+(defgeneric generic-buffer-set-term (buffer term position)
   (:argument-precedence-order term buffer position)
 
   (:method (buffer (term cons) position)
@@ -422,18 +504,10 @@
       (etf::buffer-set-string-32 buffer term position size)))
 
   (:method (buffer (term symbol) position)
-    (case term
-      (etf:nil
-       (etf::buffer-set-small-tuple buffer #(:|bert| :|nil|) position))
-      (etf:true
-       (etf::buffer-set-small-tuple buffer #(:|bert| :|true|) position))
-      (etf:false
-       (etf::buffer-set-small-tuple buffer #(:|bert| :|false|) position))
-      (t
-        (if (and (< (length (symbol-name term)) 256)
-                 *write-small-atoms*)
-          (etf::buffer-set-small-atom buffer term position)
-          (etf::buffer-set-atom buffer term position)))))
+    (if (and (< (length (symbol-name term)) 256)
+             *write-small-atoms*)
+      (etf::buffer-set-small-atom buffer term position)
+      (etf::buffer-set-atom buffer term position)))
 
   (:method (buffer (term vector) position)
     (if (typep term 'byte-buffer)
@@ -443,6 +517,9 @@
       (if (< (length term) 256)
         (etf::buffer-set-small-tuple buffer term position)
         (etf::buffer-set-large-tuple buffer term position)))))
+
+(defun etf:buffer-set-term (buffer term position)
+  (funcall etf::*buffer-set-term-hook* #'generic-buffer-set-term buffer term position))
 
 
 (defun etf::buffer-set-atom (buffer term  position)
@@ -573,8 +650,14 @@
     (etf:stream-write-term stream term))
 
   (:method ((term t) (buffer vector))
+    (setf buffer (ensure-buffer-length buffer 1))
     (etf::buffer-set-unsigned-byte-8 buffer etf::version_number 0)
     (etf:buffer-set-term buffer term 1)))
+
+(defun etf:encode-bert-term (term destination)
+  (let ((etf:*buffer-set-term-hook* #'etf::bert-buffer-set-term-hook)
+        (etf:*stream-write-term-hook* #'etf::bert-stream-write-term-hook))
+    (etf:encode-term term destination)))
 
 
 (defgeneric etf:decode-term (source &key package)
@@ -591,6 +674,20 @@
       (assert (eql version-number etf::version_number) ()
               "Invalid ETF version: ~s." version-number))
     (etf:buffer-get-term buffer 1)))
+
+(defun etf:decode-bert-term (source &rest args &key package)
+  (declare (ignore package) (dynamic-extent args))
+  (let ((etf:*buffer-get-term-hook* #'etf::bert-buffer-get-term-hook)
+        (etf:*stream-read-term-hook* #'etf::bert-stream-read-term-hook))
+    (apply #'etf:decode-term source args)))
+
+
+(defun etf:term-to-binary (object)
+  (etf:encode-term object (make-array 128 :element-type '(unsigned-byte 8))))
+
+
+(defun etf:binary-to-term (buffer)
+  (etf:decode-term buffer))
 
 
 
@@ -638,25 +735,24 @@
 
 
 #+(or)
-(
-(defun etf:term-to-binary (object)
-  (with-output-to-vector-stream (stream) (etf:encode-term object stream)))
-
-
-(defun etf:binary-to-term (buffer)
-  (with-input-from-vector-stream (stream :vector buffer) (etf:decode-term stream)))
-)
-
-#+(or)
 (progn
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
     (etf::decode-term (print (etf::encode-term `(1 ,(map-into (make-string 5) #'code-char (list 97 98 99 100 8364))
                                                  ,(make-array 8 :element-type '(unsigned-byte 8) :initial-contents '(7 6 5 4 3 2 1 0))
-                                                 a (1 . 2) 1.2d nil #(1 2)
+                                                 a (1 . 2) 1.2d0 nil #(1 2) ((a . 1) (b . 2))
+                                                 etf:nil etf:true etf:false) buffer))))
+
+  (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
+    (etf::decode-bert-term (print (etf::encode-bert-term `(1 ,(map-into (make-string 5) #'code-char (list 97 98 99 100 8364))
+                                                 ,(make-array 8 :element-type '(unsigned-byte 8) :initial-contents '(7 6 5 4 3 2 1 0))
+                                                 a (1 . 2) 1.2d0 nil #(1 2) ((a . 1) (b . 2))
                                                  etf:nil etf:true etf:false) buffer))))
 
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
     (etf::decode-term (print (etf::encode-term #(:|reply| #(DE.SETF.UTILITY.ETF:TRUE (3))) buffer))))
+
+  (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
+    (etf::decode-term (print (etf::encode-term 1.2d0 buffer))))
 
   (defun time-encode (value &key (count 1024)
                             (buffer (make-array 32 :element-type '(unsigned-byte 8))))

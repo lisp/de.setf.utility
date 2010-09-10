@@ -33,15 +33,6 @@
 ;;; translate-physical-pathname (pathname)
 ;;;    return the most immediate governing logical pathname given a physical pathname
 
-
-(in-package :common-lisp-user)
-
-;;; ensure an implementation package definition
-
-(eval-when (:execute :load-toplevel :compile-toplevel)
-  (unless (find-package :de.setf.utility.implementation)
-    (load (make-pathname :name "package" :defaults *load-pathname*))))
-
 (in-package :de.setf.utility.implementation)
 
 
@@ -176,17 +167,16 @@
                                )
                              :from-end t :key #'first :test #'equalp))))
 
-#+(or )
-(let ((bin-type "fas"))
-  (setf (logical-pathname-translations "ASDFTEST")
-        `(;(,(format nil "**;*.~a" bin-type)
-          ; ,(make-pathname :directory '(:absolute "development" "bin" :wild-inferiors) :name :wild :type bin-type :version nil))
-          ;(,(format nil "**;*.~a.*" bin-type)
-          ; ,(make-pathname :directory '(:absolute "development" "bin" :wild-inferiors) :name :wild :type bin-type))
-          ("**;*.*"
-           ,(make-pathname :directory '(:absolute "development" "source" :wild-inferiors) :name :wild :type :wild :version nil))
-          ("**;*.*.*"
-           ,(make-pathname :directory '(:absolute "development" "source" :wild-inferiors) :name :wild :type :wild)))))
+(defun define-library-host (root-pathname &optional (logical-hostname "LIBRARY"))
+  ;; must be physical in order to serve at the target for logical mappings
+  (setf root-pathname (translate-logical-pathname root-pathname))
+  (set-relative-logical-pathname-translations logical-hostname
+                                              :absolute-pathname
+                                              (make-pathname :directory (pathname-directory root-pathname)
+                                                             :name nil :type nil
+                                                             :defaults root-pathname)))
+           
+
 
 #+allegro
 (defun logical-hosts ()
@@ -292,43 +282,9 @@
                   (record-candidate host enough)))))))
       translated)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; set standard host complement
-;;; - LIBRARY    presumes that this is in in `#p"LIBRARY:de;setf;utility;"`
-;;; - P-LIBRARY  iff it is found at `#p"LIBRARY:..;..;production;Library;"`
-;;;
 
-;;; (setf (logical-pathname-translations "LIBRARY") nil)
-;;; if there is no LIBRARY host, make one
-;;; the macrolet captures *compile-file-pathname*, which should work in all runtimes.
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun define-library-host (source-pathname)
-    ;; must be physical in order to serve at the target for logical mappings
-    (setf source-pathname (translate-logical-pathname source-pathname))
-    (set-relative-logical-pathname-translations "LIBRARY"
-                                                :absolute-pathname
-                                                (make-pathname :directory (butlast (pathname-directory source-pathname) 3)
-                                                               :name nil :type nil
-                                                               :defaults source-pathname)))
-  
-  (or (ignore-errors (logical-pathname-translations "LIBRARY"))
-      (macrolet ((source-pathname () (truename (or *compile-file-pathname* *load-pathname*))))
-        #+cmu (handler-bind ((error (lambda (c) (warn "redefining LIBRARY: ~a." c) (continue))))
-                (define-library-host (source-pathname)))
-        #-cmu (define-library-host (source-pathname)))))
-
-;; nb. clisp neither merges :up relative pathnames, nor (by default) correctly parses logical namestrings
-(let* ((library (truename (make-pathname :host "LIBRARY" :directory '(:absolute))))
-       (production (make-pathname :directory (append (butlast (pathname-directory library) 2)
-                                                     '("production" "Library"))
-                                  :name nil :type nil :defaults library)))
-  (when (and (#-clisp probe-file #+clisp ext:probe-directory production)
-             (not (equalp production library)))
-    (set-relative-logical-pathname-translations "P-LIBRARY" :absolute-pathname production)))
-           
-
+#+(or)
 (let* ((logical (make-pathname :host "LIBRARY" :directory '(:absolute "de" "setf" "utility")
                                :name "pathnames" :type "lisp"))
        (physical (translate-logical-pathname logical))
@@ -344,6 +300,19 @@
                                                            :if-does-not-exist nil))))))
     (when (or (null result) (member nil result))
       (warn "translate-physical-pathname failed: ~s" result))))
+
+#+(or )
+(let ((bin-type "fas"))
+  (setf (logical-pathname-translations "ASDFTEST")
+        `(;(,(format nil "**;*.~a" bin-type)
+          ; ,(make-pathname :directory '(:absolute "development" "bin" :wild-inferiors) :name :wild :type bin-type :version nil))
+          ;(,(format nil "**;*.~a.*" bin-type)
+          ; ,(make-pathname :directory '(:absolute "development" "bin" :wild-inferiors) :name :wild :type bin-type))
+          ("**;*.*"
+           ,(make-pathname :directory '(:absolute "development" "source" :wild-inferiors) :name :wild :type :wild :version nil))
+          ("**;*.*.*"
+           ,(make-pathname :directory '(:absolute "development" "source" :wild-inferiors) :name :wild :type :wild)))))
+
 ;(trace translate-physical-pathname)
 ;(translate-physical-pathname (translate-logical-pathname #P"LIBRARY:de;setf;utility;pathnames.lisp"))
 :de.setf.utility

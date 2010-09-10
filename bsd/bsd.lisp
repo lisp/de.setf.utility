@@ -61,6 +61,7 @@
   (:use :common-lisp :ccl)
   (:nicknames :bsd)
   (:export :*run-command-eol*
+           :closelog
            :gethostname
            :popen
            :pclose
@@ -71,14 +72,17 @@
            :file-bsd-namestring
            :file-mac-namestring
            :getenv
+           :getpid
+           :openlog
            :pipe-input-stream
            :pipe-io-stream
            :pipe-output-stream
+           :syslog
            :with-popen)
   (:documentation
    "The `:de.setf.utility.bsd` library component implements low-level support for a limited number
  of 'Berkeley' UNIX library primitive operators:
- - getenv
+ - getenv, getpid
  - gethostname
  - popen
  - pclose
@@ -144,6 +148,10 @@
 ;;; FFI
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (deftrap-inline "_closelog"
+    ()
+    nil
+    ())
   (deftrap-inline "_feof"
     ((file-pointer :pointer))
     :signed-word
@@ -166,10 +174,20 @@
     ((string :pointer))
     :pointer
     ())
+  (deftrap-inline "_getpid"
+    ()
+    :unsigned-word
+    ())
   (deftrap-inline "_gethostname"
     ((returnArg :pointer)
      (length :unsigned-long))
     :unsigned-long
+    ())
+  (deftrap-inline "_openlog"
+    ((string :pointer)
+     (options :unsigned-word)
+     (facility :unsigned-word))
+    ()
     ())
   (deftrap-inline "_pclose"
     ((file :pointer))
@@ -179,6 +197,12 @@
     ((command :pointer)
      (mode :pointer))
     :pointer
+    ())
+  (deftrap-inline "_syslog"
+    ((priority :unsigned-word)
+     (format :pointer)
+     (message :pointer))
+    ()
     ()))
 
 
@@ -187,6 +211,9 @@
     (let ((%value (#_getenv %string)))
       (unless (ccl:%null-ptr-p %value)
         (ccl:%get-cstring %value)))))
+
+(defun bsd:getpid ()
+  (#_getpid))
 
 
 (defun bsd:gethostname ()
@@ -290,6 +317,37 @@
         (ccl::%put-byte %buffer (aref buffer i) i))
       (#_fwrite %buffer length 1 %file))))
 
+
+;;; syslog
+;;;
+;;; facility
+(defparameter log-user (ash 1 3))
+(defparameter log-daemon (ash 3 3))
+
+;;; level
+(defparameter log-emerg 0)
+(defparameter log-alert 1)
+(defparameter log-crit 2)
+(defparameter log-err 3)
+(defparameter log-warning 4)
+(defparameter log-notice 5)
+(defparameter log-info 6)
+(defparameter log-debug 7)
+
+;;; interface
+(defun closelog ()
+  (#_closelog))
+
+(defun openlog (identity options &optional (facility log-user))
+  (ccl:with-cstrs ((%identity identity))
+    (#_openlog %identity options facility)))
+
+(defun syslog (priority format &rest args)
+  (ccl:with-cstrs ((%format (apply #'format nil format args))
+                   (%cformat "%s"))
+    (#_syslog priority %cformat %format)))
+
+;;; external commands
 
 (defun bsd:run-command (program &rest args)
   "run a unix command and return the standard output as a string.

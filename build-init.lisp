@@ -35,6 +35,7 @@
       *load-truename*
       *default-pathname-defaults*
       (error "Indeterminate load pathname...")))
+
 (setq *build-init-pathname* (truename *build-init-pathname*))
 
 (when *load-verbose*
@@ -43,6 +44,16 @@
 ;;;
 ;;; load the production asdf version for building images
 ;;; in a dev tree, this mens to go upwards to look for the production tree
+
+(defun compile-and-load-file (source-pathname)
+  (let ((binary-pathname (compile-file-pathname source-pathname)))
+    (if (probe-file binary-pathname)
+      (if (probe-file source-pathname)
+        (if (> (file-write-date binary-pathname) (file-write-date source-pathname))
+          (load binary-pathname)
+          (load (compile-file source-pathname)))
+        (load binary-pathname))
+      (load (compile-file source-pathname)))))
 
 (defparameter *asdf-pathname*
   (make-pathname :directory (append (pathname-directory *build-init-pathname*)
@@ -55,25 +66,45 @@
   (cond ((probe-file *asdf-pathname*)
          (when *load-verbose*
            (format *trace-output* "~&;Incorporating asdf anew from ~s." *asdf-pathname*))
-         (load (compile-file *asdf-pathname*))
+         (compile-and-load-file *asdf-pathname*)
          #+ecl
-         (load (compile-file (make-pathname :name "asdf-ecl" :defaults *asdf-pathname*))))
+         (compile-and-load-file (make-pathname :name "asdf-ecl" :defaults *asdf-pathname*)))
         (t
          (cerror "Continue anyway." "ASDF is missing: ~s." *asdf-pathname*))))
 
 
 ;;;
 ;;; incorporate support for hierarchical names
-#+(or :clozure :allegro sbcl) ;; for now
+
+#+(or :clozure :allegro :sbcl) ;; for now
 (unless (fboundp (find-symbol (string :sysdef-hierarchical-search-function) :asdf))
-  (loop for (path name) in '((("de" "setf" "utility") "pathnames")
+  (loop for (path name) in '((("de" "setf" "utility") "package")
+                             (("de" "setf" "utility") "pathnames")
                              (("de" "setf" "utility" "asdf") "hierarchical-names"))
         do (let ((pathname (make-pathname :directory (append (pathname-directory *build-init-pathname*) path)
                                           :name name :type "lisp"
                                           :defaults *build-init-pathname*)))
              (if (probe-file pathname)
-               (load pathname)
+               (compile-and-load-file pathname)
                (cerror "Continue anyway." "Hierarchical name component is missing: ~s." pathname)))))
+
+;;;
+;;; define logical hosts for the dev sources and, optionally, production sources
+
+(or (ignore-errors (logical-pathname-translations "LIBRARY"))
+    (de.setf.utility:define-library-host *build-init-pathname* "LIBRARY"))
+
+;; nb. clisp neither merges :up relative pathnames, nor (by default) correctly parses logical namestrings
+(or (ignore-errors (logical-pathname-translations "P-LIBRARY"))
+    (let* ((library (truename (make-pathname :host "LIBRARY" :directory '(:absolute))))
+           (production (make-pathname :directory (substitute "production" "dev"
+                                                             (pathname-directory *build-init-pathname*)
+                                                             :test #'string-equal)
+                                      :name nil :type nil :defaults *build-init-pathname*)))
+      (when (and (#-clisp probe-file #+clisp ext:probe-directory production)
+                 (not (equalp production library)))
+        (de.setf.utility:define-library-host production "P-LIBRARY"))))
+
 
 
 ;;;
@@ -87,7 +118,7 @@
          (when (#-clisp probe-file #+clisp probe-directory pathname)
            (pushnew (truename pathname) asdf:*central-registry* :test #'equalp)))
      (list (make-pathname :directory (append (pathname-directory *build-init-pathname*)
-                                          '("asdf-registry"))
+                                             '("asdf-registry"))
                           :defaults *build-init-pathname*)
            *build-init-pathname*))
 
