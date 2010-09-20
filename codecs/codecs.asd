@@ -26,7 +26,8 @@
                (:file "utilities")
                (:file "byte-codecs")
                (:file "character-codecs")
-               (:file "float-codecs"))
+               (:file "float-codecs")
+               (:file "meta"))
   :long-description
   "`de.setf.utility.codecs` implements binary codecs for Lisp data, buffers, and streams.
  The primitive types are integers and float values, and character sequences. The operators combine the

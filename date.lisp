@@ -96,6 +96,7 @@
    :|ddMMyy.HHmm|
    :|yyyy-MM-ddTHH:mm:ssZZ|
    :|yyyy.MM.dd HH:mm:ss|
+   :|-yyyy-MM-ddTHH:mm:ssZZZZ|
    ))
 
 (modPackage :de.setf.utility
@@ -715,8 +716,8 @@
   (test date/7err (type-of (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmss|  "19060504X030201")))) 'simple-error)
   (test date/8 (date:|EEE, dd.MM.yyyy| (encode-universal-time 01 02 03 07 05 1955)) "Thu, 07.05.1955")
   (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955")
-  (test date/10 (date:|-yyyy-MM-dd-THH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 1955))  "1955-08-08T03:02:01Z00:00")
-  (test date/10 (date:|-yyyy-MM-dd-THH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 -1955))  "-1955-08-08T03:02:01Z00:00"))
+  (test date/10 (date:|-yyyy-MM-ddTHH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 1955))  "1955-08-08T03:02:01Z00:00")
+  (test date/10 (date:|-yyyy-MM-ddTHH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 -1955))  "-1955-08-08T03:02:01Z00:00"))
 
 
 :de.setf.utility
