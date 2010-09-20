@@ -32,6 +32,7 @@
 ;;; 20091025.janderson  added iso as shorthand op
 ;;; 20091220.janderson  corrected treatment of single quote; made 'Z' decoding optional
 ;;; 20100210.janderson  cleaned up ignored variables, types
+;;; 20100919.janderson  vary year as bce-year for xml-schema datatime additions to iso-8601
 
 
 (in-package :de.setf.utility.implementation)
@@ -46,6 +47,13 @@
    "This is the home package for data format patterns and for data conversion
  operators")
   (:export
+   :date-time
+   :date-time-day
+   :date-time-hour
+   :date-time-minute
+   :date-time-month
+   :date-time-second
+   :date-time-year
    :day-and-month-to-day-in-year
    :day-in-month
    :day-in-month-name
@@ -60,7 +68,9 @@
    :decode-day-name
    :decode-month-day-name
    :decode-month-name
+   :decode-date-time
    :encode
+   :encode-date-time
    :format-iso-time
    :format-excel-time
    :iso
@@ -288,49 +298,61 @@
                (error "date aspect not supported: ~a: ~s" letter pattern-string)))
         (loop (when (>= position length) (return (reverse components)))
               (setf letter (char pattern-string position))
-              (if (eql letter #\')
-                (let ((component-end (or (position letter pattern-string :start (1+ position))
-                                         (error "unbalanced quote: ~s" pattern-string))))
-                  (if (= component-end (1+ position))
-                    (push #\' components)
-                    (push (subseq pattern-string (1+ position) component-end) components))
-                  (setf position (1+ component-end)))
-                (let* ((component-end (or (position letter pattern-string :start position :test-not #'char=)
-                                          length))
-                       (component-length (- component-end position)))
-                  (push (case letter
-                          (#\g (not-supported-error letter))
-                          (#\y (if (= component-length 2)
-                                 `((.year-in-century. year) . ,component-length)
-                                 `((.year. year) . ,component-length)))
-                          (#\M (if (> component-length 2)
-                                 `((.month-name. month-in-year ,component-length) . ,component-length)
-                                 `((.month-in-year. month-in-year) . ,component-length)))
-                          (#\w (not-supported-error letter))
-                          (#\W (not-supported-error letter))
-                          (#\D `((.day-in-year. day-in-month month-in-year) . ,component-length))
-                          (#\d (if (> component-length 2)
-                                 `((.day-in-month-name. day-in-month ,component-length) . ,component-length)
-                                 `((.day-in-month. day-in-month) . ,component-length)))
-                          (#\E `((.day-in-week-name. day-in-week ,component-length) . ,component-length))
-                          (#\F `((.day-in-week. day-in-week) . ,component-length))
-                          (#\a `((.am-pm. hour-in-day) . ,component-length))
-                          (#\H `((.hour-24-0-based. hour-in-day) . ,component-length))
-                          (#\k `((.hour-24-1-based. hour-in-day) . ,component-length))
-                          (#\K `((.hour-12-0-based. hour-in-day) . ,component-length))
-                          (#\h `((.hour-12-1-based. hour-in-day) . ,component-length))
-                          (#\m `((.minute-in-hour. minute-in-hour) . ,component-length))
-                          (#\s `((.second-in-minute. second-in-minute) . ,component-length))
-                          (#\S (not-supported-error letter))
-                          ((#\z #\Z) `((.time-zone. time-zone) . ,(ecase component-length
-                                                                    ((1 4 5) 4)
-                                                                    ((2 3) 2))))
-                          (t   letter))
-                    components)
-                  (incf position component-length)))))))
+              (case letter
+                (#\'
+                 (let ((component-end (or (position letter pattern-string :start (1+ position))
+                                          (error "unbalanced quote: ~s" pattern-string))))
+                   (if (= component-end (1+ position))
+                     (push #\' components)
+                     (push (subseq pattern-string (1+ position) component-end) components))
+                   (setf position (1+ component-end))))
+                ((#\+ #\-)
+                 (cond ((zerop position)
+                        (let ((component-end (or (position #\y pattern-string :start (1+ position) :test-not #'char=)
+                                                 (error "Invalid BCE indicator."))))
+                          (assert (= (- component-end position) 5) () "Invalid BCE indicator.")
+                          (push '((.bce-year. year) . 4) components)
+                          (incf position 5)))
+                       (t
+                        (push letter components)
+                        (incf position 1))))
+                (t
+                 (let* ((component-end (or (position letter pattern-string :start position :test-not #'char=)
+                                           length))
+                        (component-length (- component-end position)))
+                   (push (case letter
+                           (#\g (not-supported-error letter))
+                           (#\y (if (= component-length 2)
+                                  `((.year-in-century. year) . ,component-length)
+                                  `((.year. year) . ,component-length)))
+                           (#\M (if (> component-length 2)
+                                  `((.month-name. month-in-year ,component-length) . ,component-length)
+                                  `((.month-in-year. month-in-year) . ,component-length)))
+                           (#\w (not-supported-error letter))
+                           (#\W (not-supported-error letter))
+                           (#\D `((.day-in-year. day-in-month month-in-year) . ,component-length))
+                           (#\d (if (> component-length 2)
+                                  `((.day-in-month-name. day-in-month ,component-length) . ,component-length)
+                                  `((.day-in-month. day-in-month) . ,component-length)))
+                           (#\E `((.day-in-week-name. day-in-week ,component-length) . ,component-length))
+                           (#\F `((.day-in-week. day-in-week) . ,component-length))
+                           (#\a `((.am-pm. hour-in-day) . ,component-length))
+                           (#\H `((.hour-24-0-based. hour-in-day) . ,component-length))
+                           (#\k `((.hour-24-1-based. hour-in-day) . ,component-length))
+                           (#\K `((.hour-12-0-based. hour-in-day) . ,component-length))
+                           (#\h `((.hour-12-1-based. hour-in-day) . ,component-length))
+                           (#\m `((.minute-in-hour. minute-in-hour) . ,component-length))
+                           (#\s `((.second-in-minute. second-in-minute) . ,component-length))
+                           (#\S (not-supported-error letter))
+                           ((#\z #\Z) `((.time-zone. time-zone) . ,(ecase component-length
+                                                                     ((1 4 5) 4)
+                                                                     ((2 3) 2))))
+                           (t   letter))
+                         components)
+                   (incf position component-length))))))))
   
 
-  (defGeneric compute-date-encoder (pattern)
+  (defGeneric compute-date-encoder (pattern &key time-decoder)
     (:documentation "Generate a date encoding function given a PATTERN string or specification.
  PATTERN : (or STRING LIST) : the pattern
 
@@ -338,10 +360,11 @@
  specification list, use the time components to construct a format string, and to
  generate conversions from the decoded time constituents.")
 
-    (:method ((pattern string))
-      (compute-date-encoder (date-pattern-components pattern)))
+    (:method ((pattern string) &rest args)
+      (apply #'compute-date-encoder (date-pattern-components pattern) args))
 
-    (:method ((components list) &aux (references nil) (format-string nil) (time-zone-p nil)
+    (:method ((components list) &key (time-decoder 'decode-universal-time)  &aux
+              (references nil) (format-string nil) (time-zone-p nil)
               (to-ignore '(second-in-minute minute-in-hour hour-in-day day-in-month month-in-year year
                            day-in-week daylight-savings-time-p time-zone)))
       (setf format-string
@@ -352,7 +375,10 @@
                    (destructuring-bind (component-operation . length) component
                      (destructuring-bind (time-component variable &optional arg) component-operation
                        (case time-component
-                         ((.year-in-century. .week-in-year. .day-in-year. .day-in-week.
+                         (.bce-year.
+                          (push component-operation references)
+                          (format stream "~~{~~:[~~;-~~]~~~d,'0d~~}" length))
+                         ((.year-in-century. .year. .week-in-year. .day-in-year. .day-in-week.
                                              .hour-24-0-based. .hour-24-1-based. .hour-12-0-based. .hour-12-1-based.)
                           (push component-operation references)
                           (format stream "~~~d,'0d" length))
@@ -372,7 +398,7 @@
                           (format stream "~~~da" length))
                          (.time-zone.
                           (push component-operation references)
-                          (write-string (ecase length (2 "Z~2,'0d") (4 "Z~2,'0d00")) stream)
+                          (write-string (ecase length (2 "Z~2,'0d") (4 "Z~2,'0d:00")) stream)
                           (setf time-zone-p t))
                          (t
                           (push variable references)
@@ -387,7 +413,8 @@
                      (write-string "~~" stream)
                      (write-char component stream)))))))
       `(lambda (time &optional stream)
-         (macrolet ((.year-in-century. (x) `(mod ,x 100))
+         (macrolet ((.bce-year. (x) `(list (not (plusp ,x)) (abs ,x)))
+                    (.year-in-century. (x) `(mod ,x 100))
                     (.year. (x) x)
                     (.month-name. (x l) `(date:month-name ,x ,l))
                     (.month-in-year. (x) x)
@@ -406,111 +433,118 @@
                     (.time-zone. (x) x))
            (multiple-value-bind (second-in-minute minute-in-hour hour-in-day day-in-month
                                                   month-in-year year day-in-week daylight-savings-time-p time-zone)
-                                (decode-universal-time time ,@(when time-zone-p '(0)))
+                                (,time-decoder time ,@(when time-zone-p '(0)))
              ,@(when to-ignore `((declare (ignore ,@to-ignore))))
              (format stream ,format-string ,@(reverse references)))))))
 
   
-  (defGeneric compute-date-decoder (pattern)
+  (defgeneric compute-date-decoder (pattern &key time-encoder)
     (:documentation "Generate a date decoding function given a PATTERN string or specification.
  PATTERN : (or STRING LIST) : the pattern
   Given a string, delegate the parsing to date-pattern-components and continue. Given a
  specification list, use the time components to assemble the parsing steps, cache the intermediate values, and
  combine them as decoded time constituents.")
-
-    (:method ((pattern string))
-      (compute-date-decoder (date-pattern-components pattern)))
-    (:method ((components list) &aux (position 0) 
+    
+    (:method ((pattern string) &rest args)
+      (apply #'compute-date-decoder (date-pattern-components pattern) args))
+    (:method ((components list) &key (time-encoder 'encode-universal-time) &aux  
               (time-zone-p (find-if #'(lambda (component)
                                         (and (consp component) (consp (car component))
                                              (or (eq (caar component) '.time-zone.))))
                                     components))
               (am-pm-p (find-if #'(lambda (c) (and (consp c) (consp (first c))
-                                                         (eq (first (first c)) '.am-pm.)))
-                                      components))
+                                                   (eq (first (first c)) '.am-pm.)))
+                                components))
               (day-in-year-p (find-if #'(lambda (c) (and (consp c) (consp (first c))
                                                          (eq (first (first c)) '.day-in-year.)))
                                       components)))
-
-             `(lambda (string)
-                (let ((second-in-minute 0)
-                      (minute-in-hour 0)
-                      (hour-in-day 0)
-                      (day-in-month 1)          ; initial values just in case the pattern
-                      (month-in-year 1)         ; includes none. ?
-                      ,@(when day-in-year-p '((day-in-year 0)))
-                      (year 0)
-                      ,@(when am-pm-p '((am-pm :am)))
-                      ,@(when time-zone-p `((time-zone 0))))
-                  ,@(mapcar #'(lambda (component)
-                                (etypecase component
-                                  (cons
-                                   (destructuring-bind ((time-component variable &optional arg) . length) component
-                                     (declare (ignore  arg))
-                                     (prog1
-                                       (case time-component
-                                         (.year-in-century.
-                                          `(setf year
-                                                 (+ 1900 (parse-integer string :start ,position :end ,(+ position length)))))
-                                         ((.day-in-week. .day-in-week-name.)
-                                          ;; do nothing, the text is for information only
-                                          )
-                                         (.day-in-month-name.
-                                          `(date:decode-month-day-name string :start ,position
-                                                                       :end ,(+ position length)))
-                                         (.week-in-year.
-                                          `(setf month-in-year
-                                                 (week-in-year-to-month
-                                                  (parse-integer string :start ,position
-                                                                 :end ,(+ position length)))))
-                                         (.day-in-year.
-                                          `(setf day-in-year
-                                                 (parse-integer string :start ,position
-                                                                :end ,(+ position length))))
-                                         ((.hour-24-0-based. .hour-12-0-based.)       ; 12/24 distinction is handled below
-                                          `(setf hour-in-day
-                                                 (parse-integer string :start ,position
-                                                                :end ,(+ position length))))
-                                         ((.hour-24-1-based. .hour-12-1-based.)
-                                          `(setf hour-in-day
-                                                 (1- (parse-integer string :start ,position
-                                                                    :end ,(+ position length)))))
-                                         (.month-in-year.
-                                          `(setf month-in-year
-                                                 (parse-integer string :start ,position
-                                                                :end ,(+ position length))))
-                                         (.month-name.
-                                          `(date:decode-month-name string  :start ,position
-                                                                   :end ,(+ position length)))
-                                         (.am-pm.
-                                          `(setf am-pm (date:decode-am-pm string  :start ,position
-                                                                          :end ,(+ position length))))
-                                         (.time-zone.
-                                          ;; (incf position) ;; don't always increment, allow optional 'Z'
-                                          `(let ((position (if (digit-char-p (char string ,position))
-                                                             ,position (1+ ,position))))
-                                             (setf time-zone (parse-integer string  :start position
-                                                                            :end (+ position 2)))))
-                                         (t     ; simple components
-                                          `(setf ,variable
-                                                 (parse-integer string :start ,position
-                                                                :end ,(+ position length)))))
-                                       (incf position length))))
-                                  (string
-                                   (prog1 `(assert (eql (string-equal string ,component :start1 ,position :end1 ,(+ position (length component)))))
-                                     (incf position (length component))))
-                                  (character
-                                   (prog1 `(assert (eql (char string ,position) ,component))
-                                     (incf position)))))
-                            components)
-                  ,@(when am-pm-p
-                      `((case am-pm (:am) (:pm (incf hour-in-day 12)))))
-                  ,@(when day-in-year-p
-                      `((multiple-value-setq (day-in-month month-in-year)
-                          (date:day-in-year-to-day-and-month day-in-year year))))
-                  (encode-universal-time second-in-minute minute-in-hour hour-in-day
-                                         day-in-month month-in-year year
-                                         ,@(when time-zone-p '(time-zone)))))))
+      
+      `(lambda (string)
+         (let ((position 0)      ; must be runtime to allow for optional bce indicator
+               (second-in-minute 0)
+               (minute-in-hour 0)
+               (hour-in-day 0)
+               (day-in-month 1)          ; initial values just in case the pattern
+               (month-in-year 1)         ; includes none. ?
+               (sign 1)
+               ,@(when day-in-year-p '((day-in-year 0)))
+               (year 0)
+               ,@(when am-pm-p '((am-pm :am)))
+               ,@(when time-zone-p `((time-zone 0))))
+           ,@(mapcar #'(lambda (component)
+                         (etypecase component
+                           (cons
+                            (destructuring-bind ((time-component variable &optional arg) . length) component
+                              (declare (ignore  arg))
+                              (case time-component
+                                (.bce-year.
+                                 `(let ((sign (if (member (char string position) '(#\+ #\-))
+                                                (char string (shiftf position (1+ position)))
+                                                #\+))
+                                        (temp-year (parse-integer string :start position
+                                                                  :end (incf position ,length))))
+                                    (setf year (case sign (#\+ (1- temp-year)) (#\- (1- (- temp-year)))))))
+                                (.year-in-century.
+                                 `(setf year
+                                        (+ 1900 (parse-integer string :start position :end (incf position ,length)))))
+                                ((.day-in-week. .day-in-week-name.)
+                                 ;; decode nothing, the text is for information only
+                                 `(incf position ,length))
+                                (.day-in-month-name.
+                                 `(date:decode-month-day-name string :start position
+                                                              :end (incf position ,length)))
+                                (.week-in-year.
+                                 `(setf month-in-year
+                                        (week-in-year-to-month
+                                         (parse-integer string :start position
+                                                        :end (incf position ,length)))))
+                                (.day-in-year.
+                                 `(setf day-in-year
+                                        (parse-integer string :start position
+                                                       :end (incf position ,length))))
+                                ((.hour-24-0-based. .hour-12-0-based.)       ; 12/24 distinction is handled below
+                                 `(setf hour-in-day
+                                        (parse-integer string :start position
+                                                       :end (incf position ,length))))
+                                ((.hour-24-1-based. .hour-12-1-based.)
+                                 `(setf hour-in-day
+                                        (1- (parse-integer string :start position
+                                                           :end (incf position ,length)))))
+                                (.month-in-year.
+                                 `(setf month-in-year
+                                        (parse-integer string :start position
+                                                       :end (incf position ,length))))
+                                (.month-name.
+                                 `(date:decode-month-name string  :start position
+                                                          :end (incf position ,length)))
+                                (.am-pm.
+                                 `(setf am-pm (date:decode-am-pm string  :start position
+                                                                 :end (incf position ,length))))
+                                (.time-zone.
+                                 ;; (incf position) ;; don't always increment, allow optional 'Z'
+                                 `(let ((tz-position (if (digit-char-p (char string position))
+                                                       position (1+ position))))
+                                    (setf time-zone (parse-integer string  :start tz-position
+                                                                   :end (setf position (+ tz-position 2))))))
+                                (t     ; simple components
+                                 `(setf ,variable
+                                        (parse-integer string :start position
+                                                       :end (incf position ,length)))))))
+                           (string
+                            `(assert (eql (string-equal string ,component :start1 position :end1 (incf position ,(length component))))
+                                     () ,(format nil "Invalid time component. Expected ~s." component)))
+                           (character
+                            `(assert (eql (char string (shiftf position (1+ position))) ,component)
+                                     () ,(format nil "Invalid time component. Expected '~c'." component)))))
+                     components)
+           ,@(when am-pm-p
+               `((case am-pm (:am) (:pm (incf hour-in-day 12)))))
+           ,@(when day-in-year-p
+               `((multiple-value-setq (day-in-month month-in-year)
+                   (date:day-in-year-to-day-and-month day-in-year year))))
+           (,time-encoder second-in-minute minute-in-hour hour-in-day
+                          day-in-month month-in-year (* sign year)
+                          ,@(when time-zone-p '(time-zone)))))))
   
   (defClass date-conversion-function (standard-generic-function)
     ()
@@ -521,16 +555,18 @@
     (:documentation "A function class to distinguish conversion function
       for find-date-format."))
   
-  (defMacro date::define-date-conversion-function (pattern)
+  (defMacro date::define-date-conversion-function (pattern &key (type 'integer)
+                                                           (time-encoder 'encode-universal-time)
+                                                           (time-decoder 'decode-universal-time))
     (let ((name (intern pattern :date)))
       `(progn
          (eval-when (:execute :compile-toplevel :load-toplevel) (export ',name :date))
          (defGeneric ,name (datum &optional arg)
            (:generic-function-class date-conversion-function)
-           (:method ((datum integer) &optional arg)
-             (,(compute-date-encoder pattern) datum arg))
+           (:method ((datum ,type) &optional arg)
+             (,(compute-date-encoder pattern :time-decoder time-decoder) datum arg))
            (:method ((datum string) &optional arg) (declare (ignore arg))
-                    (,(compute-date-decoder pattern) datum))))))
+                    (,(compute-date-decoder pattern :time-encoder time-encoder) datum))))))
   ) ; eval-when
 
 
@@ -549,6 +585,44 @@
 (date::define-date-conversion-function "EEE, dd.MM.yyyy")
 (date::define-date-conversion-function "dddddddd MMM yyyy")
 (date::define-date-conversion-function "yyyy.MM.dd HH:mm:ss")
+
+(defstruct (date-time (:constructor date-time (second minute hour day month year)))
+  year month day hour minute second)
+
+(defun encode-date-time (second minute hour day month year &optional ( zone 0))
+ (unless (zerop zone)
+   (multiple-value-bind (s-s s-m s-hour s-day s-month s-year)
+                        (decode-universal-time (encode-universal-time 0 0 hour day month (abs year) 0)
+                                               zone)
+        (declare (ignore s-s s-m))
+        (setf hour s-hour
+              day s-day
+              month s-month
+              year (+ year (- s-year (abs year))))))
+ (date-time second minute hour day month year))
+
+(defun decode-date-time (value &optional (zone 0))
+  (let ((year (date-time-year value))
+        (month (date-time-month value))
+        (day (date-time-day value))
+        (hour (date-time-hour value)))
+    (unless (zerop zone)
+      (multiple-value-bind (s-s s-m s-hour s-day s-month s-year)
+                           (decode-universal-time (encode-universal-time 0 0 hour day month (abs year) 0)
+                                                  zone)
+        (declare (ignore s-s s-m))
+        (setf hour s-hour
+              day s-day
+              month s-month
+              year (+ year (- s-year (abs year))))))
+    (values (date-time-second value) (date-time-minute value) hour
+            day month year
+            nil nil
+            zone)))
+
+(date::define-date-conversion-function "-yyyy-MM-ddTHH:mm:ssZZZZ"
+  :type date-time
+  :time-encoder encode-date-time :time-decoder decode-date-time)
 
 
 (defGeneric date::find-date-format (name &key if-does-not-exist)
@@ -640,9 +714,9 @@
   (test date/7de (date:|yyyyMMddTHHmmss| "19060504T030201") (encode-universal-time 01 02 03 04 05 1906))
   (test date/7err (type-of (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmss|  "19060504X030201")))) 'simple-error)
   (test date/8 (date:|EEE, dd.MM.yyyy| (encode-universal-time 01 02 03 07 05 1955)) "Thu, 07.05.1955")
-  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955"))
-
-
+  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955")
+  (test date/10 (date:|-yyyy-MM-dd-THH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 1955))  "1955-08-08T03:02:01Z00:00")
+  (test date/10 (date:|-yyyy-MM-dd-THH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 -1955))  "-1955-08-08T03:02:01Z00:00"))
 
 
 :de.setf.utility

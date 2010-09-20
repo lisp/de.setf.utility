@@ -25,7 +25,7 @@
 (defpackage :de.setf.utility
   (:use )
   (:nicknames :d.s.u :dsu)
-  #+ccl
+  #+mcl
   (:import-from :ccl
                 :stream-reader
                 :stream-writer)

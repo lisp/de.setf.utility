@@ -113,9 +113,9 @@
   (use-package :de.setf.utility.codecs :de.setf.utility.implementation)
 
   #+clozure
-  (import '(ccl:double-float-positive-infinity
-            ccl:double-float-negative-infinity
-            #+ccl-1.4 ccl:double-float-nan)
+  (import '(ccl::double-float-positive-infinity
+            ccl::double-float-negative-infinity
+            #+ccl-1.4 ccl::double-float-nan)
           :de.setf.utility.implementation)
   #+sbcl
   (import '(sb-ext:double-float-positive-infinity
