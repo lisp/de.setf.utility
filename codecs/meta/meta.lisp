@@ -357,38 +357,3 @@
 (parse-int "-123.")
 (parse-int "-")
 |#
-
-(defun meta:parse-float (string &aux (s +1) (es +1) (i 0) (f 0) (e 0) (m #\e) (f-count 0) (i-count 0) (e-count 0) (v 0) d)
-  (with-string-meta (string)
-      (and
-       (match
-        "[{#\\+ [#\\- !(setq s -1)] []}
-          *[@(\"0123456789\" d) !(setf i (+ (* i 10) (digit-char-p d)) i-count (1+  i-count))]
-          {#\\. []}
-          *[@(\"0123456789\" d) !(setf f (+ (* f 10) (digit-char-p d)) f-count (1+ f-count))]
-          {@(\"eEsSdDfFlL\" m) []}
-          {#\\+ [#\\- !(setq es -1)] []}
-          *[@(\"0123456789\" d) !(setf e (+ (* e 10) (digit-char-p d)) e-count (1+ e-count))]
-          ]")
-       (when (> (+ f-count i-count) 0)
-         (when (> f-count 0) (setf f (/ f (expt 10 f-count))))
-         (setf v (+ i f))
-         (when (plusp e-count) (setf v (* v (expt 10 (* es e)))))
-         (when (< s 0) (setf v (- v)))
-         (case m
-           ((#\E #\e) (float v 0.0e0))
-           ((#\S #\s) (float v 0.0s0))
-           ((#\D #\d) (float v 0.0d0))
-           ((#\F #\f) (float v 0.0s0))
-           ((#\L #\l) (float v 0.0s0)))))))
-                     
-#|
-(parse-float "0.0")
-(parse-float "0E0")
-(parse-float "-.0")
-(parse-float "6.02E+23")
-
-(mapcar #'parse-float
-        '("1" "-1" "1034" "-364" "3.5333" "2.4E4" "6.8d3" "13.09s3" "35.66L5" "21.4f2"))
-
-|#

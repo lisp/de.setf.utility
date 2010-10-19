@@ -38,16 +38,21 @@
 ;;;      you could do with this code.
 ;;;
 ;;; Operators
-;;;   hostname
-;;;   popen
-;;;   pclose
 ;;;   feofp
 ;;;   fread
 ;;;   fwrite
+;;;   getenv
+;;;   getpid
+;;;   hostname
+;;;   openlog
+;;;   popen
+;;;   pclose
 ;;;   run-command
+;;;   syslog
 ;;;
 ;;; Classes
 ;;;   pipe-input-stream
+;;;   pipe-io-stream
 ;;;   pipe-output-stream
 
 ;;; ---------------------------------------------------------------------------
