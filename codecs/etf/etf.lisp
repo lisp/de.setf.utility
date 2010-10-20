@@ -225,11 +225,18 @@
     (or (funcall etf:*intern-operator* symbol-name etf:*package*)
         (error "Invalid atom name: ~s." symbol-name))))
 
-(defun etf::stream-read-new-float (stream)
-  (etf::stream-read-float-64 stream))
-
 (defun etf::stream-read-integer (stream)
   (etf::stream-read-signed-byte-32 stream))
+
+(defun etf::stream-read-large-big-integer (stream)
+  (let* ((byte-count (etf::stream-read-unsigned-byte-32 stream))
+         (sign (etf::stream-read-unsigned-byte-8 stream))
+         (bit-count (* byte-count 8))
+         (value 0))
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf (ldb (byte 8 term-position) value) (etf::stream-read-unsigned-byte-8 stream)))
+    (if (zerop sign) value (- value))))
 
 (defun etf::stream-read-large-tuple (stream)
   (let* ((count (etf::stream-read-unsigned-byte-32 stream))
@@ -245,6 +252,9 @@
         (collect (etf::stream-read-term stream)))
       (setf (last) (etf::stream-read-term stream)))))
 
+(defun etf::stream-read-new-float (stream)
+  (etf::stream-read-float-64 stream))
+
 (defun etf::stream-read-nil (stream)
   (declare (ignore stream))
   nil)
@@ -253,6 +263,16 @@
   (let ((symbol-name (etf::stream-read-string-iso-8 stream)))
     (or (funcall etf:*intern-operator* symbol-name etf:*package*)
         (error "Invalid atom name: ~s." symbol-name))))
+
+(defun etf::stream-read-small-big-integer (stream)
+  (let* ((byte-count (etf::stream-read-unsigned-byte-8 stream))
+         (sign (etf::stream-read-unsigned-byte-8 stream))
+         (bit-count (* byte-count 8))
+         (value 0))
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf (ldb (byte 8 term-position) value) (etf::stream-read-unsigned-byte-8 stream)))
+    (if (zerop sign) value (- value))))
 
 (defun etf::stream-read-small-integer (stream)
   (etf::stream-read-unsigned-byte-8 stream))
@@ -286,11 +306,14 @@
     (etf::stream-write-new-float stream term))
 
   (:method (stream (term integer))
-    (etypecase term
+    (typecase term
       ((unsigned-byte 8)
        (etf::stream-write-small-integer stream term))
       ((signed-byte 32)
-       (etf::stream-write-integer stream term))))
+       (etf::stream-write-integer stream term))
+      (t
+       ;; leave further distinction until the bits/bytes are counted
+       (etf::stream-write-big-integer stream term))))
 
   (:method (stream (term null))
     (etf::stream-write-nil stream term))
@@ -325,6 +348,23 @@
 (defun etf::stream-write-integer (stream term)
   (etf::stream-write-unsigned-byte-8 stream etf:integer_ext)
   (etf::stream-write-signed-byte-32 stream term))
+
+(defun etf::stream-write-big-integer (stream term)
+  (let* ((abs (abs term))
+         (sign (if (= abs term) 0 1))
+         (byte-count (ceiling (integer-length abs) 8))
+         (bit-count (* byte-count 8)))
+    (cond ((> byte-count 255)
+           (etf::stream-write-unsigned-byte-8 stream etf:large_big_ext)
+           (etf::stream-write-unsigned-byte-32 stream byte-count))
+          (t
+           (etf::stream-write-unsigned-byte-8 stream etf:small_big_ext)
+           (etf::stream-write-unsigned-byte-8 stream byte-count)))
+    (etf::stream-write-unsigned-byte-8 stream sign)
+    (do ((position 0 (+ position 8)))
+        ((>= position bit-count))
+      (etf::stream-write-unsigned-byte-8 stream (ldb (byte 8 position) term)))))
+    
 
 (defun etf::stream-write-large-tuple (stream term)
   (let ((count (length term)))
@@ -406,6 +446,18 @@
 (defun etf::buffer-get-integer (buffer position)
   (etf::buffer-get-unsigned-byte-32 buffer position))
 
+(defun etf::buffer-get-large-big-integer (buffer position)
+  (let* ((byte-count (etf::buffer-get-unsigned-byte-32 buffer position))
+         (sign (etf::buffer-get-unsigned-byte-8 buffer (1+ position)))
+         (bit-count (* byte-count 8))
+         (value 0))
+    (incf position 5)
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf (ldb (byte 8 term-position) value) (etf::buffer-get-unsigned-byte-8 buffer position))
+      (incf position))
+    (values (if (zerop sign) value (- value)) position)))
+
 (defun etf::buffer-get-large-tuple (buffer position)
   (let ((count 0)
         (element nil)
@@ -447,6 +499,18 @@
     (values (or (funcall etf:*intern-operator* symbol-name etf:*package*)
                 (error "Invalid atom name: ~s." symbol-name))
             position)))
+
+(defun etf::buffer-get-small-big-integer (buffer position)
+  (let* ((byte-count (etf::buffer-get-unsigned-byte-8 buffer position))
+         (sign (etf::buffer-get-unsigned-byte-8 buffer (1+ position)))
+         (bit-count (* byte-count 8))
+         (value 0))
+    (incf position 2)
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf (ldb (byte 8 term-position) value) (etf::buffer-get-unsigned-byte-8 buffer position))
+      (incf position))
+    (values (if (= sign 1) (- value) value) position)))
 
 (defun etf::buffer-get-small-integer (buffer position)
   (etf::buffer-get-unsigned-byte-8 buffer position))
@@ -490,11 +554,13 @@
     (etf::buffer-set-new-float buffer term position))
 
   (:method (buffer (term integer) position)
-    (etypecase term
+    (typecase term
       ((unsigned-byte 8)
        (etf::buffer-set-small-integer buffer term position))
       ((signed-byte 32)
-       (etf::buffer-set-integer buffer term position))))
+       (etf::buffer-set-integer buffer term position))
+      (t
+       (etf::buffer-set-big-integer buffer term position))))
 
   (:method (buffer (term null) position)
     (etf::buffer-set-nil buffer term position))
@@ -528,6 +594,27 @@
     (setf buffer (ensure-buffer-length buffer new-length))
     (etf::buffer-set-unsigned-byte-8 buffer etf:atom_ext position)
     (etf::buffer-set-string-iso-16 buffer string (1+ position))
+    (values buffer new-length)))
+
+(defun etf::buffer-set-big-integer (buffer term position)
+  (let* ((abs (abs term))
+         (sign (if (= abs term) 0 1))
+         (byte-count (ceiling (integer-length abs) 8))
+         (length-byte-count (if (> byte-count 255) 4 1))
+         (bit-count (* byte-count 8))
+         (new-length (+ position 1 length-byte-count 1 byte-count)))
+    (setf buffer (ensure-buffer-length buffer new-length))
+    (setf position
+          (cond ((> byte-count 255)
+                 (etf::buffer-set-unsigned-byte-8 buffer etf:large_big_ext position)
+                 (etf::buffer-set-unsigned-byte-32 buffer byte-count (1+ position)))
+                (t
+                 (etf::buffer-set-unsigned-byte-8 buffer etf:small_big_ext position)
+                 (etf::buffer-set-unsigned-byte-8 buffer byte-count (1+ position)))))
+    (setf position (etf::buffer-set-unsigned-byte-8 buffer sign position))
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf position (etf::buffer-set-unsigned-byte-8 buffer (ldb (byte 8 term-position) term) position)))
     (values buffer new-length)))
 
 (defun etf::buffer-set-integer (buffer term position)
@@ -704,11 +791,13 @@
     (set-dispatches (etf:atom_ext etf::stream-read-atom)
                     (etf:binary_ext etf::stream-read-string-32)
                     (etf:integer_ext etf::stream-read-integer)
+                    (etf:large_big_ext etf::stream-read-large-big-integer)
                     (etf:large_tuple_ext etf::stream-read-large-tuple)
                     (etf:list_ext etf::stream-read-list)
                     (etf:new_float_ext etf::stream-read-new-float)
                     (etf:nil_ext etf::stream-read-nil)
                     (etf:small_atom_ext etf::stream-read-small-atom)
+                    (etf:small_big_ext etf::stream-read-small-big-integer)
                     (etf:small_integer_ext etf::stream-read-small-integer)
                     (etf:small_tuple_ext etf::stream-read-small-tuple)
                     (etf:string_ext etf::stream-read-vector-16))))
@@ -724,11 +813,13 @@
     (set-dispatches (etf:atom_ext etf::buffer-get-atom)
                     (etf:binary_ext etf::buffer-get-string-32)
                     (etf:integer_ext etf::buffer-get-integer)
+                    (etf:large_big_ext etf::buffer-get-large-big-integer)
                     (etf:large_tuple_ext etf::buffer-get-large-tuple)
                     (etf:list_ext etf::buffer-get-list)
                     (etf:new_float_ext etf::buffer-get-new-float)
                     (etf:nil_ext etf::buffer-get-nil)
                     (etf:small_atom_ext etf::buffer-get-small-atom)
+                    (etf:small_big_ext etf::buffer-get-small-big-integer)
                     (etf:small_integer_ext etf::buffer-get-small-integer)
                     (etf:small_tuple_ext etf::buffer-get-small-tuple)
                     (etf:string_ext etf::buffer-get-vector-16))))
@@ -740,6 +831,7 @@
     (etf::decode-term (print (etf::encode-term `(1 ,(map-into (make-string 5) #'code-char (list 97 98 99 100 8364))
                                                  ,(make-array 8 :element-type '(unsigned-byte 8) :initial-contents '(7 6 5 4 3 2 1 0))
                                                  a (1 . 2) 1.2d0 nil #(1 2) ((a . 1) (b . 2))
+                                                 ,(expt 2 64)
                                                  etf:nil etf:true etf:false) buffer))))
 
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
@@ -747,6 +839,10 @@
                                                  ,(make-array 8 :element-type '(unsigned-byte 8) :initial-contents '(7 6 5 4 3 2 1 0))
                                                  a (1 . 2) 1.2d0 nil #(1 2) ((a . 1) (b . 2))
                                                  etf:nil etf:true etf:false) buffer))))
+
+  (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
+    (etf::decode-term (print (etf::encode-term `(,(expt 2 64)) buffer))))
+
 
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
     (etf::decode-term (print (etf::encode-term #(:|reply| #(DE.SETF.UTILITY.ETF:TRUE (3))) buffer))))
