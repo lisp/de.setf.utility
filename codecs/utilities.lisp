@@ -51,10 +51,12 @@
 (define-compiler-macro sign-byte (&whole form value bit-count)
   (if (integerp bit-count)
     (let ((max-positive (1- (expt 2 (1- bit-count))))
-          (mask (1- (expt 2 bit-count))))
-      `(if (> ,value ,max-positive)          ;  convert
-         (- (logxor ,mask (1- ,value)))
-         ,value))
+          (mask (1- (expt 2 bit-count)))
+          (value-var (gensym)))
+      `(let ((,value-var ,value))       ; ensure one reference 
+         (if (> ,value-var ,max-positive)          ;  convert
+           (- (logxor ,mask (1- ,value-var)))
+           ,value-var)))
     form))
 
 
