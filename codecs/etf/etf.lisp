@@ -5,7 +5,7 @@
 (:documentation
   "This file defines a BERT/ETF encoding for the `de.setf.utility.codecs.bert` library."
   
-  (copyright
+  (:copyright
   "Copyright 2010 [james anderson](mailto:james.anderson@setf.de)  All Rights Reserved"
   "'de.setf.utility' is free software: you can redistribute it and/or modify
  it under the terms of version 3 of the GNU Lesser General Public License as published by
@@ -18,7 +18,7 @@
  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
  If not, see the GNU [site](http://www.gnu.org/licenses/).")
   
-  (description "The ETF codec implements the 'Binary ERlang Term' ([BERT-RPC](http://bert-rpc.org/)) data
+  (:description "The ETF codec implements the 'Binary ERlang Term' ([BERT-RPC](http://bert-rpc.org/)) data
  interchange format with respect to unigned byte arrays and binary streams. It is analogous to the BERT
  implementation in (CLERIC)[http://github.com/flambard/CLERIC], but implements symmetric coding/decoding
  operators and targets pre-allocated storage for vector encoding.
@@ -828,7 +828,7 @@
 #+(or)
 (progn
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
-    (etf::decode-term (print (etf::encode-term `(1 ,(map-into (make-string 5) #'code-char (list 97 98 99 100 8364))
+    (etf::decode-term (print (etf::encode-term `(131 1 ,(map-into (make-string 5) #'code-char (list 97 98 99 100 8364))
                                                  ,(make-array 8 :element-type '(unsigned-byte 8) :initial-contents '(7 6 5 4 3 2 1 0))
                                                  a (1 . 2) 1.2d0 nil #(1 2) ((a . 1) (b . 2))
                                                  ,(expt 2 64) -1 -255
@@ -846,6 +846,9 @@
 
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
     (etf::decode-term (print (etf::encode-term #(:|reply| #(DE.SETF.UTILITY.ETF:TRUE (3))) buffer))))
+
+  (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
+    (etf::buffer-set-unsigned-byte-8 buffer 131 0))
 
   (let ((buffer (make-array 32 :element-type '(unsigned-byte 8))))
     (etf::decode-term (print (etf::encode-term 1.2d0 buffer))))
