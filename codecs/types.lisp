@@ -100,9 +100,11 @@
 
 #+sbcl  ;; works on osx and linux
 (unless (boundp 'single-float-nan)
+  ;; do _not_ define as constants as sbcl's compiler chokes on any reference to them
+  ;; do _not_ let it compile the value expressions as it tries to constant-fold them, with similar results.
   (sb-vm::with-float-traps-masked (:invalid)
-    (defconstant single-float-nan
+    (defparameter single-float-nan
       (eval '(+ single-float-positive-infinity single-float-negative-infinity)))
-    (defconstant double-float-nan
+    (defparameter double-float-nan
       (eval '(+ double-float-positive-infinity double-float-negative-infinity)))))
 

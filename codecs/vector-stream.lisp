@@ -76,7 +76,7 @@
   (:default-initargs :direction :io))
 
 
-(defun make-vector-stream-buffer (length &optional (element-type *vector-stream-buffer-element-type*))
+(defun make-vector-stream-buffer (length &optional (element-type *vector-stream-element-type*))
   (make-array length :element-type element-type :initial-element 0))
 
 

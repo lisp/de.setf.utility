@@ -79,8 +79,7 @@
       (#xff
        (if (zerop fraction)
          (if negative-p single-float-negative-infinity single-float-positive-infinity)
-         #-sbcl single-float-nan
-         #+sbcl (eval 'single-float-nan)))
+         single-float-nan))
       (#x00
        ;; (print (list :to-float sign raw-exponent exponent fraction))
        (if (zerop fraction)
@@ -101,8 +100,7 @@
       (#x7ff
        (if (zerop fraction)
          (if negative-p double-float-negative-infinity double-float-positive-infinity)
-         #-sbcl double-float-nan
-         #+sbcl (eval 'double-float-nan)))
+         double-float-nan))
       (#x000
        ;; (print (list :to-float sign raw-exponent exponent fraction))
        (if (zerop fraction)

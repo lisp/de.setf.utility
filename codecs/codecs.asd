@@ -27,6 +27,7 @@
                (:file "byte-codecs")
                (:file "character-codecs")
                (:file "float-codecs")
+               (:file "vector-stream")
                (:module "meta"
                 :serial t
                 :components ((:file "meta")

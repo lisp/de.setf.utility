@@ -21,8 +21,8 @@
 (test:test codec.types.float
   (and (typep double-float-positive-infinity 'double-float)
        (typep double-float-negative-infinity 'double-float)
-       (typep double-float-nan 'double-float)
-       (typep single-float-nan 'single-float)
+       (typep (symbol-value 'double-float-nan) 'double-float)
+       (typep (symbol-value 'single-float-nan) 'single-float)
        (typep single-float-positive-infinity 'single-float)
        (typep single-float-negative-infinity 'single-float)))
 
