@@ -458,6 +458,18 @@
       (incf position))
     (values (if (zerop sign) value (- value)) position)))
 
+(defun etf::buffer-get-large-big-integer (buffer position)
+  (let* ((byte-count (etf::buffer-get-unsigned-byte-32 buffer position))
+         (sign (etf::buffer-get-unsigned-byte-8 buffer (1+ position)))
+         (bit-count (* byte-count 8))
+         (value 0))
+    (incf position 5)
+    (do ((term-position 0 (+ term-position 8)))
+        ((>= term-position bit-count))
+      (setf (ldb (byte 8 term-position) value) (etf::buffer-get-unsigned-byte-8 buffer position))
+      (incf position))
+    (values (if (zerop sign) value (- value)) position)))
+
 (defun etf::buffer-get-large-tuple (buffer position)
   (let ((count 0)
         (element nil)
