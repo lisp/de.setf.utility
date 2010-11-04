@@ -21,8 +21,7 @@
   :depends-on (:de.setf.utility.codecs)
   :serial t
   :description "BERT stream and buffer codecs."
-  :components ((:file "package")
-               (:file "bert"))
+  :components ((:file "bert"))
   :long-description)
 
 

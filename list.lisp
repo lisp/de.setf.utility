@@ -40,10 +40,11 @@
    ))
 
 
-(defun make-weak-hash-table ()
-  #+clozure (make-hash-table :test 'eq :weak t)
-  #+digitool (make-hash-table :test 'eq :weak t)
-  #+sbcl (make-hash-table :test 'eq :weakness :key)
+(defun make-weak-hash-table (&key (weakness :key) (test 'eq))
+  ;; don't constrain the weakness/test combination here, but a runtime may
+  #+clozure (make-hash-table :test test :weak weakness)
+  #+digitool (make-hash-table :test test :weak weakness)
+  #+sbcl (make-hash-table :test test :weakness weakness)
   )
 
 (defmacro with-gensyms (variables &rest forms)

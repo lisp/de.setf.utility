@@ -225,6 +225,13 @@
     (or (funcall etf:*intern-operator* symbol-name etf:*package*)
         (error "Invalid atom name: ~s." symbol-name))))
 
+(defun etf::stream-read-float (stream)
+  "unpack a 31-byte string and decode it as a float"
+  (let ((float-string (make-array 31 :element-type 'base-char :initial-element #\space)))
+    (dotimes (i 31)
+      (setf (schar float-string i) (code-char (etf::stream-read-unsigned-byte-8 stream))))
+    (de.setf.utility.meta:parse-float float-string)))
+
 (defun etf::stream-read-integer (stream)
   (etf::stream-read-signed-byte-32 stream))
 
@@ -441,6 +448,15 @@
                        (etf::buffer-get-string-iso-16 buffer position)
     (values (or (funcall etf:*intern-operator* symbol-name etf:*package*)
                 (error "Invalid atom name: ~s." symbol-name))
+            position)))
+
+(defun etf::buffer-get-float (buffer position)
+  "unpack a 31-byte string and decode it as a float"
+  (let ((float-string (make-string 31 :initial-element #\space)))
+    (dotimes (i 31)
+      (setf (schar float-string i) (code-char (aref buffer position)))
+      (incf position))
+    (values (with-standard-io-syntax (let ((*read-eval* t)) (read-from-string float-string)))
             position)))
 
 (defun etf::buffer-get-integer (buffer position)
@@ -732,7 +748,7 @@
 
 
 (defgeneric etf:encode-term (term destination)
-  (:method ((term t) (stream stream))
+  (:method ((term t) (stream stream)) 
     (etf::stream-write-unsigned-byte-8 stream etf::version_number)
     (etf:stream-write-term stream term))
 
@@ -790,6 +806,7 @@
                                collect `(set-dispatch ,tag ,function)))))
     (set-dispatches (etf:atom_ext etf::stream-read-atom)
                     (etf:binary_ext etf::stream-read-string-32)
+                    (etf:float_ext etf::stream-read-float)
                     (etf:integer_ext etf::stream-read-integer)
                     (etf:large_big_ext etf::stream-read-large-big-integer)
                     (etf:large_tuple_ext etf::stream-read-large-tuple)
@@ -812,6 +829,7 @@
                                collect `(set-dispatch ,tag ,function)))))
     (set-dispatches (etf:atom_ext etf::buffer-get-atom)
                     (etf:binary_ext etf::buffer-get-string-32)
+                    (etf:float_ext etf::buffer-get-float)
                     (etf:integer_ext etf::buffer-get-integer)
                     (etf:large_big_ext etf::buffer-get-large-big-integer)
                     (etf:large_tuple_ext etf::buffer-get-large-tuple)

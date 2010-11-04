@@ -47,6 +47,7 @@
    "This is the home package for data format patterns and for data conversion
  operators")
   (:export
+   :date
    :date-time
    :date-time-day
    :date-time-hour
@@ -96,7 +97,6 @@
    :|ddMMyy.HHmm|
    :|yyyy-MM-ddTHH:mm:ssZZ|
    :|yyyy.MM.dd HH:mm:ss|
-   :|-yyyy-MM-ddTHH:mm:ssZZZZ|
    ))
 
 (modPackage :de.setf.utility
@@ -414,7 +414,7 @@
                      (write-string "~~" stream)
                      (write-char component stream)))))))
       `(lambda (time &optional stream)
-         (macrolet ((.bce-year. (x) `(list (not (plusp ,x)) (abs ,x)))
+         (macrolet ((.bce-year. (x) `(list (not (plusp ,x)) (if  (plusp ,x) (1+ ,x) (abs ,x))))
                     (.year-in-century. (x) `(mod ,x 100))
                     (.year. (x) x)
                     (.month-name. (x l) `(date:month-name ,x ,l))
@@ -556,12 +556,13 @@
     (:documentation "A function class to distinguish conversion function
       for find-date-format."))
   
-  (defMacro date::define-date-conversion-function (pattern &key (type 'integer)
+  (defMacro date::define-date-conversion-function (pattern &key (type 'integer) (package :date)
                                                            (time-encoder 'encode-universal-time)
                                                            (time-decoder 'decode-universal-time))
-    (let ((name (intern pattern :date)))
+    (let ((name (intern pattern package)))
       `(progn
-         (eval-when (:execute :compile-toplevel :load-toplevel) (export ',name :date))
+         ,@(when (eq package :date)
+             `((eval-when (:execute :compile-toplevel :load-toplevel) (export ',name :date))))
          (defGeneric ,name (datum &optional arg)
            (:generic-function-class date-conversion-function)
            (:method ((datum ,type) &optional arg)
@@ -586,44 +587,6 @@
 (date::define-date-conversion-function "EEE, dd.MM.yyyy")
 (date::define-date-conversion-function "dddddddd MMM yyyy")
 (date::define-date-conversion-function "yyyy.MM.dd HH:mm:ss")
-
-(defstruct (date-time (:constructor date-time (second minute hour day month year)))
-  year month day hour minute second)
-
-(defun encode-date-time (second minute hour day month year &optional ( zone 0))
- (unless (zerop zone)
-   (multiple-value-bind (s-s s-m s-hour s-day s-month s-year)
-                        (decode-universal-time (encode-universal-time 0 0 hour day month (abs year) 0)
-                                               zone)
-        (declare (ignore s-s s-m))
-        (setf hour s-hour
-              day s-day
-              month s-month
-              year (+ year (- s-year (abs year))))))
- (date-time second minute hour day month year))
-
-(defun decode-date-time (value &optional (zone 0))
-  (let ((year (date-time-year value))
-        (month (date-time-month value))
-        (day (date-time-day value))
-        (hour (date-time-hour value)))
-    (unless (zerop zone)
-      (multiple-value-bind (s-s s-m s-hour s-day s-month s-year)
-                           (decode-universal-time (encode-universal-time 0 0 hour day month (abs year) 0)
-                                                  zone)
-        (declare (ignore s-s s-m))
-        (setf hour s-hour
-              day s-day
-              month s-month
-              year (+ year (- s-year (abs year))))))
-    (values (date-time-second value) (date-time-minute value) hour
-            day month year
-            nil nil
-            zone)))
-
-(date::define-date-conversion-function "-yyyy-MM-ddTHH:mm:ssZZZZ"
-  :type date-time
-  :time-encoder encode-date-time :time-decoder decode-date-time)
 
 
 (defGeneric date::find-date-format (name &key if-does-not-exist)
