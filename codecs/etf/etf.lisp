@@ -325,6 +325,9 @@
   (:method (stream (term null))
     (etf::stream-write-nil stream term))
 
+  (:method (stream (term rational))
+    (generic-stream-write-term stream (float term)))
+
   (:method (stream (term string))
     (etf::stream-write-string-32 stream term))
 

@@ -17,7 +17,8 @@
 (in-package :de.setf.utility.meta)
 
 
-(defun meta:parse-float (string &aux (s +1) (es +1) (i 0) (f 0) (e 0) (m #\e) (f-count 0) (i-count 0) (e-count 0) (v 0) d)
+(defun meta:parse-float (string &aux (s +1) (es +1) (i 0) (f 0) (e 0)
+                                (m nil) (f-count 0) (i-count 0) (e-count 0) (v 0) d)
   (with-string-meta (string)
       (and
        (match
@@ -35,9 +36,13 @@
          (when (plusp e-count) (setf v (* v (expt 10 (* es e)))))
          (when (< s 0) (setf v (- v)))
          (case m
-           ((#\E #\e) (float v 0.0e0))
+           ((nil #\E #\e) (float v (ecase *read-default-float-format*
+                             (short-float 0.0s0)
+                             (single-float 0.0f0)
+                             (double-float 0.0d0)
+                             (long-float 0.0l0))))
            ((#\S #\s) (float v 0.0s0))
            ((#\D #\d) (float v 0.0d0))
-           ((#\F #\f) (float v 0.0s0))
-           ((#\L #\l) (float v 0.0s0)))))))
+           ((#\F #\f) (float v 0.0f0))
+           ((#\L #\l) (float v 0.0l0)))))))
 

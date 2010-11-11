@@ -40,21 +40,13 @@
 #-( or sbcl allegro lispworks ccl)
 (cerror "Continue anyway" "Conditionalization required for funcallable-standar-class")
 
-(defPackage :de.setf.date
+(defpackage :de.setf.date
   (:nicknames :date)
   (:use)
   (:documentation
    "This is the home package for data format patterns and for data conversion
  operators")
   (:export
-   :date
-   :date-time
-   :date-time-day
-   :date-time-hour
-   :date-time-minute
-   :date-time-month
-   :date-time-second
-   :date-time-year
    :day-and-month-to-day-in-year
    :day-in-month
    :day-in-month-name
@@ -678,9 +670,7 @@
   (test date/7de (date:|yyyyMMddTHHmmss| "19060504T030201") (encode-universal-time 01 02 03 04 05 1906))
   (test date/7err (type-of (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmss|  "19060504X030201")))) 'simple-error)
   (test date/8 (date:|EEE, dd.MM.yyyy| (encode-universal-time 01 02 03 07 05 1955)) "Thu, 07.05.1955")
-  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955")
-  (test date/10 (date:|-yyyy-MM-ddTHH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 1955))  "1955-08-08T03:02:01Z00:00")
-  (test date/10 (date:|-yyyy-MM-ddTHH:mm:ssZZZZ| (encode-date-time 01 02 03 08 08 -1955))  "-1955-08-08T03:02:01Z00:00"))
+  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955"))
 
 
 :de.setf.utility

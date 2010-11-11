@@ -278,13 +278,15 @@
         ,@body))))
 
 
+(defun ensure-simple-string (string)
+  (if (simple-string-p string) string (coerce string 'simple-string)))
 
 (defmacro with-string-meta ((string-buffer &key (start 0) end) &body body &aux (string-binding (gensym "STRING-")))
-  `(let* ((,string-binding ,string-buffer)
+  `(let* ((,string-binding (ensure-simple-string ,string-buffer))
           (index ,start)
           (end ,(or end `(length ,string-binding))))
      (declare (fixnum index end)
-              (type simple-base-string ,string-binding))
+              (type simple-string ,string-binding))
      (flet ((p-c () (when (< index end) (char ,string-binding index)))
             (r-c () (when (< index end)
                       (prog1 (char ,string-binding index)
@@ -295,8 +297,9 @@
                     (setf index new-index)
                     value))
             (p (&optional position) (if position (setf index position) index)))
-       (with-meta (:peek-char #'p-c :read-char #'r-c :read #'r :position #'p)
-         ,@body))))
+       (values (with-meta (:peek-char #'p-c :read-char #'r-c :read #'r :position #'p)
+                 ,@body)
+               index))))
 
 
 #+mcl ;MCL won't compile to a file without this.

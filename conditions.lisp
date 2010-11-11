@@ -188,7 +188,7 @@
 (defmacro assert-argument-type (operator variable type &optional (required-p t) (test `(typep ,variable ',type)))
   (let ((form `(unless ,test
                  (error 'simple-type-error :datum ,variable :expected-type ',type
-                        :format-control ,(format nil "~s: the ~:[(optional) ~;~] ~a argument (~~s) must be of type ~a."
+                        :format-control ,(format nil "~s: the ~:[(optional) ~;~] ~a argument (~~s) must be of type ~s."
                                                  operator required-p variable type)
                         :format-arguments (list ,variable)))))
     (if required-p
