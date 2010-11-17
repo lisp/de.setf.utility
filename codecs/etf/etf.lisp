@@ -345,7 +345,10 @@
         (etf::stream-write-vector-list stream term))
       (if (< (length term) 256)
         (etf::stream-write-small-tuple stream term)
-        (etf::stream-write-large-tuple stream term)))))
+        (etf::stream-write-large-tuple stream term))))
+
+  (:method (stream (term function))
+    (funcall term stream)))
 
 (defun etf:stream-write-term (stream term)
   (funcall etf::*stream-write-term-hook* #'generic-stream-write-term stream term))
