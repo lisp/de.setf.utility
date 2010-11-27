@@ -160,7 +160,11 @@
                :reader mime-type-minor-type)))
 
 (defclass mime:*/* (major-mime-type minor-mime-type)
-  ())
+  ((charset
+    :initarg :charset :initform nil
+    :reader mime-type-charset
+    :type symbol
+    :documentation "See http://www.iana.org/assignments/character-sets")))
 
 ;;; must be ordered such that abstract mime types appear first,
 ;;; as each definition form instantiates a singleton
@@ -169,10 +173,7 @@
 (def-mime-type ("IMAGE" "*"))
 (def-mime-type ("TEXT" "*") ()
   ((charset
-    :initarg :charset :initform :iso-8859-1
-    :reader mime-type-charset
-    :type keyword
-    :documentation "See http://www.iana.org/assignments/character-sets")))
+    :initform :iso-8859-1)))
 
 (defclass mime:graphviz (mime:*/*)
   ((file-type :initform "dot" :allocation :class))

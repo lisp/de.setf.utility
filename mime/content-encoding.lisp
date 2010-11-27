@@ -63,6 +63,13 @@ from de.setf.xml suffice."))
 
 
 (def-class-constructor content-encoding
+  (:method ((name string) &rest initargs)
+    (declare (dynamic-extent initargs))
+    (if (equal name "")
+      nil
+      (apply #'content-encoding (or (find-symbol (string-upcase name) :keyword)
+                                    (error "Invalid character encoding: ~s." name))
+             initargs)))
   (:method ((keyword symbol) &rest initargs)
     (declare (dynamic-extent initargs))
     (flet ((define-encoding (encoding)
@@ -70,14 +77,17 @@ from de.setf.xml suffice."))
              (setf encoding (content-encoding encoding))
              ;; define it
              (setf (content-encoding (content-encoding-name encoding)) encoding)))
-      (if (keywordp keyword)
-        ;; iff additional arguments follow the initial keyword, make the instance
-        ;; otherwise - for a single keyword, treat it as an encoding designator
-        (if initargs
-          (define-encoding (apply #'make-instance *class.content-encoding* keyword initargs))
-          (content-encoding (or (gethash keyword *content-encodings*)
-                                (error "Invalid character encoding: ~s." keyword))))
-        (define-encoding (apply #'make-instance keyword initargs))))))
+      (typecase keyword
+        (null nil)
+        (keyword
+         ;; iff additional arguments follow the initial keyword, make the instance
+         ;; otherwise - for a single keyword, treat it as an encoding designator
+         (if initargs
+           (define-encoding (apply #'make-instance *class.content-encoding* keyword initargs))
+           (content-encoding (or (gethash keyword *content-encodings*)
+                                 (error "Invalid character encoding: ~s." keyword)))))
+        (t
+         (define-encoding (apply #'make-instance keyword initargs)))))))
 
 
 (defun (setf content-encoding) (encoding name)
