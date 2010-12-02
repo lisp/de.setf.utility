@@ -61,7 +61,6 @@ from de.setf.xml suffice."))
     :initarg :documentation :initform nil
     :accessor content-encoding-documentation)))
 
-
 (def-class-constructor content-encoding
   (:method ((name string) &rest initargs)
     (declare (dynamic-extent initargs))
@@ -94,6 +93,9 @@ from de.setf.xml suffice."))
   (when (gethash name *content-encodings*)
     (warn "redefining encoding: ~s." name))
   (setf (gethash name *content-encodings*) encoding))
+
+(defmethod content-encoding-name ((encoding null))
+  nil)
 
 
 

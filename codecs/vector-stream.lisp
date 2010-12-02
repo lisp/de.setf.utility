@@ -33,6 +33,7 @@
     :initform 0
     :reader get-stream-position :writer setf-stream-position)
    (vector
+    ;; nb no type information, othreise sbcl objects to latr specification
     :reader get-vector-stream-vector :writer setf-vector-stream-vector
     :type vector)
    (signed)
@@ -200,15 +201,23 @@
 
 (defMethod stream-reader ((stream vector-input-stream))
   (with-slots (vector position) stream
-    (if (typep vector 'simple-vector)
-      #'(lambda (ignore) (declare (ignore ignore))
-         (when (< position (length vector))
-           (prog1 (svref vector position)
-             (incf position))))
-      #'(lambda (ignore) (declare (ignore ignore))
-         (when (< position (length vector))
-           (prog1 (aref vector position)
-             (incf position)))))))
+    (flet ((simple-vector-reader (ignore)
+             (declare (ignore ignore))
+             (declare (optimize (speed 3) (safety 0))
+                      (type (simple-array (unsigned-byte 8) (*)) vector))
+             (when (< position (length vector))
+               (prog1 (aref vector position)
+                 (incf position))))
+           (vector-reader (ignore)
+             (declare (ignore ignore))
+             (declare (optimize (speed 3) (safety 0))
+                      (type (array (unsigned-byte 8) (*)) vector))
+             (when (< position (length vector))
+               (prog1 (aref vector position)
+                 (incf position)))))
+      (etypecase vector
+        (simple-vector #'simple-vector-reader)
+        (vector #'vector-reader)))))
 
 ;;;
 ;;; output
@@ -246,18 +255,25 @@
 (defmethod stream-tyo ((stream vector-output-stream) (datum integer))
   (stream-write-byte stream datum))
 
-(defMethod stream-writer ((stream vector-output-stream))
+(defmethod stream-writer ((stream vector-output-stream))
   (with-slots (vector position) stream
-    (if (typep vector 'simple-vector)
-      #'(lambda (next datum)
-          (unless (< (setf next (1+ position)) (length vector))
-            (setf vector (adjust-array vector (+ next (floor (/ next 4)))
-                                       :element-type (array-element-type vector))))
-          (setf (svref vector position) (logand #xff datum))
-          (setf position next))
-      #'(lambda (next datum)
-          (unless (< (setf next (1+ position)) (length vector))
-            (setf vector (adjust-array vector (+ next (floor (/ next 4)))
-                                       :element-type (array-element-type vector))))
-          (setf (aref vector position) (logand #xff datum))
-          (setf position next)))))
+    (flet ((simple-vector-writer (next datum)
+            (declare (optimize (speed 3) (safety 0))
+                     (type (vector (unsigned-byte 8) *) vector))
+             (when (>= position (length vector))
+               (setf next (+ position 1))
+               (setf vector (adjust-array vector (+ next (floor (/ next 4)))
+                                          :element-type (array-element-type vector))))
+             (setf (aref vector position) (logand #xff datum))
+             (incf position))
+           (vector-writer (next datum)
+             (declare (optimize (speed 3) (safety 0)))
+             (when (>= position (length vector))
+               (setf next (1+ position))
+               (setf vector (adjust-array vector (+ next (floor (/ next 4)))
+                                          :element-type (array-element-type vector))))
+             (setf (aref vector position) (logand #xff datum))
+             (incf position)))
+      (etypecase vector
+        (simple-vector #'simple-vector-writer)
+        (vector #'vector-writer)))))

@@ -227,8 +227,6 @@
 (def-mime-type ("TEXT" "XML") ()
   ((file-type :initform "xml" :allocation :class)))
 
-(defmethod mime-type-charset ((type mime:*/*))
-  nil)
 
 (defgeneric mime-type-file-type (mime-type)
   (:method ((type mime:*/*))
