@@ -252,18 +252,47 @@
         (setf position new-position))
       new-position)))
 
+(defmethod stream-write-string ((stream vector-output-stream) (sequence string)
+                                #-mcl &optional (start 0) (end nil))
+  (unless end (setf end (length sequence)))
+  (assert (typep start '(integer 0)))
+  (assert (>= end start))
+  (with-slots (vector position) stream
+    (let* ((new-position (+ position (- end start))))
+      (when (> new-position position)
+        (unless (< new-position (length vector))
+          (setf vector
+                (adjust-array vector (floor (+ new-position (floor (/ new-position 4))))
+                              :element-type (array-element-type vector))))
+        (dotimes (i (- end start))
+          (setf (aref vector position) (char-code (char sequence start)))
+          (incf position)
+          (incf start))
+        (setf position new-position))
+      new-position)))
+
 (defmethod stream-tyo ((stream vector-output-stream) (datum integer))
   (stream-write-byte stream datum))
 
+(defmethod stream-tyo ((stream vector-output-stream) (datum character))
+  ;; no unicode
+  (stream-write-byte stream (char-code datum)))
+
+(defmethod stream-write-char ((stream vector-output-stream) (datum character))
+  (stream-write-byte stream (char-code datum)))
+
+;; support ascii charactr strings...
 (defmethod stream-writer ((stream vector-output-stream))
   (with-slots (vector position) stream
     (flet ((simple-vector-writer (next datum)
-            (declare (optimize (speed 3) (safety 0))
-                     (type (vector (unsigned-byte 8) *) vector))
+             (declare (optimize (speed 3) (safety 0))
+                      (type (vector (unsigned-byte 8) *) vector))
              (when (>= position (length vector))
                (setf next (+ position 1))
                (setf vector (adjust-array vector (+ next (floor (/ next 4)))
                                           :element-type (array-element-type vector))))
+             (when (characterp datum)
+               (setf datum (char-code datum)))
              (setf (aref vector position) (logand #xff datum))
              (incf position))
            (vector-writer (next datum)
@@ -272,6 +301,8 @@
                (setf next (1+ position))
                (setf vector (adjust-array vector (+ next (floor (/ next 4)))
                                           :element-type (array-element-type vector))))
+             (when (characterp datum)
+               (setf datum (char-code datum)))
              (setf (aref vector position) (logand #xff datum))
              (incf position)))
       (etypecase vector
