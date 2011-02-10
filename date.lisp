@@ -33,6 +33,7 @@
 ;;; 20091220.janderson  corrected treatment of single quote; made 'Z' decoding optional
 ;;; 20100210.janderson  cleaned up ignored variables, types
 ;;; 20100919.janderson  vary year as bce-year for xml-schema datatime additions to iso-8601
+;;; 20110208.janderson  invert offset sign to correctly reflect iso
 
 
 (in-package :de.setf.utility.implementation)
@@ -423,7 +424,7 @@
                     (.hour-12-1-based. (x) `(1+ (mod ,x 12)))
                     (.minute-in-hour. (x) x)
                     (.second-in-minute. (x) x)
-                    (.time-zone. (x) x))
+                    (.time-zone. (x) `(- ,x)))
            (multiple-value-bind (second-in-minute minute-in-hour hour-in-day day-in-month
                                                   month-in-year year day-in-week daylight-savings-time-p time-zone)
                                 (,time-decoder time ,@(when time-zone-p '(0)))
@@ -515,10 +516,16 @@
                                                                  :end (incf position ,length))))
                                 (.time-zone.
                                  ;; (incf position) ;; don't always increment, allow optional 'Z'
-                                 `(let ((tz-position (if (digit-char-p (char string position))
-                                                       position (1+ position))))
+                                 `(let ((tz-position (cond ((find (char string position) "+-0123456789")
+                                                            position)
+                                                           ((find (char string position) "zZ")
+                                                            (1+ position))
+                                                           (t
+                                                            (error "Invalid time zone specifier: ~s." string)))))
                                     (setf time-zone (parse-integer string  :start tz-position
-                                                                   :end (setf position (+ tz-position 2))))))
+                                                                   :end (setf position
+                                                                              (+ tz-position
+                                                                                 (if (find (char string tz-position) "+-") 3 2)))))))
                                 (t     ; simple components
                                  `(setf ,variable
                                         (parse-integer string :start position
@@ -537,7 +544,7 @@
                    (date:day-in-year-to-day-and-month day-in-year year))))
            (,time-encoder second-in-minute minute-in-hour hour-in-day
                           day-in-month month-in-year (* sign year)
-                          ,@(when time-zone-p '(time-zone)))))))
+                          ,@(when time-zone-p '((- time-zone))))))))
   
   (defClass date-conversion-function (standard-generic-function)
     ()
@@ -670,7 +677,29 @@
   (test date/7de (date:|yyyyMMddTHHmmss| "19060504T030201") (encode-universal-time 01 02 03 04 05 1906))
   (test date/7err (type-of (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmss|  "19060504X030201")))) 'simple-error)
   (test date/8 (date:|EEE, dd.MM.yyyy| (encode-universal-time 01 02 03 07 05 1955)) "Thu, 07.05.1955")
-  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955"))
+  (test date/9 (date:|dddddddd MMM yyyy| (encode-universal-time 01 02 03 08 08 1955)) "eighth   aug 1955")
 
+  ;; time zones
+  (test date.zone
+    (and (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z00")) "20120101T000102Z00")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T00010200")) "20120101T000102Z00")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+00")) "20120101T000102Z00")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102+00")) "20120101T000102Z00")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z-05")) "20120101T050102Z00")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+05")) "20111231T190102Z00")
+         (typep (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmssZZ| "20120101T001002/00"))) 'error)
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20110101T010203-02") 0))
+                '(3 2 3 1 1 2011 5 NIL 0))
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20110101T010203+00") 0))
+                '(3 2 1 1 1 2011 5 NIL 0))
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20110101T010203+02") 0))
+                '(3 2 23 31 12 2010 4 NIL 0))
 
-:de.setf.utility
+         
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20111231T232425-02") 0))
+                '(25 24 1 1 1 2012 6 NIL 0))
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20111231T232425+00") 0))
+                '(25 24 23 31 12 2011 5 NIL 0))
+         (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20111231T232425+02") 0))
+                '(25 24 21 31 12 2011 5 NIL 0))))
+  )

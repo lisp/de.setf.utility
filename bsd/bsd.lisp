@@ -339,6 +339,14 @@
 (defparameter log-info 6)
 (defparameter log-debug 7)
 
+(defparameter log-cons 2)
+(defparameter log-ndelay 8)
+(defparameter log-nowait 16)
+(defparameter log-odelay 4)
+(defparameter log-perror 32)
+(defparameter log-pid 1)
+
+
 ;;; interface
 (defun closelog ()
   (#_closelog))

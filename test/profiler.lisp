@@ -165,5 +165,23 @@
       (when report (report-profilers names)))))
 
 
+(defmacro dsu:time-and-memory (form)
+  "Execute the from recording and returing time and memory usage in addition to the form's initial value."
+
+  `(flet ((.time-and-memory. () ,form))
+     (declare (dynamic-extent #'.time-and-memory.))
+     (call-with-time-and-memory #'.time-and-memory.)))
+
+(defun call-with-time-and-memory (operator)
+  (let ((time-before (get-internal-run-time))
+        (bytes-before (ccl::total-bytes-allocated))
+        (value (funcall operator)))
+    (let* ((bytes (- (ccl::total-bytes-allocated) bytes-before))
+           (time (- (get-internal-run-time) time-before)))
+      (decf bytes 24) ; by observation
+      (values value
+              time bytes))))
+
+
 ;;; (defun test-fm (arg1 arg2) (+ arg1 arg2))
 ;;; (profiling (test-fm) (dotimes (x 1000) (test-fm 1 2)))

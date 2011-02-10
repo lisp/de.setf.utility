@@ -607,7 +607,8 @@
 
 (defmacro dsu:time-and-memory (form)
   "this is a placeholder for an operator which captures time and memory usage for a form."
-  `(values ,form 0 0))
+  ;; see profiler.lisp
+  `(values (multiple-value-list ,form) 0 0))
 
 (defmacro test-and (&rest forms)
   "perform a conditional conjunction, but signal an error if a clause fails."
