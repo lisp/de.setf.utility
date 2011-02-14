@@ -65,6 +65,7 @@
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
 (def-mime-type-key "TEXT")
+(def-mime-type-key "TURTLE")
 (def-mime-type-key "VND.GRAPHVIZ")
 (def-mime-type-key "X-GRAPHVIZ")
 (def-mime-type-key "XML")
@@ -193,9 +194,14 @@
   (:documentation "The abstract graphviz mime type is specialized as
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
  and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
+
 (defclass mime:n3 (mime:text/plain)
   ()
   (:documentation "The N3 mime class is the abstract base class for application/n3 and text/n3."))
+
+(defclass mime:turtle (mime:text/plain)
+  ()
+  (:documentation "The TURTLE mime class is the abstract base class for text/turtle."))
 
 (def-mime-type ("APPLICATION" "JSON"))
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
@@ -222,8 +228,9 @@
   ((file-type :initform "html" :allocation :class)))
 (def-mime-type ("TEXT" "MARKDOWN") ()
   ((file-type :initform "md" :allocation :class)))
-(def-mime-type ("TEXT" "X-GRAPHVIZ") (mime:graphviz))
+(def-mime-type ("TEXT" "TURTLE") (mime:turtle))
 (def-mime-type ("TEXT" "VND.GRAPHVIZ") (mime:graphviz))
+(def-mime-type ("TEXT" "X-GRAPHVIZ") (mime:graphviz))
 (def-mime-type ("TEXT" "XML") ()
   ((file-type :initform "xml" :allocation :class)))
 

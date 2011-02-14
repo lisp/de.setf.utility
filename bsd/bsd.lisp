@@ -493,7 +493,8 @@ output to *VERBOSE-OUT*.  Returns the shell's exit code."
   (with-slots (in-buffer in-string-buffer in-length) instance
     (setf in-buffer (#_NewPtr :errchk 512)
           in-length 512
-          in-string-buffer (make-array 512 :element-type 'character :adjustable t))))
+          in-string-buffer (make-array 512 :element-type 'character))
+    (read-pipe-input-stream-buffer instance)))
 
 (defmethod initialize-instance :after ((instance pipe-output-stream) &key)
   (with-slots (out-buffer out-string-buffer out-length) instance
@@ -523,7 +524,7 @@ output to *VERBOSE-OUT*.  Returns the shell's exit code."
       (setf in-buffer nil))
     (call-next-method)))
 
-(defmethod ccl::stream-close ((stream pipe-stream))
+(defmethod ccl::stream-close ((stream pipe-output-stream))
   (with-slots (fp output-buffer out-string-buffer out-index out-length script) stream
     (when (and output-buffer (not (ccl::%null-ptr-p output-buffer)))
       (when (plusp out-index)
@@ -535,24 +536,46 @@ output to *VERBOSE-OUT*.  Returns the shell's exit code."
     
 
 (defun fread-decoded (fp io-buffer io-buffer-length string-buffer script)
-  (cond ((bsd:feofp fp)
-         (values nil string-buffer))
-        (t
-         (let ((io-count (bsd:fread io-buffer fp :length io-buffer-length)))
-           (cond ((plusp io-count)
-                  (if script
-                    (multiple-value-bind (chars fatp) (ccl::pointer-char-length io-buffer io-count script)
-                      (cond ((not fatp)
-                             (ccl::%copy-ptr-to-ivector io-buffer 0 string-buffer 0 io-count))
-                            (t
-                             (unless (= (length string-buffer) chars)
-                               (setf string-buffer (adjust-array string-buffer chars)))
-                             (ccl::pointer-to-string-in-script io-buffer string-buffer io-count script)
-                             (setf io-count chars))))
-                    (ccl::%copy-ptr-to-ivector io-buffer 0 string-buffer 0 io-count))
-                  (values io-count string-buffer))
-                 (t
-                  (values 0 string-buffer)))))))
+  (flet ((copy-ptr-to-string (ptr string count)
+           ;; must convert each byte as the string is not guaranteed to have base character elements
+           (dotimes (i count)
+             (setf (char string i) (code-char (%get-byte ptr i))))
+           string))
+    (cond ((bsd:feofp fp)
+           (values nil string-buffer))
+          (t
+           (let ((io-count (bsd:fread io-buffer fp :length io-buffer-length)))
+             (cond ((plusp io-count)
+                    (cond (script
+                           (multiple-value-bind (char-count fatp) (ccl::pointer-char-length io-buffer io-count script)
+                             (cond ((not fatp)
+                                    (unless (= (length string-buffer) io-count)
+                                      (setf string-buffer (adjust-array string-buffer io-count)))
+                                    (copy-ptr-to-string io-buffer string-buffer io-count))
+                                   (t
+                                    (unless (= (length string-buffer) char-count)
+                                 (setf string-buffer (adjust-array string-buffer char-count)))
+                                    (ccl::pointer-to-string-in-script io-buffer string-buffer io-count script)
+                                    (setf io-count char-count)))))
+                          (t
+                           (unless (= (length string-buffer) io-count)
+                             (setf string-buffer (adjust-array string-buffer io-count)))
+                           (copy-ptr-to-string io-buffer string-buffer io-count)))
+                    (values io-count string-buffer))
+                   (t
+                    (values 0 string-buffer))))))))
+
+(defun read-pipe-input-stream-buffer (stream)
+  (with-slots (in-buffer fp in-string-buffer in-length in-index script) stream
+    (when (>= in-length 0)
+      (multiple-value-bind (read-length read-buffer)
+                           (fread-decoded fp in-buffer in-length in-string-buffer script)
+        (unless (and read-length (plusp read-length))
+          (setf in-length -1))
+        ;; in case it changes size
+        (setf in-string-buffer read-buffer))
+      (setf in-index 0))
+    in-length))
 
 (defun fwrite-encoded (fp out-buffer out-buffer-length char-code-buffer char-code-count)
   "MCL supports two-byte scripts only. thus the simplistic encoding."
@@ -583,26 +606,20 @@ output to *VERBOSE-OUT*.  Returns the shell's exit code."
 (defmethod ccl::stream-tyi ((stream bsd:pipe-input-stream))
   ;; despite the decoding provisions, unix input comes with linefeeds
   ;; and i don't know what decoding one would need.
-  (with-slots (in-buffer fp in-string-buffer in-length in-index script) stream
-    (when fp
+  (with-slots (fp in-string-buffer in-length in-index) stream
+    (when (and fp (> in-length 0))
       (when (>= in-index (length in-string-buffer))
-        (multiple-value-bind (read-length read-buffer)
-                             (fread-decoded fp in-buffer in-length in-string-buffer script)
-          (unless (and read-length (plusp read-length))
-            (setf in-length -1)
-            (return-from ccl::stream-tyi nil))
-          ;; in case it changes size
-          (setf in-string-buffer read-buffer))
-        (setf in-index 0))
-      (let ((char (schar in-string-buffer in-index)))
+        (unless (> (read-pipe-input-stream-buffer stream) 0)
+          (return-from ccl::stream-tyi nil)))
+      (let ((char (char in-string-buffer in-index)))
         (incf in-index)
         (case char
           ((#\return #\linefeed) #\newline)
           (t char))))))
     
 (defmethod ccl::stream-untyi ((stream bsd:pipe-input-stream) char)
-  (with-slots (string-buffer length index) stream
-    (unless (and (plusp index) (eql char (schar string-buffer (decf index))))
+  (with-slots (in-string-buffer in-length in-index) stream
+    (unless (and (plusp in-index) (eql char (schar in-string-buffer (decf in-index))))
       (error "invalid tyi character: ~s." char))
     char))
 
@@ -618,8 +635,8 @@ output to *VERBOSE-OUT*.  Returns the shell's exit code."
       char)))
 
 (defmethod ccl::stream-eofp ((stream bsd:pipe-input-stream))
-  (with-slots (length) stream
-    (minusp length)))
+  (with-slots (in-length) stream
+    (minusp in-length)))
 
 
 (pushnew :bsd *features*)
