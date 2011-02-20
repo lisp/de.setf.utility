@@ -234,8 +234,9 @@
     (setf position next)))
 
 
-(defmethod stream-write-sequence ((stream vector-output-stream) (sequence vector)
-                                  #+mcl &key #-mcl &optional (start 0) (end nil))
+(defmethod stream-write-sequence
+           #-mcl ((stream vector-output-stream) (sequence vector) &optional (start 0) (end nil))
+           #+mcl ((stream vector-output-stream) (sequence vector) &key (start 0) (end nil))
   (unless end (setf end (length sequence)))
   (assert (typep start '(integer 0)))
   (assert (>= end start))
@@ -252,8 +253,9 @@
         (setf position new-position))
       new-position)))
 
-(defmethod stream-write-string ((stream vector-output-stream) (sequence string)
-                                #-mcl &optional (start 0) (end nil))
+(defmethod stream-write-string
+           #-mcl ((stream vector-output-stream) (sequence string) &optional (start 0) (end nil))
+           #+mcl ((stream vector-output-stream) (sequence string) start end)
   (unless end (setf end (length sequence)))
   (assert (typep start '(integer 0)))
   (assert (>= end start))
