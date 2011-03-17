@@ -226,9 +226,16 @@ from de.setf.xml suffice."))
 
 ;;; (map 'string #'code-char (encode-string "asdf" :utf-8))
 
-;;; from doan text
-;;; (map 'vector 'char-code "Spr‡vce projektu, vedouc’ projektu.")
-#+(or)
-(let ((string (map 'string 'code-char #(83 112 114 225 118 99 101 32 112 114 111 106 101 107 116 117 44 32 118 101
-                                        100 111 117 99 237 32 112 114 111 106 101 107 116 117 46))))
-  (encode-string string :utf-8))
+;;; test 128 - 255 encoding
+(let ((string (map 'string 'code-char #(83 112 114 225 118 99 101 32
+                                        112 114 111 106 101 107 116 117
+                                        44 32 118 101 100 111 117 99
+                                        237 32 112 114 111 106 101 107
+                                        116 117 46))))
+  (assert (equalp (encode-string string :utf-8)
+                  #(83 112 114 195 161 118 99 101
+                    32 112 114 111 106 101 107 116
+                    117 44 32 118 101 100 111 117
+                    99 195 173 32 112 114 111 106
+                    101 107 116 117 46))
+          () "Invalid utf encoding result"))
