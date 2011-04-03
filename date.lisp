@@ -650,7 +650,14 @@
     (date:|yyyyMMddTHHmmssZZ| string)
     (date:|yyyyMMddTHHmmss| string)))
 
-(defun iso-time (&optional (time (get-universal-time))) (date:|yyyyMMddTHHmmss| time))
+(defun iso-time (&optional (time (get-universal-time)))
+  (etypecase time
+    (integer (date:|yyyyMMddTHHmmss| time))
+    (string
+     (ecase (length time)
+       (15 (date:|yyyyMMddTHHmmss| time))
+       (19 (date:|yyyy-MM-ddTHH:mm:ss| time))
+       (21 (date:|yyyy-MM-ddTHH:mm:ssZZ| time))))))
 
 
 ;(let ((time (get-universal-time))) (= (decode-iso-time (iso-time time)) time))

@@ -124,6 +124,12 @@
       (setf-stream-position (min (length vector) new) stream)
       (get-stream-position stream))))
 
+#+(or)
+(defmethod amqp.u:stream-file-position ((stream vector-stream) &optional new)
+  (when (null new) 
+    (stream-position stream)))
+
+
 (defmethod stream-eofp ((stream vector-stream))
   (with-slots (position vector) stream
     (>= position (length vector))))
@@ -283,7 +289,7 @@
 (defmethod stream-write-char ((stream vector-output-stream) (datum character))
   (stream-write-byte stream (char-code datum)))
 
-;; support ascii charactr strings...
+;; support ascii character strings...
 (defmethod stream-writer ((stream vector-output-stream))
   (with-slots (vector position) stream
     (flet ((simple-vector-writer (next datum)

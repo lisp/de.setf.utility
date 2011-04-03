@@ -1,7 +1,7 @@
-;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: common-lisp-user; -*-
+;;; -*- Mode: lisp; Syntax: ansi-common-lisp; Base: 10; Package: de.setf.utility.implementation; -*-
 
 
-(in-package :common-lisp-user)
+(in-package :de.setf.utility.implementation)
 
 ;;;  This file is part of the 'de.setf.utility' Common Lisp library.
 ;;;  It  file defines a 'null' macro-expansion for the top-level documention operator.
@@ -20,7 +20,7 @@
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
 
-(in-package :cl-user)
+(in-package :de.setf.utility.implementation)
 
 (defmacro :documentation (&rest arguments)
   (declare (ignore arguments))
@@ -29,3 +29,19 @@
 #+mcl
 (progn
   (setf (ccl:assq ':documentation *fred-special-indent-alist*) 1))
+
+(defgeneric test-features (specification)
+  (:method ((spec symbol))
+    (when (member spec *features*) t))
+  (:method ((spec null))
+    t)
+  (:method ((spec cons))
+    (ecase (pop spec)
+      (and (every #'test-features spec))
+      (or (some #'test-features spec))
+      (not (not (test-features (first spec)))))))
+
+(defmacro require-features ((&rest features) message &rest args)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (unless (test-features ',features)
+       (cerror "Continue anyway." ,message ,@args))))

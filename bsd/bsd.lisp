@@ -346,6 +346,17 @@
 (defparameter log-perror 32)
 (defparameter log-pid 1)
 
+(defparameter log-authpriv 80)
+(defparameter log-chron 72)
+(defparameter log-daemon 24)
+(defparameter log-ftp 88)
+(defparameter log-lpr 48)
+(defparameter log-mail 16)
+(defparameter log-news 56)
+(defparameter log-syslog 40)
+(defparameter log-user 8)
+(defparameter log-uucp 64)
+
 
 ;;; interface
 (defun closelog ()

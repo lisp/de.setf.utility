@@ -44,6 +44,7 @@
   ;; don't constrain the weakness/test combination here, but a runtime may
   #+clozure (make-hash-table :test test :weak weakness)
   #+digitool (make-hash-table :test test :weak weakness)
+  #+lispworks (make-hash-table :test test :weak-kind weakness)
   #+sbcl (make-hash-table :test test :weakness weakness)
   )
 

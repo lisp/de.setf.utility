@@ -145,7 +145,7 @@
                                    (dolist (other-definition (record-definitions sym '(function)))
                                      (unless (eq component (definition-parent other-definition))
                                        (record-dependency component other-definition))))
-                               (de.setf.utility.clos.graph:function-calls symbol)))
+                               (dsw:function-calls symbol)))
                      definition))))
            
            (module (pathname)
@@ -240,7 +240,8 @@
   (remove-duplicates (reduce  #'union
                               (slot-value component 'asdf::in-order-to)
                               :key #'(lambda (to-do)
-                                       (reduce #'union (rest to-do)
+                                       (reduce #'union (remove 'asdf:feature (rest to-do)
+                                                               :key #'first)
                                                :key #'rest :initial-value nil))
                               :initial-value nil)
                      :test #'string-equal))

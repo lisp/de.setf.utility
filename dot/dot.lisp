@@ -73,6 +73,10 @@
                  :name nil :type nil)
   "Pathname location for the Graphviz binary root.")
 
+(defvar setf.dot::*restricted-labels*
+  '("graph")
+  "certain labels just fail to parse")
+
 
 ;;;
 ;;; Classes
@@ -81,7 +85,7 @@
 ;;;  setf.dot:stream
 ;;;  setf.dot:constructor
 
-(defClass delegate-stream (stream)
+(defclass delegate-stream (#-lispworks stream #+lispworks stream:fundamental-stream)
   ((stream
     :initform (error "stream is required")
     :initarg :stream
@@ -205,7 +209,7 @@
 
 (defgeneric setf.dot:fresh-line (&optional stream)
   (:method (&optional (stream setf.dot:*context*))
-    (unless (zerop (stream-line-column stream))
+    (unless (eql (stream-line-column stream) 0)
       (setf.dot:write-eol stream)
       (dotimes (i setf.dot:*level*) (write-char #\space stream)))))
 
@@ -264,7 +268,8 @@
                  (eql c #\_))))
       (cond ((and (every #'id-char-p id)
                   (plusp (length id))
-                  (not (digit-char-p (char id 0))))
+                  (not (digit-char-p (char id 0)))
+                  (not (member id setf.dot::*restricted-labels* :test #'string-equal)))
              (stream-write-casefolded-string stream id case))
             (t
              (write-char #\" stream)

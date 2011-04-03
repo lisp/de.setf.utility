@@ -90,6 +90,7 @@
    :n3
    :octet-stream
    :plain
+   :rdf+xml
    :svg
    :svg+xml
    :text
@@ -101,6 +102,7 @@
    :text/vnd.graphviz
    :text/x-graphviz
    :text/xml
+   :turtle
    :vnd.graphviz
    :x-graphviz
    :xhtml

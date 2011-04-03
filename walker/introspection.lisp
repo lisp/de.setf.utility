@@ -2,11 +2,10 @@
 
 (in-package :de.setf.utility.implementation)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless (or (intersection '(:digitool :sbcl :allegro) *features*)
-              (and (member :clozure *features*)
-                   (intersection '(:ppc-target :x86-target) *features*)))
-    (cerror "Continue anyway." "This file must be conditionalized for ~a." (lisp-implementation-type))))
+(require-features (or :digitool :sbcl :allegro :lispworks
+                      (and :clozure (or :ppc-target :x86-target)))
+                  "This file must be conditionalized for ~a."
+                  (lisp-implementation-type))
 
 
 (:documentation "This file defines introspective operators for the image walking module of the 'de.setf.utility'
@@ -41,11 +40,13 @@
     (function datum)))
 
 
+#+allegro
+(defun dsw:function-name (function) (xref::object-to-function-name function))
+#+lispworks
+(defun dsw:function-name (function) (system::function-name function))
 #+sbcl
 (defun dsw:function-name (function) (sb-impl::fun-name function))
 
-#+allegro
-(defun dsw:function-name (function) (xref::object-to-function-name function))
 
 
 #+ccl                                   ; internals accept a name only
@@ -57,6 +58,12 @@
     (ccl::callers x))
   (:method ((x cons))
     (when (and (eq (first x) 'setf) (fboundp x)) (ccl::callers x))))
+
+
+#+lispworks
+(defgeneric dsw:function-callers (x)
+  (:method ((x t)) nil))
+
 
 #+sbcl                                  ; internals accepts either a function object or a name
 (defgeneric dsw:function-callers (x)
@@ -160,6 +167,11 @@
                                      (ccl::class-cell (pushnew (ccl::class-cell-name name) calls)))))))
         (error (c) (warn "Call trace error: ~a~%~:W." c disassembly)))
       calls))
+
+  #+lispworks
+  (:method ((function function))
+    nil)
+
 
   #+sbcl
   (:method ((function function))
@@ -274,6 +286,12 @@
   (:method ((object package) (type-specification (eql 'package)))
     (rest (assoc 'package
                  (ccl::get-source-files-with-types&classes (intern (package-name object) :cl-user))))))
+
+
+#+lispworks
+(defgeneric dsw:object-source-information (subject type-specification)
+  (:method ((subject t) (type t))
+    #p""))
 
 
 #+sbcl
