@@ -167,14 +167,15 @@
            :buffer-set-unsigned-byte-32
            :buffer-set-unsigned-byte-64
            :double-float-positive-infinity
+           :double-float-nan
            :double-float-negative-infinity
-           :open-stream-p
            :sign-byte
            :sign-byte-8
            :sign-byte-16
            :sign-byte-32
            :sign-byte-64
            :single-float-positive-infinity
+           :single-float-nan
            :single-float-negative-infinity  
            :stream-advance-to-column
            :stream-clear-input

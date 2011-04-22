@@ -37,6 +37,12 @@
   (declare (ignore length))
   `(simple-array character (*)))
 
+;;; floating point boundary constants
+;;; define them where an implementation has not prepared them
+;;;
+;;; extended from corkill's openmcl addition
+
+
 #-sbcl
 (declaim (double-float double-float-positive-infinity
                        double-float-negative-infinity)
@@ -108,3 +114,13 @@
     (defparameter double-float-nan
       (eval '(+ double-float-positive-infinity double-float-negative-infinity)))))
 
+
+#+lispworks
+(progn
+  (defconstant double-float-positive-infinity +1D++0)
+  (defconstant double-float-negative-infinity -1D++0)
+  (defconstant single-float-positive-infinity +1F++0)
+  (defconstant single-float-negative-infinity -1F++0)
+
+  (defconstant single-float-nan SYSTEM::*SINGLE-FLOAT-NAN*)
+  (defconstant double-float-nan SYSTEM::*DOUBLE-FLOAT-NAN*))
