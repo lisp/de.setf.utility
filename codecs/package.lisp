@@ -79,7 +79,6 @@
                 :stream-read-char-no-hang
                 :stream-read-line
                 :stream-read-sequence
-                :stream-read-string
                 :stream-start-line-p
                 :stream-terpri
                 :stream-unread-char
