@@ -37,7 +37,6 @@
                 :stream-clear-input
                 :stream-clear-output
                 :stream-direction
-                :stream-element-type
                 :stream-eofp
                 :stream-finish-output
                 :stream-force-output
@@ -101,7 +100,6 @@
                 :stream-advance-to-column
                 :stream-clear-input
                 :stream-clear-output
-                :stream-element-type
                 :stream-file-position
                 :stream-finish-output
                 :stream-force-output
@@ -181,7 +179,6 @@
            :stream-clear-output
            :stream-close
            :stream-direction
-           :stream-element-type
            :stream-eofp
            :stream-file-position
            :stream-finish-output
