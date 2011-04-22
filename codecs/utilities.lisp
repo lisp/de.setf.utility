@@ -87,6 +87,14 @@
 (defmethod stream-writer ((stream t))
   (values #'stream-write-byte stream))
 
+#+lispworks
+(defmethod stream-writer ((stream stream:fundamental-character-output-stream))
+  (values #'stream-write-char stream))
+
+#+lispworks
+(defmethod stream-writer ((stream stream:fundamental-binary-output-stream))
+  (values #'stream-write-byte stream))
+
 #+sbcl
 (defmethod stream-writer ((stream t))
   (values #'(lambda (stream byte)
