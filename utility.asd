@@ -17,6 +17,9 @@
 ;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
+#+lispworks
+(setq hcl:*packages-for-warn-on-redefinition*
+      (remove "KEYWORD" hcl:*packages-for-warn-on-redefinition* :test 'string-equal))
 
 (asdf:defsystem :de.setf.utility
   :version "20100214-1.0"
