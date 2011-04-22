@@ -167,8 +167,19 @@
   (:method ((left condition) (right (eql t))) nil)
   (:method ((left t) (right (eql t))) t)
   (:method ((left cons) (right cons))
-    (and (test-equal (first left) (first right))
-         (test-equal (rest left) (rest right))))
+    (labels ((plist-equal (left right)
+               ;; relax plist order
+               (and (= (length left) (length right))
+                    (loop for (key left-value) on left by #'cddr
+                          do (let ((right-value (getf right key left)))
+                               (unless (test-equal left-value right-value)
+                                 (break "test-equal plist failed.")
+                                 (return nil)))
+                          finally (return t)))))
+      (if (and (keywordp (first left)) (keywordp (first right)))
+        (plist-equal left right)
+        (and (test-equal (first left) (first right))
+             (test-equal (rest left) (rest right))))))
   (:method ((left vector) (right vector))
     (and (= (length left) (length right))
          (every #'test-equal left right)))
@@ -177,7 +188,13 @@
   (:method ((left number) (right number))
     (funcall *test-=* left right))
   (:method ((left t) (right t))
-    (equal left right)))
+    (equal left right))
+  (:method ((left symbol) (right symbol))
+    (or (eq left right)
+        ;; treat uninterned symbols as wild-cards
+        (and (null (symbol-package left)) (null (symbol-package right))))))
+
+;;; (defmethod test-equal :around ((x t) (y t)) (or (call-next-method) (break "test-equal failed.")))
 
 (defgeneric test-unit-path (path)
   (:documentation

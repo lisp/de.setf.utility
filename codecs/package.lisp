@@ -20,11 +20,116 @@
 (defpackage :de.setf.utility.codecs
   (:use )
   (:documentation "The API package for BERT-encoding operators.")
-
+  
   (:import-from :de.setf.utility
                 :stream-reader
                 :stream-writer)
-
+  
+  #+allegro
+  (:import-from :excl
+                :stream-line-column
+                :stream-write-char
+                :stream-write-string
+                )
+  #+ccl
+  (:import-from :ccl
+                :open-stream-p
+                :stream-clear-input
+                :stream-clear-output
+                :stream-direction
+                :stream-element-type
+                :stream-eofp
+                :stream-finish-output
+                :stream-force-output
+                :stream-fresh-line
+                :stream-listen
+                :stream-position
+                :stream-read-byte
+                :stream-write-byte
+                :stream-write-string
+                )
+  #+clozure
+  (:import-from :ccl
+                :double-float-positive-infinity
+                :double-float-negative-infinity
+                #+ccl-1.4 :double-float-nan
+                #:stream-advance-to-column
+                #:stream-line-column
+                #:stream-peek-char
+                #:stream-read-char-no-hang
+                #:stream-read-char
+                #:stream-read-line
+                #:stream-start-line-p
+                #:stream-terpri
+                #:stream-unread-char
+                #:stream-write-char
+                )
+  #+lispworks
+  (:import-from :stream
+                :stream-advance-to-column
+                :stream-clear-input
+                :stream-clear-output
+                :stream-file-position
+                :stream-finish-output
+                :stream-force-output
+                :stream-line-column
+                :stream-peek-char
+                :stream-read-byte
+                :stream-read-char
+                :stream-read-char-no-hang
+                :stream-read-line
+                :stream-read-sequence
+                :stream-read-string
+                :stream-start-line-p
+                :stream-terpri
+                :stream-unread-char
+                :stream-write-byte
+                :stream-write-char
+                :stream-write-sequence
+                :stream-write-string)
+  #+mcl
+  (:import-from :ccl
+                :stream-close
+                :stream-read-sequence
+                :stream-untyi
+                :stream-tyi
+                :stream-tyo
+                :stream-write-sequence
+                )
+  #+sbcl
+  (:import-from :sb-gray
+                :open-stream-p
+                :stream-advance-to-column
+                :stream-clear-input
+                :stream-clear-output
+                :stream-element-type
+                :stream-file-position
+                :stream-finish-output
+                :stream-force-output
+                :stream-fresh-line
+                :stream-line-column
+                :stream-listen
+                :stream-peek-char
+                :stream-read-byte
+                :stream-read-char
+                :stream-read-char-no-hang
+                :stream-read-line
+                :stream-read-sequence
+                :stream-start-line-p
+                :stream-terpri
+                :stream-unread-char
+                :stream-write-byte
+                :stream-write-char
+                :stream-write-sequence
+                :stream-write-string
+                )
+  #+sbcl
+  (:import-from :sb-ext
+                :double-float-positive-infinity
+                :double-float-negative-infinity
+                :single-float-positive-infinity
+                :single-float-negative-infinity)
+  
   (:export :buffer-get-float-32
            :buffer-get-float-64
            :buffer-get-signed-byte
@@ -61,18 +166,43 @@
            :buffer-set-unsigned-byte-16
            :buffer-set-unsigned-byte-32
            :buffer-set-unsigned-byte-64
+           :double-float-positive-infinity
+           :double-float-negative-infinity
+           :open-stream-p
            :sign-byte
            :sign-byte-8
            :sign-byte-16
            :sign-byte-32
            :sign-byte-64
+           :single-float-positive-infinity
+           :single-float-negative-infinity  
+           :stream-advance-to-column
+           :stream-clear-input
+           :stream-clear-output
+           :stream-close
+           :stream-direction
+           :stream-element-type
+           :stream-eofp
+           :stream-file-position
+           :stream-finish-output
+           :stream-force-output
+           :stream-fresh-line
+           :stream-line-column
+           :stream-listen
+           :stream-peek-char
+           :stream-read-byte
+           :stream-read-char
+           :stream-read-char-no-hang
            :stream-read-float-32
            :stream-read-float-64
+           :stream-read-line
+           :stream-read-sequence
            :stream-read-signed-byte
            :stream-read-signed-byte-8
            :stream-read-signed-byte-16
            :stream-read-signed-byte-32
            :stream-read-signed-byte-64
+           :stream-start-line-p
            :stream-read-string-iso-8
            :stream-read-string-iso-16
            :stream-read-string-iso-32
@@ -86,13 +216,23 @@
            :stream-read-unsigned-byte-32
            :stream-read-unsigned-byte-64
            :stream-reader
+           :stream-start-line-p
+           :stream-terpri
+           :stream-tyi
+           :stream-tyo
+           :stream-untyi
+           :stream-unread-char
+           :stream-write-byte
+           :stream-write-char
            :stream-write-float-32
            :stream-write-float-64
+           :stream-write-sequence
            :stream-write-signed-byte
            :stream-write-signed-byte-8
            :stream-write-signed-byte-16
            :stream-write-signed-byte-32
            :stream-write-signed-byte-64
+           :stream-write-string
            :stream-write-string-iso-8
            :stream-write-string-iso-16
            :stream-write-string-iso-32
@@ -110,16 +250,4 @@
 
 
 (eval-when (:load-toplevel :compile-toplevel :execute)
-  (use-package :de.setf.utility.codecs :de.setf.utility.implementation)
-
-  #+clozure
-  (import '(ccl::double-float-positive-infinity
-            ccl::double-float-negative-infinity
-            #+ccl-1.4 ccl::double-float-nan)
-          :de.setf.utility.implementation)
-  #+sbcl
-  (import '(sb-ext:double-float-positive-infinity
-            sb-ext:double-float-negative-infinity
-            sb-ext:single-float-positive-infinity
-            sb-ext:single-float-negative-infinity)
-          :de.setf.utility.implementation))
+  (use-package :de.setf.utility.codecs :de.setf.utility.implementation))

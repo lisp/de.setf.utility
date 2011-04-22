@@ -61,23 +61,6 @@
   (:use #+:CCL :ccl
         :common-lisp
         :de.setf.utility)
-  #+lispworks
-  (:import-from :stream
-                :stream-write-string
-                :stream-write-char
-                :stream-line-column
-                :stream-write-byte :stream-read-byte
-                :stream-read-sequence :stream-write-sequence
-                :stream-force-output :stream-finish-output)
-  #+sbcl
-  (:import-from :sb-gray
-                :stream-write-string
-                :stream-write-char
-                :stream-line-length
-                :stream-line-column
-                :stream-write-byte :stream-read-byte
-                :stream-read-sequence :stream-write-sequence
-                :stream-force-output :stream-finish-output)
   (:documentation "This is the package for source files in the :de.setf.utility library module."))
 
 
