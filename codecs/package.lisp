@@ -18,6 +18,7 @@
 
 
 (defpackage :de.setf.utility.codecs
+  (:nicknames :dsu.codecs)
   (:use )
   (:documentation "The API package for BERT-encoding operators.")
   
@@ -187,6 +188,7 @@
            :stream-line-column
            :stream-listen
            :stream-peek-char
+           :stream-position             ; ccl benefits from the cross-export
            :stream-read-byte
            :stream-read-char
            :stream-read-char-no-hang
@@ -199,7 +201,6 @@
            :stream-read-signed-byte-16
            :stream-read-signed-byte-32
            :stream-read-signed-byte-64
-           :stream-start-line-p
            :stream-read-string-iso-8
            :stream-read-string-iso-16
            :stream-read-string-iso-32
