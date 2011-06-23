@@ -367,8 +367,8 @@
     (etypecase (slot-value instance 'asdf::relative-pathname)
       (null nil)
       (logical-pathname nil)
-      (pathname (let ((logical (de.setf.utility.implementation::translate-physical-pathname
-                                (slot-value instance 'asdf::relative-pathname))))
+      (pathname (let ((logical (ignore-errors (de.setf.utility.implementation::translate-physical-pathname
+                                               (slot-value instance 'asdf::relative-pathname)))))
                   (when logical
                     (setf (slot-value instance 'asdf::relative-pathname)
                           logical))))))
