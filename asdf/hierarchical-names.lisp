@@ -136,7 +136,7 @@
                                 (when (typep root-path 'logical-pathname)
                                   (setf root-path (translate-logical-pathname root-path)))
                                 (when (and verbose-p asdf::*verbose-out*)
-                                  (format asdf::*verbose-out* "~&asdf >search: [ ~s ] ... " root-path))
+                                  (format asdf::*verbose-out* "~&asdf >search: ~a [ ~s ] ... " name root-path))
                                 (labels ((direct-file-name ()
                                          ;; look for it immediately in the registry
                                          (make-pathname :name name :type "asd" :defaults root-path))
@@ -147,10 +147,21 @@
                                                                                    `(,@(butlast tokens) ,directory-name)
                                                                                    '(:wild-inferiors))
                                                                 :name name :type "asd"
-                                                                :defaults root-path)))
+                                                                :defaults root-path))
+                                               (wilder-indirect-file-name
+                                                (when (butlast tokens)
+                                                  (make-pathname  :directory (append (ensure-pathname-directory root-path)
+                                                                                     (butlast tokens) 
+                                                                                     '(:wild-inferiors))
+                                                                  :name name :type "asd"
+                                                                  :defaults root-path))))
                                            (when (and verbose-p asdf::*verbose-out*)
-                                             (format asdf::*verbose-out* "~&... wild-indirect-file-name: ~s" wild-indirect-file-name))
-                                           (first (sort (wild-file-names wild-indirect-file-name) #'> :key #'file-write-date))))
+                                             (format asdf::*verbose-out* "~&... wild-indirect-file-name: ~s" wild-indirect-file-name)
+                                             (format asdf::*verbose-out* "~&... wilder-indirect-file-name: ~s" wilder-indirect-file-name))
+                                           (first (sort (or (wild-file-names wild-indirect-file-name)
+                                                            (when wilder-indirect-file-name
+                                                              (wild-file-names wilder-indirect-file-name)))
+                                                        #'> :key #'file-write-date))))
                                        (versioned-file-pattern ()
                                          ;; add a wildcard to the end the final path element to permit
                                          ;; versioned directories release tar files.
@@ -369,6 +380,7 @@
       (logical-pathname nil)
       (pathname (let ((logical (ignore-errors (de.setf.utility.implementation::translate-physical-pathname
                                                (slot-value instance 'asdf::relative-pathname)))))
+                  ;; if the translation fails, give up on setting the logical equivalent
                   (when logical
                     (setf (slot-value instance 'asdf::relative-pathname)
                           logical))))))
