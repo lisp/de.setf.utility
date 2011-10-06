@@ -34,7 +34,7 @@
 ;;; 20100210.janderson  cleaned up ignored variables, types
 ;;; 20100919.janderson  vary year as bce-year for xml-schema datatime additions to iso-8601
 ;;; 20110208.janderson  invert offset sign to correctly reflect iso
-
+;;; 20111005.janderson  leave bce year offsets to eveutal duration calculations
 
 (in-package :de.setf.utility.implementation)
 
@@ -371,7 +371,7 @@
                        (case time-component
                          (.bce-year.
                           (push component-operation references)
-                          (format stream "~~{~~:[~~;-~~]~~~d,'0d~~}" length))
+                          (format stream "~~{~~:[-~~;~~]~~~d,'0d~~}" length))
                          ((.year-in-century. .year. .week-in-year. .day-in-year. .day-in-week.
                                              .hour-24-0-based. .hour-24-1-based. .hour-12-0-based. .hour-12-1-based.)
                           (push component-operation references)
@@ -392,7 +392,7 @@
                           (format stream "~~~da" length))
                          (.time-zone.
                           (push component-operation references)
-                          (write-string (ecase length (2 "Z~2,'0d") (4 "Z~2,'0d:00")) stream)
+                          (write-string (ecase length (2 "~:[Z~;~:*~{~a~2,'0d~}~]") (4 "~:[Z~;~:*~{~a~2,'0d:00~}~]")) stream)
                           (setf time-zone-p t))
                          (t
                           (push variable references)
@@ -407,7 +407,7 @@
                      (write-string "~~" stream)
                      (write-char component stream)))))))
       `(lambda (time &optional stream)
-         (macrolet ((.bce-year. (x) `(list (not (plusp ,x)) (if  (plusp ,x) (1+ ,x) (abs ,x))))
+         (macrolet ((.bce-year. (x) `(list (plusp ,x) (abs ,x)))
                     (.year-in-century. (x) `(mod ,x 100))
                     (.year. (x) x)
                     (.month-name. (x l) `(date:month-name ,x ,l))
@@ -424,7 +424,7 @@
                     (.hour-12-1-based. (x) `(1+ (mod ,x 12)))
                     (.minute-in-hour. (x) x)
                     (.second-in-minute. (x) x)
-                    (.time-zone. (x) `(- ,x)))
+                    (.time-zone. (x) `(unless (zerop ,x) (list (if (plusp ,x) "+" "-") (- ,x)))))
            (multiple-value-bind (second-in-minute minute-in-hour hour-in-day day-in-month
                                                   month-in-year year day-in-week daylight-savings-time-p time-zone)
                                 (,time-decoder time ,@(when time-zone-p '(0)))
@@ -477,7 +477,7 @@
                                                 #\+))
                                         (temp-year (parse-integer string :start position
                                                                   :end (incf position ,length))))
-                                    (setf year (case sign (#\+ (1- temp-year)) (#\- (1- (- temp-year)))))))
+                                    (setf year (ecase sign (#\+ temp-year) (#\- (- temp-year))))))
                                 (.year-in-century.
                                  `(setf year
                                         (+ 1900 (parse-integer string :start position :end (incf position ,length)))))
@@ -515,17 +515,21 @@
                                  `(setf am-pm (date:decode-am-pm string  :start position
                                                                  :end (incf position ,length))))
                                 (.time-zone.
-                                 ;; (incf position) ;; don't always increment, allow optional 'Z'
-                                 `(let ((tz-position (cond ((find (char string position) "+-0123456789")
-                                                            position)
-                                                           ((find (char string position) "zZ")
-                                                            (1+ position))
-                                                           (t
-                                                            (error "Invalid time zone specifier: ~s." string)))))
-                                    (setf time-zone (parse-integer string  :start tz-position
-                                                                   :end (setf position
-                                                                              (+ tz-position
-                                                                                 (if (find (char string tz-position) "+-") 3 2)))))))
+                                 ;; don't always increment, alloe either 'Z' or offset or both
+                                 ;; (incf position)
+                                 `(let ((pm-position (or (position #\+ string :start position)
+                                                         (position #\- string :start position)))
+                                        (z-position (when (find (char string position) "zZ") position))
+                                        (digit-position (position-if #'digit-char-p string :start position)))
+                                    (setf time-zone
+                                          (cond (pm-position
+                                                 (parse-integer string :start pm-position :end (+ pm-position 3)))
+                                                ((and digit-position z-position)
+                                                 (parse-integer string :start digit-position :end (+ digit-position 2)))
+                                                (z-position
+                                                 0)
+                                                (t
+                                                 (error "Invalid time zone specifier: ~s." string))))))
                                 (t     ; simple components
                                  `(setf ,variable
                                         (parse-integer string :start position
@@ -688,12 +692,13 @@
 
   ;; time zones
   (test date.zone
-    (and (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z00")) "20120101T000102Z00")
-         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T00010200")) "20120101T000102Z00")
-         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+00")) "20120101T000102Z00")
-         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102+00")) "20120101T000102Z00")
-         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z-05")) "20120101T050102Z00")
-         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+05")) "20111231T190102Z00")
+    (and (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z00")) "20120101T000102Z")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+00")) "20120101T000102Z")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z")) "20120101T000102Z")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102+00")) "20120101T000102Z")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z-05")) "20120101T050102Z")
+         (equal (date:|yyyyMMddTHHmmssZZ| (date:|yyyyMMddTHHmmssZZ| "20120101T000102Z+05")) "20111231T190102Z")
+         (typep (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmssZZ| "20120101T00010200"))) 'error)
          (typep (nth-value 1 (ignore-errors (date:|yyyyMMddTHHmmssZZ| "20120101T001002/00"))) 'error)
          (equal (multiple-value-list (decode-universal-time (date:|yyyyMMddTHHmmssZZ| "20110101T010203-02") 0))
                 '(3 2 3 1 1 2011 5 NIL 0))
