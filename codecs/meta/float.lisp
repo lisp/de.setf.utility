@@ -33,6 +33,22 @@
        (when (> (+ f-count i-count) 0)
          (when (> f-count 0) (setf f (/ f (expt 10 f-count))))
          (setf v (+ i f))
+
+         (ecase *read-default-float-format*
+           ;; constraint exponents
+           ((short-float single-float)
+            (if (plusp es)
+              (when (> e 38)
+                (return-from meta:parse-float de.setf.utility.codecs:single-float-positive-infinity))
+              (when (> e 45)
+                (return-from meta:parse-float de.setf.utility.codecs:single-float-negative-infinity))))
+           ((double-float long-float)
+            (if (plusp es)
+              (when (> e 308)
+                (return-from meta:parse-float de.setf.utility.codecs:double-float-positive-infinity))
+              (when (> e 324)
+                (return-from meta:parse-float de.setf.utility.codecs:double-float-negative-infinity)))))
+           
          (when (plusp e-count) (setf v (* v (expt 10 (* es e)))))
          (when (< s 0) (setf v (- v)))
          (case m
@@ -46,3 +62,6 @@
            ((#\F #\f) (float v 0.0f0))
            ((#\L #\l) (float v 0.0l0)))))))
 
+;;; (let ((*read-default-float-format* 'short-float)) (meta:parse-float "0.02173913E434782608"))
+;;; (let ((*read-default-float-format* 'double-float)) (meta:parse-float "0.02173913E434782608"))
+;;; (let ((*read-default-float-format* 'double-float)) (meta:parse-float "0.02173913E308"))
