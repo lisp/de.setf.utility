@@ -85,7 +85,9 @@
 ;;;  setf.dot:stream
 ;;;  setf.dot:constructor
 
-(defclass delegate-stream (#-lispworks stream #+lispworks stream:fundamental-stream)
+(defclass delegate-stream (#+ccl stream
+                           #+lispworks stream:fundamental-stream
+                           #+sbcl sb-gray:fundamental-stream)
   ((stream
     :initform (error "stream is required")
     :initarg :stream
@@ -128,6 +130,9 @@
 (defmethod stream-line-column ((stream stream))
   (stream-column stream))
 
+#+sbcl
+(defmethod sb-GRAY:STREAM-LINE-LENGTH ((stream delegate-stream))
+  nil)
 
 
 (defClass setf.dot:context ()
