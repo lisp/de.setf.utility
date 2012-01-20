@@ -169,14 +169,15 @@
   (:method ((left cons) (right cons))
     (labels ((plist-equal (left right)
                ;; relax plist order
-               (and (= (length left) (length right))
-                    (loop for (key left-value) on left by #'cddr
-                          do (let ((right-value (getf right key left)))
-                               (unless (test-equal left-value right-value)
-                                 (break "test-equal plist failed.")
-                                 (return nil)))
-                          finally (return t)))))
-      (if (and (keywordp (first left)) (keywordp (first right)))
+               (loop for (key left-value) on left by #'cddr
+                     do (let ((right-value (getf right key left)))
+                          (unless (test-equal left-value right-value)
+                            (break "test-equal plist failed.")
+                            (return nil)))
+                     finally (return t))))
+      (if (ignore-errors (and (keywordp (first left)) (keywordp (first right))
+                              (evenp (length left))
+                              (= (length left) (length right))))
         (plist-equal left right)
         (and (test-equal (first left) (first right))
              (test-equal (rest left) (rest right))))))
@@ -188,7 +189,8 @@
   (:method ((left number) (right number))
     (funcall *test-=* left right))
   (:method ((left t) (right t))
-    (equal left right))
+    ;; equalp to allow structures
+    (equalp left right))
   (:method ((left symbol) (right symbol))
     (or (eq left right)
         ;; treat uninterned symbols as wild-cards
@@ -560,7 +562,7 @@
             (stream *trace-output*) (debug nil)
             &aux results (*test-unit* unit))
      (handler-bind ((error (lambda (condition)
-                             (format stream "~&signaled condition: ~a." condition)
+                             (format stream "~&signaled condition: ~a: ~a~% with~%~s" (type-of condition)  condition results)
                              (return-from %execute-test (values :failed condition)))))
              
        (when (eq *test-unit-mode* :verbose)
@@ -572,7 +574,7 @@
        (setf results
              (block :run-test
                (multiple-value-list (handler-bind
-                                      ((error (lambda (condition)
+                                      ((error (lambda (condition) 
                                                 (when debug (break "~%test ~s signaled:~%~a"
                                                                    (test-unit-path unit) condition))
                                                 (return-from :run-test (list condition)))))
