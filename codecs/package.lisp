@@ -20,7 +20,7 @@
 (defpackage :de.setf.utility.codecs
   (:nicknames :dsu.codecs)
   (:use )
-  (:documentation "The API package for BERT-encoding operators.")
+  (:documentation "The API package for encoding operators.")
   
   (:import-from :de.setf.utility
                 :stream-reader
