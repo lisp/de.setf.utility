@@ -55,12 +55,19 @@
    :runtime-directory-name
    :set-relative-logical-pathname-translations
    :stream-reader
-   :stream-writer))
+   :stream-writer
+   :stream-tyo))
 
 (defpackage :de.setf.utility.implementation
   (:use #+:CCL :ccl
         :common-lisp
         :de.setf.utility)
+  #+sbcl
+  (:import-from :sb-gray
+                :stream-line-column
+                :stream-write-char
+                :stream-write-sequence
+                :stream-write-string)
   (:documentation "This is the package for source files in the :de.setf.utility library module."))
 
 

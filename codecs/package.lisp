@@ -24,7 +24,8 @@
   
   (:import-from :de.setf.utility
                 :stream-reader
-                :stream-writer)
+                :stream-writer
+                :stream-tyo)
   
   #+allegro
   (:import-from :excl

@@ -223,9 +223,3 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (import '(setf.dot:rgb-blue setf.dot:rgb-green setf.dot:rgb-p setf.dot:rgb-red setf.dot:make-rgb)
            :de.setf.utility.implementation))
-
-;;; avoid conflicts
-#+sbcl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (import '(sb-gray:stream-write-char)
-           :de.setf.utility.implementation))
