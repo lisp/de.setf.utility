@@ -78,7 +78,6 @@
 ;;; An encoding framework
 
 (defgeneric encode-instance-as (instance stream as &rest arguments)
-  (declare (dynamic-extent arguments))
   (:documentation
    "collects a set of functions which encode instances for specific purposes.")
 

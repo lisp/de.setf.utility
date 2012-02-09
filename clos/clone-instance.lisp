@@ -73,7 +73,6 @@
     invoke shared-initialize with initargs to initialize slots
     prior to copying from the instancto the clone in order to override the existing
     slot values and preclude unwanted deep cloning.")
-  (declare (dynamic-extent initargs))
   (:method ((instance standard-object) &rest initargs)
     (declare (dynamic-extent initargs))
     (apply #'clone-instance-as instance (class-of instance) initargs))
@@ -86,7 +85,6 @@
     (mapcar #'(lambda (x) (apply #'clone-instance x initargs)) nodes)))
 
 (defgeneric clone-instance-as (instance class &rest initargs)
-  (declare (dynamic-extent initargs))
   (:method ((instance standard-object) (class symbol) &rest initargs)
            (apply #'clone-instance-as instance (find-class class) initargs))
   (:method ((instance standard-object) (class class)
@@ -102,7 +100,6 @@
            new))
 
 (defgeneric initialize-clone (old new &rest initargs &key &allow-other-keys)
-  (declare (dynamic-extent initargs))
   (:method ((old standard-object) (new standard-object) &rest initargs)
     (declare (dynamic-extent initargs))
     (apply #'shared-initialize new t initargs))         ;; must pass t to get default initform protocol
