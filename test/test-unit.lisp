@@ -531,7 +531,12 @@
                                 ,@(if predicate
                                     `(:predicate-function (function ,predicate)
                                                           :predicate-form ',predicate)
-                                    `(:predicate-function (function (lambda (&rest results) (,test results ,values)))
+                                    `(:predicate-function (function (lambda (&rest results)
+                                                                      (loop for result in results
+                                                                            for value in ,values
+                                                                            unless (,test result value)
+                                                                            do (return nil)
+                                                                            finally (return t))))
                                                           :predicate-form '(equalp ,values)))
                                 ,@(when documentation `(:documentation ,documentation))
                                 ,@(when situation `(:situation ,situation))

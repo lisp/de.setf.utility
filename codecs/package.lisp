@@ -25,6 +25,7 @@
   (:import-from :de.setf.utility
                 :stream-reader
                 :stream-writer
+                :stream-tyi
                 :stream-tyo)
   
   #+allegro
@@ -92,8 +93,6 @@
                 :stream-close
                 :stream-read-sequence
                 :stream-untyi
-                :stream-tyi
-                :stream-tyo
                 :stream-write-sequence
                 )
   #+sbcl

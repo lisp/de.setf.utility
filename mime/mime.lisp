@@ -216,7 +216,8 @@
 (def-mime-type ("IMAGE" "SVG") ()
   ((file-type :initform "svg" :allocation :class)))
 (def-mime-type ("IMAGE" "SVG+XML") (mime::image/svg))
-(def-mime-type ("TEXT" "CSV"))
+(def-mime-type ("TEXT" "CSV") ()
+  ((file-type :initform "csv" :allocation :class)))
 (def-mime-type ("TEXT" "N3") (mime:n3)
   ((file-type :initform "nt" :allocation :class))
   (:documentation "The [w3c](http://www.w3.org/TR/rdf-testcases/#ntriples) specifies text/plain."))
@@ -236,7 +237,7 @@
 
 
 (defgeneric mime-type-file-type (mime-type)
-  (:method ((type mime:*/*))
+  (:method ((type minor-mime-type))
     (or (get-mime-type-file-type type)
         (setf (slot-value type 'file-type)
               (string-downcase (mime-type-minor-type type))))))
@@ -274,7 +275,18 @@
               "Invalid mime type designator: ~s." designator)
       (if args
         (apply #'make-instance designator args)
-        type))))
+        type)))
+
+  (:method ((location pathname) &key &allow-other-keys)
+    (let ((file-type (pathname-type location)))
+      (with-package-iterator  (next :mime :external)
+        (loop (multiple-value-bind (next-p designator) (next)
+                (unless next-p (return))
+                (let ((mime-type (when (boundp designator) (symbol-value designator))))
+                  (when (and (typep mime-type 'minor-mime-type)
+                             (typep mime-type 'major-mime-type)
+                             (string-equal (mime-type-file-type mime-type) file-type))
+                    (return mime-type)))))))))
 
 
 (defun list-mime-types ()

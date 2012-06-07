@@ -28,7 +28,9 @@
   #+mcl
   (:import-from :ccl
                 :stream-reader
-                :stream-writer)
+                :stream-writer
+                :stream-tyi
+                :stream-tyo)
   (:export
    :*logical-source-type*
    :*logical-binary-type*
@@ -56,6 +58,7 @@
    :set-relative-logical-pathname-translations
    :stream-reader
    :stream-writer
+   :stream-tyi
    :stream-tyo))
 
 (defpackage :de.setf.utility.implementation
