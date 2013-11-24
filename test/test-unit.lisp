@@ -186,6 +186,8 @@
          (every #'test-equal left right)))
   (:method ((left condition) (right symbol))
     (and (subtypep right 'condition) (typep left right)))
+  (:method ((left t) (right symbol))
+    (and (find-class right nil) (typep left right)))
   (:method ((left number) (right number))
     (funcall *test-=* left right))
   (:method ((left t) (right t))
