@@ -94,7 +94,7 @@
             the specialization for this function cann be relaxed accordingly."
            (declare (dynamic-extent initargs))
            (setf new (allocate-instance class))
-           ;; pass any initargs thorugh and augment them on the
+           ;; pass any initargs through and augment them on the
            ;; way to the ultimate shared-initialize call
            (apply #'initialize-clone instance new initargs)
            new))
@@ -208,9 +208,10 @@
                                  (list* name-spec
                                         (or form
                                             `(_slot-value ,from 
-                                                           ',(etypecase name-spec
-                                                               (symbol name-spec)
-                                                               (cons (second name-spec)))))
+                                                          ;; allow alternative keyword
+                                                          ',(etypecase name-spec
+                                                              (symbol name-spec)
+                                                              (cons (second name-spec)))))
                                          rest))
                              slot-names
                              slot-forms
