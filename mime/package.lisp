@@ -40,17 +40,19 @@
    :defmimetype
    :defmimetypekey
    :encode-string
-   :size-string
+   :experimental-mime-type
    :intern-mime-type-key
    :major-mime-type
    :mime-type
    :mime-type-charset
+   :mime-type-canonical-mime-type
    :mime-type-expression
    :mime-type-major-type
    :mime-type-minor-type
    :mime-type-file-type
    :mime-type-p
    :minor-mime-type
+   :size-string
    ))
 
 (defpackage :mime

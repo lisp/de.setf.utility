@@ -65,9 +65,11 @@
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
 (def-mime-type-key "TEXT")
+(def-mime-type-key "TAB-SEPARATED-VALUES")
 (def-mime-type-key "TURTLE")
 (def-mime-type-key "VND.GRAPHVIZ")
 (def-mime-type-key "X-GRAPHVIZ")
+(def-mime-type-key "X-WWW-FORM-URLENCODED")
 (def-mime-type-key "XML")
 (def-mime-type-key "XHTML")
 (def-mime-type-key "XHTML+XML")
@@ -138,6 +140,19 @@
    ((expression :allocation :class :reader mime-type-expression :initform nil)
     (file-type :reader get-mime-type-file-type :initform nil)))
 
+(defclass experimental-mime-type ()
+  ((canonical-mime-type
+    :initform nil
+    :reader mime-type-canonical-mime-type)))
+
+(defgeneric canonical-mime-type (mime-type)
+  (:method ((type experimental-mime-type))
+    (or (mime-type-canonical-mime-type type)
+        type))
+
+  (:method ((type mime-type))
+    type))
+
 #+(or)                                  ; no longer suffices once w/ charset
 (defmethod make-load-form ((instance mime-type) &optional environment)
   (declare (ignore environment))
@@ -166,6 +181,7 @@
     :reader mime-type-charset
     :type symbol
     :documentation "See http://www.iana.org/assignments/character-sets")))
+(defvar mime:*/* (make-instance 'mime:*/*))
 
 ;;; must be ordered such that abstract mime types appear first,
 ;;; as each definition form instantiates a singleton
@@ -211,6 +227,13 @@
 (def-mime-type ("APPLICATION" "RDF+XML") ()
   ((file-type :initform "dot" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
+(def-mime-type ("APPLICATION" "X-WWW-FORM-URLENCODED") (experimental-mime-type)
+  ((charset :initform :utf-8)
+   (file-type :initform nil)))
+(def-mime-type ("TEXT" "TAB-SEPARATED-VALUES") ()
+  ((charset :initform nil)
+   (file-type :initform "tsv" :allocation :class))
+  (:documentation "SPARQL results encoded as a stream of binary symbolic expressions"))
 (def-mime-type ("IMAGE" "JPEG") (mime:binary)
   ((file-type :initform "jpg" :allocation :class)))
 (def-mime-type ("IMAGE" "SVG") ()
