@@ -28,6 +28,7 @@
   (:export
    :*class.content-encoding*
    :*mime-type-package*
+   :canonical-mime-type
    :clone-instance
    :compute-charset-codecs
    :content-encoding
