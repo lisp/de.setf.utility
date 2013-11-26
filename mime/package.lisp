@@ -28,6 +28,7 @@
   (:export
    :*class.content-encoding*
    :*mime-type-package*
+   :binary-mime-type-p
    :canonical-mime-type
    :clone-instance
    :compute-charset-codecs
@@ -69,7 +70,10 @@
  is arranged such that the generalizations are present as super-classes. Of
  which the major-type generaalization preceeds the minor-type.")
 
-  (:import-from :de.setf.utility :mime-type)
+  (:import-from :de.setf.utility
+                :mime-type
+                :mime-type-p
+                :binary-mime-type-p)
   (:export
    :*
    :*/*

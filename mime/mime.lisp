@@ -166,6 +166,10 @@
   (:method ((datum mime-type)) t)
   (:method ((datum t)) nil))
 
+(defgeneric binary-mime-type-p (datum)
+  (:method ((datum mime:binary)) t)
+  (:method ((datum t)) nil))
+
 (defclass major-mime-type (mime-type)
   ((major-type :initform nil :initarg :major-type
                :reader mime-type-major-type)))
@@ -205,6 +209,7 @@
 
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
+
 (defclass mime:graphviz (mime:*/*)
   ((file-type :initform "dot" :allocation :class))
   (:documentation "The abstract graphviz mime type is specialized as
@@ -221,7 +226,7 @@
 
 (def-mime-type ("APPLICATION" "JSON"))
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
-(def-mime-type (:application :octet-stream) (mime:binary))
+(def-mime-type ("APPLICATION" "OCTET-STREAM") (mime:binary))
 (def-mime-type ("APPLICATION" "PDF"))
 (def-mime-type ("APPLICATION" "XML"))
 (def-mime-type ("APPLICATION" "RDF+XML") ()
