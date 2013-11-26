@@ -88,12 +88,14 @@
    :application/xml
    :application/rdf+xml
    :binary
+   :binary-mime-type-p
    :graphviz
    :html
    :image
    :json
    :markdown
    :mime-type
+   :mime-type-p
    :n3
    :octet-stream
    :plain
