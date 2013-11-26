@@ -140,6 +140,11 @@
    ((expression :allocation :class :reader mime-type-expression :initform nil)
     (file-type :reader get-mime-type-file-type :initform nil)))
 
+(defclass mime:binary (mime:*/*)
+  ()
+  (:documentation "The abstract binary mime type is specialized, eg as APPLICATION/OCTET-STREAM, to mark a stream
+ for binary operations rather than text decoding."))
+
 (defclass experimental-mime-type ()
   ((canonical-mime-type
     :initform nil
@@ -201,11 +206,6 @@
   (:documentation "The abstract graphviz mime type is specialized as
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
  and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
-
-(defclass mime:binary (mime:*/*)
-  ()
-  (:documentation "The abstract binary mime type is specialized, eg as APPLICATION/OCTET-STREAM, to mark a stream
- for binary operations rather than text decoding."))
 
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
