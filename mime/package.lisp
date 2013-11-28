@@ -96,6 +96,7 @@
    :json
    :markdown
    :mime-type
+   :mime-type-expression
    :mime-type-p
    :n3
    :octet-stream
