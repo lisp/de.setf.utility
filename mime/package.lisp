@@ -73,7 +73,8 @@
   (:import-from :de.setf.utility
                 :mime-type
                 :mime-type-p
-                :binary-mime-type-p)
+                :binary-mime-type-p
+                :mime-type-expression)
   (:export
    :*
    :*/*

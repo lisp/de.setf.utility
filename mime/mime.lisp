@@ -61,6 +61,7 @@
 (def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "PDF")
+(def-mime-type-key "RDF")
 (def-mime-type-key "RDF+XML")
 (def-mime-type-key "SVG")
 (def-mime-type-key "SVG+XML")
@@ -216,11 +217,18 @@
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
  and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
 
-(defclass mime:n3 (mime:text/plain)
+(defclass mime:rdf (mime:*/*)
+  ()
+  (:documentation
+    "A protocol class to indicate that the concreate mime type is an RDF media type.
+ see: http://www.w3.org/2008/01/rdf-media-types, which is obsolete, but a start.
+ It is specified neither as text nor binary as there are alternatives."))
+
+(defclass mime:n3 (mime:text/plain mime:rdf)
   ()
   (:documentation "The N3 mime class is the abstract base class for application/n3 and text/n3."))
 
-(defclass mime:turtle (mime:text/plain)
+(defclass mime:turtle (mime:text/plain mime:rdf)
   ()
   (:documentation "The TURTLE mime class is the abstract base class for text/turtle."))
 
@@ -229,7 +237,7 @@
 (def-mime-type ("APPLICATION" "OCTET-STREAM") (mime:binary))
 (def-mime-type ("APPLICATION" "PDF"))
 (def-mime-type ("APPLICATION" "XML"))
-(def-mime-type ("APPLICATION" "RDF+XML") ()
+(def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf)
   ((file-type :initform "dot" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
 (def-mime-type ("APPLICATION" "X-WWW-FORM-URLENCODED") (experimental-mime-type)
@@ -277,7 +285,7 @@
 
   (:method ((mime-type mime-type) &rest args)
     (if args
-      (apply #'make-instance (type-of mime-type) args)
+      (apply #'make-instance (class-of mime-type) args)
       mime-type))
 
   (:method ((designator cons) &key &allow-other-keys)
