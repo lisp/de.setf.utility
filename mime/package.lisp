@@ -101,6 +101,7 @@
    :n3
    :octet-stream
    :plain
+   :rdf
    :rdf+xml
    :svg
    :svg+xml
