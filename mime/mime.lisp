@@ -289,12 +289,18 @@
       mime-type))
 
   (:method ((designator cons) &key &allow-other-keys)
-    "Given a cons, the first two elements must be the type and the remainder the initargs."
+    "Given a cons, either the first two elements arethe type and the remainder
+     the initargs, in which case they should both be keywords, or the
+     first is a mime-type type and all thr rest are the initargs "
     (destructuring-bind (major minor . args) designator
       (declare (dynamic-extent args))
-      (apply #'mime-type (intern-mime-type-key (format nil "~a/~a" major minor)
-                                       :if-does-not-exist :error)
-             args)))
+      (typecase major
+        (keyword 
+         (apply #'mime-type (intern-mime-type-key (format nil "~a/~a" major minor)
+                                                  :if-does-not-exist :error)
+                args))
+        (symbol
+         (apply #'mime-type major minor args)))))
 
   (:method ((designator string) &rest args)
     "Given a string, coerce it to the class designator and continue."

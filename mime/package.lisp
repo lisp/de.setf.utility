@@ -71,9 +71,10 @@
  which the major-type generaalization preceeds the minor-type.")
 
   (:import-from :de.setf.utility
-                :mime-type
-                :mime-type-p
                 :binary-mime-type-p
+                :mime-type
+                :mime-type-charset
+                :mime-type-p
                 :mime-type-expression)
   (:export
    :*
