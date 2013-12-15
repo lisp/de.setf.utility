@@ -74,8 +74,8 @@
                 :binary-mime-type-p
                 :mime-type
                 :mime-type-charset
-                :mime-type-p
-                :mime-type-expression)
+                :mime-type-expression
+                :mime-type-p)
   (:export
    :*
    :*/*
@@ -97,6 +97,7 @@
    :json
    :markdown
    :mime-type
+   :mime-type-charset
    :mime-type-expression
    :mime-type-p
    :n3
