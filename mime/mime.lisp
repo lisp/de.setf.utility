@@ -303,10 +303,20 @@
          (apply #'mime-type major minor args)))))
 
   (:method ((designator string) &rest args)
-    "Given a string, coerce it to the class designator and continue."
+    "Given a string, parse it - isolating any arguments, coerce the type to the
+     class designator and continue with the argument list."
     (declare (dynamic-extent args))
-    (apply #'mime-type (intern-mime-type-key designator :if-does-not-exist :error)
-           args))
+    (setf designator (remove #\space designator))
+    (destructuring-bind (type-name . parameters) (split-string designator "; ")
+      (setf parameters (loop for parameter in parameters
+                             append (destructuring-bind (attribute value) (split-string parameter "=")
+                                      (list (cons-symbol :keyword attribute)
+                                            (with-standard-io-syntax
+                                              (let ((*read-eval* nil)
+                                                    (*package* (find-package :keyword)))
+                                                (read-from-string value)))))))
+      (apply #'mime-type (intern-mime-type-key type-name :if-does-not-exist :error)
+             (append parameters args))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.
