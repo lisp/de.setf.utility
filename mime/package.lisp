@@ -75,7 +75,8 @@
                 :mime-type
                 :mime-type-charset
                 :mime-type-expression
-                :mime-type-p)
+                :mime-type-p
+                :size-string)
   (:export
    :*
    :*/*
@@ -105,6 +106,7 @@
    :plain
    :rdf
    :rdf+xml
+   :size-string
    :svg
    :svg+xml
    :text
