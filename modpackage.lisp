@@ -314,14 +314,16 @@
                    (do-shadowing-import symbol))))))
 
   (:method ((package package) (operation (eql :export-from)) (source-and-symbols list))
-           (flet ((do-import-export (symbol) (import symbol package) (export symbol package)))
-             (declare (dynamic-extent #'do-import-export))
-             (let ((source-package (first source-and-symbols))
-                   (symbols (rest source-and-symbols)))
-               (if symbols
-                 (call-with-interned-symbols #'do-import-export symbols source-package)
-                 ;; do all and don't allow for shadowing
-                 (do-external-symbols (symbol source-package) (do-import-export symbol))))))
+    "Export symbols originating in the given package: (origin . designators)
+     If no symbols are specified, then export all external symbols."
+    (flet ((do-import-export (symbol) (import symbol package) (export symbol package)))
+      (declare (dynamic-extent #'do-import-export))
+      (let ((source-package (first source-and-symbols))
+            (symbols (rest source-and-symbols)))
+        (if symbols
+          (call-with-interned-symbols #'do-import-export symbols source-package)
+          ;; do all and don't allow for shadowing
+          (do-external-symbols (symbol source-package) (do-import-export symbol))))))
 
   (:method ((package package) (operation (eql :export-through)) (destination-and-symbols list))
            (let ((destination-package (ensure-package (first destination-and-symbols) :if-does-not-exist :error))
@@ -422,7 +424,9 @@
 
 
 (defmacro modPackage (name-and-args &rest options)
-  "modify a package as specified. the options include those of defpackage. additional specifications support inter-package operations. if the package exists, it is destructively modified."
+  "modify a package as specified. the options include those of defpackage.
+ additional specifications support inter-package operations.
+ if the package exists, it is destructively modified."
   (let ((package-form `(ensure-package ,(string (if (consp name-and-args) (first name-and-args) name-and-args))
                                        ,@(when (consp name-and-args) (rest name-and-args)))))
     (labels ((check-modpackage-option (option)
