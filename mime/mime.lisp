@@ -26,6 +26,7 @@
    - [rfc2046](http://tools.ietf.org/html/rfc2046) : (MIME) Part Two: Media Types
    - [rfc2049](http://tools.ietf.org/html/rfc2049) : (MIME) Part Five: Conformance Criteria and Examples
    - [IANA](http://www.iana.org/assignments/media-types/) : media type list
+   - [rdfa](http://www.w3.org/TR/rdfa-core/#xmlrdfaconformance) : rdfa media types
 
    Each type is defined as a singleton in a major/minor type lattice and bound to a
  global variable with the same name. The `text/*` types include a slot for a content encoding
@@ -54,6 +55,7 @@
 (def-mime-type-key "APPLICATION")
 (def-mime-type-key "CSV")
 (def-mime-type-key "HTML")
+(def-mime-type-key "HTML+RDFA")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
 (def-mime-type-key "JPEG")
@@ -73,6 +75,7 @@
 (def-mime-type-key "X-WWW-FORM-URLENCODED")
 (def-mime-type-key "XML")
 (def-mime-type-key "XHTML")
+(def-mime-type-key "XHTML+RDFA")
 (def-mime-type-key "XHTML+XML")
 (def-mime-type-key "*")
 
@@ -211,12 +214,6 @@
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
 
-(defclass mime:graphviz (mime:*/*)
-  ((file-type :initform "dot" :allocation :class))
-  (:documentation "The abstract graphviz mime type is specialized as
- TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
- and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
-
 (defclass mime:rdf (mime:*/*)
   ()
   (:documentation
@@ -236,9 +233,13 @@
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
 (def-mime-type ("APPLICATION" "OCTET-STREAM") (mime:binary))
 (def-mime-type ("APPLICATION" "PDF"))
+(def-mime-type ("APPLICATION" "XHTML+XML") ()
+  ((file-type :initform "html" :allocation :class))
+  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
+(def-mime-type ("APPLICATION" "XHTML+RDFA") (mime:application/xhtml+xml))
 (def-mime-type ("APPLICATION" "XML"))
-(def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf)
-  ((file-type :initform "dot" :allocation :class))
+(def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf mime:application/xml)
+  ((file-type :initform "rdf" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
 (def-mime-type ("APPLICATION" "X-WWW-FORM-URLENCODED") (experimental-mime-type)
   ((charset :initform :utf-8)
@@ -258,11 +259,9 @@
   ((file-type :initform "nt" :allocation :class))
   (:documentation "The [w3c](http://www.w3.org/TR/rdf-testcases/#ntriples) specifies text/plain."))
 (def-mime-type ("TEXT" "XHTML"))
-(def-mime-type ("APPLICATION" "XHTML+XML") ()
-  ((file-type :initform "html" :allocation :class))
-  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
 (def-mime-type ("TEXT" "HTML") ()
   ((file-type :initform "html" :allocation :class)))
+(def-mime-type ("TEXT" "HTML+RDFA") (mime:text/html))
 (def-mime-type ("TEXT" "MARKDOWN") ()
   ((file-type :initform "md" :allocation :class)))
 (def-mime-type ("TEXT" "TURTLE") (mime:turtle))
