@@ -54,12 +54,14 @@
 
 (def-mime-type-key "APPLICATION")
 (def-mime-type-key "CSV")
+(def-mime-type-key "FORM-DATA")
 (def-mime-type-key "HTML")
 (def-mime-type-key "HTML+RDFA")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
 (def-mime-type-key "JPEG")
 (def-mime-type-key "MARKDOWN")
+(def-mime-type-key "MULTIPART")
 (def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "PDF")
@@ -201,6 +203,7 @@
 
 (def-mime-type ("APPLICATION" "*"))
 (def-mime-type ("IMAGE" "*"))
+(def-mime-type ("MULTIPART" "*"))
 (def-mime-type ("TEXT" "*") ()
   ((charset
     :initform :iso-8859-1)))
@@ -244,6 +247,7 @@
 (def-mime-type ("APPLICATION" "X-WWW-FORM-URLENCODED") (experimental-mime-type)
   ((charset :initform :utf-8)
    (file-type :initform nil)))
+(def-mime-type ("MULTIPART" "FORM-DATA"))
 (def-mime-type ("TEXT" "TAB-SEPARATED-VALUES") ()
   ((charset :initform nil)
    (file-type :initform "tsv" :allocation :class))
