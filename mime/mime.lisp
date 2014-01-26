@@ -389,7 +389,7 @@
       "reproduce a given instance.")
 
     (:method ((instance standard-object) &rest args)
-      (apply #'de.setf.utility::initialize-clone (allocate-instance (class-of instance)) instance
+      (apply #'de.setf.utility::initialize-clone instance (allocate-instance (class-of instance))
              args)))
   )
 
