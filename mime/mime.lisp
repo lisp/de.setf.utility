@@ -368,17 +368,30 @@
   (eval-when (:compile-toplevel :load-toplevel :execute)
     (export '(de.setf.utility::clone-instance de.setf.utility::initialize-clone)
             :de.setf.utility))
-  (defmethod de.setf.utility::initialize-clone ((new mime-type) (old mime-type) &rest args)
-    (apply #'shared-initialize new t
-           args))
-  (defmethod de.setf.utility::initialize-clone ((new mime:text/*) (old mime:text/*) &rest args
-                               &key (charset (slot-value old 'charset)))
-    (apply #'call-next-method new old
-           :charset charset
-           args))
-  (defmethod de.setf.utility::clone-instance ((instance mime-type) &rest args)
-    (apply #'de.setf.utility::initialize-clone (allocate-instance (class-of instance)) instance
-           args)))
+
+  (defgeneric de.setf.utility::initialize-clone (old new &rest args)
+    (:documentation
+      "invoke shared-initialize on the collected initargs to initialize slots
+       prior to copying from the instance to the clonein order to override the existing
+       slot values and preclude unwanted deep cloning.")
+
+    (:method ((old standard-object) (new standard-object) &rest args)
+      (apply #'shared-initialize new t args))
+
+    (:method de.setf.utility::initialize-clone ((old mime:text/*) (new mime:text/*) &rest args
+                                                &key (charset (slot-value old 'charset)))
+             (apply #'call-next-method old new
+                    :charset charset
+                    args)))
+
+  (defgeneric de.setf.utility::clone-instance (instance &rest args)
+    (:documentation 
+      "reproduce a given instance.")
+
+    (:method ((instance standard-object) &rest args)
+      (apply #'de.setf.utility::initialize-clone (allocate-instance (class-of instance)) instance
+             args)))
+  )
 
 
 (defmethod content-encoding ((mime-type mime:text/*) &rest args)
