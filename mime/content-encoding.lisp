@@ -179,14 +179,17 @@ from de.setf.xml suffice."))
 
 
 (defgeneric compute-charset-codecs (mime-type)
+  (:method ((type mime:*/*))
+    ;; compute the codec's for the respective character set
+    (compute-charset-codecs (mime-type-charset type)))
   (:method ((charset null))
+    ;; absent a charset, or for application/octet-stream, fall-back to
+    ;; the codecs for iso-8859-1
     (compute-charset-codecs :iso-8859-1))
   (:method ((charset string))
     (compute-charset-codecs (content-encoding charset)))
   (:method ((charset symbol))
     (compute-charset-codecs (content-encoding charset)))
-  (:method ((type mime:*/*))
-    (compute-charset-codecs (mime-type-charset type)))
   (:method ((encoding content-encoding))
     (values (content-encoding-byte-decoder encoding)
             (content-encoding-byte-encoder encoding))))
