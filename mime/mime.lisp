@@ -305,7 +305,7 @@
         (symbol
          (apply #'mime-type major minor args)))))
 
-  (:method ((designator string) &rest args)
+  (:method ((designator string) &rest args &key (if-does-not-exist :error idne-s) &allow-other-keys)
     "Given a string, parse it - isolating any arguments, coerce the type to the
      class designator and continue with the argument list."
     (declare (dynamic-extent args))
@@ -318,8 +318,11 @@
                                               (let ((*read-eval* nil)
                                                     (*package* (find-package :keyword)))
                                                 (read-from-string value)))))))
-      (apply #'mime-type (intern-mime-type-key type-name :if-does-not-exist :error)
-             (append parameters args))))
+      (when idne-s
+        (setf args (plist-difference args '(:if-does-not-exist))))
+      (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
+        (when mime-type-symbol
+          (apply #'mime-type mime-type-symbol (append parameters args))))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.

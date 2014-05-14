@@ -241,4 +241,11 @@
                            (:key2 (pop t) (setf key2 (pop t)))
                            (t (return))))
                    (list key1 key2))))
+
+(defun plist-difference (plist keys)
+  (loop for (key value) on plist by #'cddr
+        unless (member key keys)
+        collect key and
+        collect value))
+
 :de.setf.utility

@@ -81,11 +81,11 @@
 
 #-(or ccl sbcl)
 (defmethod stream-reader ((stream t))
-  (values #'stream-read-byte stream))
+  (values #'read-char stream))
 
 #+sbcl
 (defmethod stream-reader ((stream t))
-  (values #'read-byte stream))
+  (values #'read-char stream))
 
 
 (defmethod stream-writer ((stream synonym-stream))
@@ -93,7 +93,7 @@
 
 #-(or ccl sbcl)
 (defmethod stream-writer ((stream t))
-  (values #'write-byte stream))
+  (values #'write-char stream))
 
 #+lispworks
 (defmethod stream-writer ((stream stream:fundamental-character-output-stream))
