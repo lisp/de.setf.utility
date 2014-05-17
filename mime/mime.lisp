@@ -204,6 +204,7 @@
 (def-mime-type ("APPLICATION" "*"))
 (def-mime-type ("IMAGE" "*"))
 (def-mime-type ("MULTIPART" "*"))
+(def-mime-type ("RDF" "*"))
 (def-mime-type ("TEXT" "*") ()
   ((charset
     :initform :iso-8859-1)))
