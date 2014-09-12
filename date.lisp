@@ -38,8 +38,8 @@
 
 (in-package :de.setf.utility.implementation)
 
-#-( or sbcl allegro lispworks ccl)
-(cerror "Continue anyway" "Conditionalization required for funcallable-standar-class")
+#-( or sbcl allegro lispworks ccl abcl)
+(cerror "Continue anyway" "Conditionalization required for funcallable-standard-class")
 
 (defpackage :de.setf.date
   (:nicknames :date)
@@ -555,7 +555,8 @@
     (:metaclass #+:sbcl sb-mop:funcallable-standard-class
                 #+:allegro mop:funcallable-standard-class
                 #+lispworks hcl:funcallable-standard-class
-                #+:ccl ccl:funcallable-standard-class)
+                #+:ccl ccl:funcallable-standard-class
+                #+abcl MOP:FUNCALLABLE-STANDARD-CLASS)
     (:documentation "A function class to distinguish conversion function
       for find-date-format."))
   
