@@ -193,8 +193,11 @@
 
 
 
-(defmethod stream-read-sequence ((stream vector-input-stream) (sequence vector)
-                                  #+mcl &key #-mcl &optional (start 0) (end nil))
+(defmethod stream-read-sequence
+  #+mcl ((stream vector-input-stream) (sequence vector) &key &optional (start 0) (end nil))
+  #+lispworks ((stream vector-input-stream) (sequence vector) start end)
+  #-(or mcl lispworks) ((stream vector-input-stream) (sequence vector) &optional (start 0) (end nil))
+
   (unless end (setf end (length sequence)))
   (assert (typep start '(integer 0)))
   (assert (>= end start))
@@ -258,8 +261,9 @@
 
 
 (defmethod stream-write-sequence
-           #-mcl ((stream vector-output-stream) (sequence vector) &optional (start 0) (end nil))
            #+mcl ((stream vector-output-stream) (sequence vector) &key (start 0) (end nil))
+           #+lispworks ((stream vector-output-stream) (sequence vector) start end)
+           #-(or mcl lispworks) ((stream vector-output-stream) (sequence vector) &optional (start 0) (end nil))
   (unless end (setf end (length sequence)))
   (assert (typep start '(integer 0)))
   (assert (>= end start))
