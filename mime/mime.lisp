@@ -26,6 +26,7 @@
    - [rfc2046](http://tools.ietf.org/html/rfc2046) : (MIME) Part Two: Media Types
    - [rfc2049](http://tools.ietf.org/html/rfc2049) : (MIME) Part Five: Conformance Criteria and Examples
    - [IANA](http://www.iana.org/assignments/media-types/) : media type list
+   - [rdfa](http://www.w3.org/TR/rdfa-core/#xmlrdfaconformance) : rdfa media types
 
    Each type is defined as a singleton in a major/minor type lattice and bound to a
  global variable with the same name. The `text/*` types include a slot for a content encoding
@@ -53,11 +54,14 @@
 
 (def-mime-type-key "APPLICATION")
 (def-mime-type-key "CSV")
+(def-mime-type-key "FORM-DATA")
 (def-mime-type-key "HTML")
+(def-mime-type-key "HTML+RDFA")
 (def-mime-type-key "IMAGE")
 (def-mime-type-key "JSON")
 (def-mime-type-key "JPEG")
 (def-mime-type-key "MARKDOWN")
+(def-mime-type-key "MULTIPART")
 (def-mime-type-key "N3")
 (def-mime-type-key "PLAIN")
 (def-mime-type-key "PDF")
@@ -73,6 +77,7 @@
 (def-mime-type-key "X-WWW-FORM-URLENCODED")
 (def-mime-type-key "XML")
 (def-mime-type-key "XHTML")
+(def-mime-type-key "XHTML+RDFA")
 (def-mime-type-key "XHTML+XML")
 (def-mime-type-key "*")
 
@@ -198,6 +203,8 @@
 
 (def-mime-type ("APPLICATION" "*"))
 (def-mime-type ("IMAGE" "*"))
+(def-mime-type ("MULTIPART" "*"))
+(def-mime-type ("RDF" "*"))
 (def-mime-type ("TEXT" "*") ()
   ((charset
     :initform :iso-8859-1)))
@@ -210,12 +217,6 @@
 
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
-
-(defclass mime:graphviz (mime:*/*)
-  ((file-type :initform "dot" :allocation :class))
-  (:documentation "The abstract graphviz mime type is specialized as
- TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
- and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
 
 (defclass mime:rdf (mime:*/*)
   ()
@@ -236,13 +237,18 @@
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
 (def-mime-type ("APPLICATION" "OCTET-STREAM") (mime:binary))
 (def-mime-type ("APPLICATION" "PDF"))
+(def-mime-type ("APPLICATION" "XHTML+XML") ()
+  ((file-type :initform "html" :allocation :class))
+  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
+(def-mime-type ("APPLICATION" "XHTML+RDFA") (mime:application/xhtml+xml))
 (def-mime-type ("APPLICATION" "XML"))
-(def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf)
-  ((file-type :initform "dot" :allocation :class))
+(def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf mime:application/xml)
+  ((file-type :initform "rdf" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
 (def-mime-type ("APPLICATION" "X-WWW-FORM-URLENCODED") (experimental-mime-type)
   ((charset :initform :utf-8)
    (file-type :initform nil)))
+(def-mime-type ("MULTIPART" "FORM-DATA"))
 (def-mime-type ("TEXT" "TAB-SEPARATED-VALUES") ()
   ((charset :initform nil)
    (file-type :initform "tsv" :allocation :class))
@@ -258,11 +264,9 @@
   ((file-type :initform "nt" :allocation :class))
   (:documentation "The [w3c](http://www.w3.org/TR/rdf-testcases/#ntriples) specifies text/plain."))
 (def-mime-type ("TEXT" "XHTML"))
-(def-mime-type ("APPLICATION" "XHTML+XML") ()
-  ((file-type :initform "html" :allocation :class))
-  (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
 (def-mime-type ("TEXT" "HTML") ()
   ((file-type :initform "html" :allocation :class)))
+(def-mime-type ("TEXT" "HTML+RDFA") (mime:text/html))
 (def-mime-type ("TEXT" "MARKDOWN") ()
   ((file-type :initform "md" :allocation :class)))
 (def-mime-type ("TEXT" "TURTLE") (mime:turtle))
@@ -289,18 +293,37 @@
       mime-type))
 
   (:method ((designator cons) &key &allow-other-keys)
-    "Given a cons, the first two elements must be the type and the remainder the initargs."
+    "Given a cons, either the first two elements arethe type and the remainder
+     the initargs, in which case they should both be keywords, or the
+     first is a mime-type type and all thr rest are the initargs "
     (destructuring-bind (major minor . args) designator
       (declare (dynamic-extent args))
-      (apply #'mime-type (intern-mime-type-key (format nil "~a/~a" major minor)
-                                       :if-does-not-exist :error)
-             args)))
+      (typecase major
+        (keyword 
+         (apply #'mime-type (intern-mime-type-key (format nil "~a/~a" major minor)
+                                                  :if-does-not-exist :error)
+                args))
+        (symbol
+         (apply #'mime-type major minor args)))))
 
-  (:method ((designator string) &rest args)
-    "Given a string, coerce it to the class designator and continue."
+  (:method ((designator string) &rest args &key (if-does-not-exist :error idne-s) &allow-other-keys)
+    "Given a string, parse it - isolating any arguments, coerce the type to the
+     class designator and continue with the argument list."
     (declare (dynamic-extent args))
-    (apply #'mime-type (intern-mime-type-key designator :if-does-not-exist :error)
-           args))
+    (setf designator (remove #\space designator))
+    (destructuring-bind (type-name . parameters) (split-string designator "; ")
+      (setf parameters (loop for parameter in parameters
+                             append (destructuring-bind (attribute value) (split-string parameter "=")
+                                      (list (cons-symbol :keyword attribute)
+                                            (with-standard-io-syntax
+                                              (let ((*read-eval* nil)
+                                                    (*package* (find-package :keyword)))
+                                                (read-from-string value)))))))
+      (when idne-s
+        (setf args (plist-difference args '(:if-does-not-exist))))
+      (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
+        (when mime-type-symbol
+          (apply #'mime-type mime-type-symbol (append parameters args))))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.
@@ -349,17 +372,30 @@
   (eval-when (:compile-toplevel :load-toplevel :execute)
     (export '(de.setf.utility::clone-instance de.setf.utility::initialize-clone)
             :de.setf.utility))
-  (defmethod de.setf.utility::initialize-clone ((new mime-type) (old mime-type) &rest args)
-    (apply #'shared-initialize new t
-           args))
-  (defmethod de.setf.utility::initialize-clone ((new mime:text/*) (old mime:text/*) &rest args
-                               &key (charset (slot-value old 'charset)))
-    (apply #'call-next-method new old
-           :charset charset
-           args))
-  (defmethod de.setf.utility::clone-instance ((instance mime-type) &rest args)
-    (apply #'de.setf.utility::initialize-clone (allocate-instance (class-of instance)) instance
-           args)))
+
+  (defgeneric de.setf.utility::initialize-clone (old new &rest args)
+    (:documentation
+      "invoke shared-initialize on the collected initargs to initialize slots
+       prior to copying from the instance to the clonein order to override the existing
+       slot values and preclude unwanted deep cloning.")
+
+    (:method ((old standard-object) (new standard-object) &rest args)
+      (apply #'shared-initialize new t args))
+
+    (:method de.setf.utility::initialize-clone ((old mime:text/*) (new mime:text/*) &rest args
+                                                &key (charset (slot-value old 'charset)))
+             (apply #'call-next-method old new
+                    :charset charset
+                    args)))
+
+  (defgeneric de.setf.utility::clone-instance (instance &rest args)
+    (:documentation 
+      "reproduce a given instance.")
+
+    (:method ((instance standard-object) &rest args)
+      (apply #'de.setf.utility::initialize-clone instance (allocate-instance (class-of instance))
+             args)))
+  )
 
 
 (defmethod content-encoding ((mime-type mime:text/*) &rest args)

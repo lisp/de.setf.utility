@@ -121,8 +121,10 @@
 (defvarconstant +ordinal-month-quarter+ #(0 1 1 1 2 2 2 3 3 3 4 4 4)
   "a constant array of the respective quarter for each (1-based) month.")
 
-(defvar *day-names* #(nil
-                      "Sunday" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
+(defvar *day-names* #("Sunday" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
+  "a static array of the (0-based) day names.")
+
+(defvar *day-names-from-one* #(nil "Sunday" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
   "a static array of the (1-based) day names.")
 
 (defvar *month-day-names*
@@ -168,8 +170,8 @@
     (svref +ordinal-month-quarter+ m)))
 
 (defun date:day-in-week-name (day &optional length &aux name)
-  "returns the number name of a (1-based) day."
-  (assert (< 0 day 8))
+  "returns the number name of a (0-based) day."
+  (assert (<= 0 day 7))
   (setf name (svref *day-names* day))
   (if (and length (< length (length name)))
     (subseq name 0 length)
@@ -243,11 +245,12 @@
 
 
 (defun date:decode-day-name (day &key (start 0) (end (length day)))
+  "returns the 0-based index of the given name in the week"
   (flet ((test-name (name)
            (and (> (length day) 2)
                 (string-equal name day :end1 (min (length name) end) :start2 start :end2 end))))
     (declare (dynamic-extent #'test-name))
-    (position-if #'test-name *day-names* :start 1)))
+    (position-if #'test-name *day-names*)))
 
 (defun date:decode-am-pm (string &key (start 0))
   (let ((end (+ start 2)))

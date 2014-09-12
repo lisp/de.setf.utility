@@ -69,10 +69,8 @@
 
 (defgeneric clone-instance (instance &rest initargs)
   (:documentation 
-   "reproduce a given instance.
-    invoke shared-initialize with initargs to initialize slots
-    prior to copying from the instancto the clone in order to override the existing
-    slot values and preclude unwanted deep cloning.")
+      "reproduce a given instance.")
+
   (:method ((instance standard-object) &rest initargs)
     (declare (dynamic-extent initargs))
     (apply #'clone-instance-as instance (class-of instance) initargs))
@@ -91,7 +89,7 @@
                                        &rest initargs &aux new)
            "observing that both mcl and allegro support allocate-instance
             on all of {built-in,funcallable-standard,standard,structure}class
-            the specialization for this function cann be relaxed accordingly."
+            the specialization for this function can be relaxed accordingly."
            (declare (dynamic-extent initargs))
            (setf new (allocate-instance class))
            ;; pass any initargs through and augment them on the
@@ -100,6 +98,11 @@
            new))
 
 (defgeneric initialize-clone (old new &rest initargs &key &allow-other-keys)
+  (:documentation
+      "invoke shared-initialize with initargs to initialize slots
+       prior to copying from the instance to the clonein order to override the existing
+       slot values and preclude unwanted deep cloning.")
+
   (:method ((old standard-object) (new standard-object) &rest initargs)
     (declare (dynamic-extent initargs))
     (apply #'shared-initialize new t initargs))         ;; must pass t to get default initform protocol

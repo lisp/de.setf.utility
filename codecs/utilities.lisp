@@ -75,17 +75,25 @@
 
 ;;; trivial methods absent runtime-specifica
 ;;; no eof suppression as it should not happen in mid-term
+
+(defmethod stream-reader ((stream synonym-stream))
+  (stream-reader (symbol-value (synonym-stream-symbol stream))))
+
 #-(or ccl sbcl)
 (defmethod stream-reader ((stream t))
-  (values #'stream-read-byte stream))
+  (values #'read-char stream))
 
 #+sbcl
 (defmethod stream-reader ((stream t))
-  (values #'read-byte stream))
+  (values #'read-char stream))
+
+
+(defmethod stream-writer ((stream synonym-stream))
+  (stream-writer (symbol-value (synonym-stream-symbol stream))))
 
 #-(or ccl sbcl)
 (defmethod stream-writer ((stream t))
-  (values #'stream-write-byte stream))
+  (values #'write-char stream))
 
 #+lispworks
 (defmethod stream-writer ((stream stream:fundamental-character-output-stream))
@@ -97,9 +105,9 @@
 
 #+sbcl
 (defmethod stream-writer ((stream t))
-  (values #'(lambda (stream byte)
-              ;; loud tracing
-              ;; (sb-posix:syslog 0 " [~3,'0d]" byte)
-              (write-byte byte stream))
+  (values #'(lambda (stream datum)
+              (etypecase datum
+                (integer (write-byte datum stream))
+                (character (write-char datum stream))))
           stream))
 

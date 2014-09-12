@@ -71,10 +71,12 @@
  which the major-type generaalization preceeds the minor-type.")
 
   (:import-from :de.setf.utility
-                :mime-type
-                :mime-type-p
                 :binary-mime-type-p
-                :mime-type-expression)
+                :mime-type
+                :mime-type-charset
+                :mime-type-expression
+                :mime-type-p
+                :size-string)
   (:export
    :*
    :*/*
@@ -96,12 +98,15 @@
    :json
    :markdown
    :mime-type
+   :mime-type-charset
    :mime-type-expression
    :mime-type-p
    :n3
    :octet-stream
    :plain
+   :rdf
    :rdf+xml
+   :size-string
    :svg
    :svg+xml
    :text
