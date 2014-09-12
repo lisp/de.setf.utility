@@ -33,7 +33,7 @@
     :initform 0
     :reader get-stream-position :writer setf-stream-position)
    (vector
-    ;; nb no type information, othreise sbcl objects to latr specification
+    ;; nb no type information, otherwise sbcl objects to later specification
     :reader get-vector-stream-vector :writer setf-vector-stream-vector
     :type vector)
    (signed)
@@ -83,7 +83,7 @@
 
 (defmethod shared-initialize
            ((instance vector-stream) (slots t) &key (vector nil vector-s) (length 128)
-            element-type)
+            (element-type '(unsigned-byte 8)))
   (with-slots (position signed) instance
     (setf position 0)
     (setf signed (ecase (first element-type) (signed-byte t) (unsigned-byte nil)))
@@ -171,12 +171,26 @@
 
 (defmethod stream-read-byte ((stream vector-input-stream))
   (with-slots (position vector signed) stream
-    (when (< position (length vector))
+    (if (< position (length vector))
       (let ((byte (aref vector position)))
         (incf position)
         (if (and (> byte 127) signed)
           (- (logxor 255 (1- byte)))
-          byte)))))
+          byte))
+      #+sbcl :eof)
+    #-sbcl nil))
+
+(defmethod stream-read-char ((stream vector-input-stream))
+  (with-slots (position vector signed) stream
+    (if (< position (length vector))
+      (let ((byte (aref vector position)))
+        (incf position)
+        (code-char (if (and (> byte 127) signed)
+                     (- (logxor 255 (1- byte)))
+                     byte)))
+      #+sbcl :eof)
+    #-sbcl nil))
+
 
 
 (defmethod stream-read-sequence ((stream vector-input-stream) (sequence vector)
@@ -201,9 +215,12 @@
   (with-slots (position vector) stream
     (cond ((> position 0)
            (decf position)
-           (setf (svref vector position) datum))
+           (setf (aref vector position) datum))
           (t
            (error 'end-of-file :stream stream)))))
+
+(defmethod stream-unread-char ((stream vector-input-stream) (datum character))
+  (stream-untyi stream (char-code datum)))
 
 (defMethod stream-reader ((stream vector-input-stream))
   (with-slots (vector position) stream
