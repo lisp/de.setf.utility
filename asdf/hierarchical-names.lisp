@@ -353,15 +353,6 @@
 ;;;
 ;;; additions to instantiation steps to support the above
 
-;;; use primtive interface to allow that the operator extensions are not loaded
-(defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
-  (when (slot-boundp instance 'asdf::name)
-    (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
-  (when (slot-boundp instance 'asdf::properties)
-    (let ((time (get-universal-time)))
-    (dolist (nick (asdf::system-nicknames instance))
-      (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
-            (cons time instance))))))
 
 (defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
                                      (description nil description-p)
@@ -371,6 +362,18 @@
   (when long-description-p (setf (asdf::component-long-description instance) long-description))
   (when contingent-on-p  (setf (asdf::component-property instance 'asdf::contingent-on) contingent-on)))
 
+;;; use primtive interface to allow that the operator extensions are not loaded
+#+(or)
+(defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
+  (when (slot-boundp instance 'asdf::name)
+    (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
+  (when (slot-boundp instance 'asdf::properties)
+    (let ((time (get-universal-time)))
+    (dolist (nick (asdf::system-nicknames instance))
+      (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
+            (cons time instance))))))
+
+#+(or)
 (defmethod shared-initialize :after ((instance asdf:system) (slots t) &key
                                      (nicknames nil nicknames-p))
   ;; if a relative pathname was supplied, canonicalize it
@@ -400,6 +403,50 @@
     (asdf::register-system (asdf:component-name instance) instance))
   (dolist (nick (asdf::system-nicknames instance))
     (asdf::register-system nick instance)))
+
+
+;;; 3.0.2 ;; (trace asdf::component-relative-pathname asdf::system-qualified-component-name asdf::system-nicknames)
+(defmethod shared-initialize :around ((instance asdf:system) (slots t) &key
+				       (nicknames nil nicknames-p))
+  ;; if a relative pathname was supplied, canonicalize it
+  #+(or)
+  (when nicknames-p
+    (when (slot-boundp instance 'asdf::properties)
+      (dolist (nick (asdf::system-nicknames instance))
+	(remhash (asdf::coerce-name nick) asdf::*defined-systems*))))
+  (call-next-method)
+
+  (when (slot-boundp instance 'asdf::relative-pathname)
+    (etypecase (slot-value instance 'asdf::relative-pathname)
+      (null nil)
+      (logical-pathname nil)
+      (pathname (let ((logical (ignore-errors (de.setf.utility.implementation::translate-physical-pathname
+                                               (slot-value instance 'asdf::relative-pathname)))))
+                  ;; if the translation fails, give up on setting the logical equivalent
+                  (when logical
+                    (setf (slot-value instance 'asdf::relative-pathname)
+                          logical))))))
+  ;; default nicknames to the qualified component name
+  (print (list :shared-initialize instance))
+  (when (slot-boundp instance 'asdf::name)
+    (if nicknames-p
+	(setf (asdf::system-nicknames instance) nicknames)
+      (let* ((source-file (asdf::system-source-file instance))
+	     (system-name (asdf::component-name instance))
+	     (nickname (when (and source-file system-name)
+			 (ignore-errors (pathname-qualified-component-name system-name source-file)))))
+	(setf (asdf::system-nicknames instance) (when nickname (list nickname)))))
+    (print (list :name (asdf::component-name instance) :nicknames (asdf::system-nicknames instance)))
+    (let* ((name (asdf:component-name instance))
+           (entry (gethash name asdf::*defined-systems*)))
+      #+(or)(unless entry
+	(setf entry (cons (get-universal-time) instance)
+	      (gethash name asdf::*defined-systems*) entry))
+      (dolist (nick (asdf::system-nicknames instance))
+	(setf (gethash nick asdf::*defined-systems*)
+	      entry))))
+  )
+
 
 
 (pushnew :asdf.hierarchical-names *features*)
