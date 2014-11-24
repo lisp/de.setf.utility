@@ -196,10 +196,11 @@
 (defun date:leap-p (&optional (year (date:year-in-century)))
   (and (zerop (mod year 4)) (not (zerop (mod year 100)))))
 
-(defun date:month-days (month)
+(defun date:month-days (month &optional (year nil))
   "returns the number of days in a (1-based) month."
   (assert (< 0 month 13))
-  (svref +ordinal-month-days+ month))
+  (+ (svref +ordinal-month-days+ month)
+     (if (and year (date:leap-p year) (= month 2)) 1 0)))
 
 (defun date:month-quarter (month)
   "returns the respective (zero-based) quarter of a (1-based) month."
