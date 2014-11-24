@@ -353,17 +353,7 @@
 ;;;
 ;;; additions to instantiation steps to support the above
 
-
-(defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
-                                     (description nil description-p)
-                                     (long-description nil long-description-p)
-                                     (contingent-on nil contingent-on-p))
-  (when description-p (setf (asdf::component-description instance) description))
-  (when long-description-p (setf (asdf::component-long-description instance) long-description))
-  (when contingent-on-p  (setf (asdf::component-property instance 'asdf::contingent-on) contingent-on)))
-
-;;; use primtive interface to allow that the operator extensions are not loaded
-#+(or)
+;;; use primitive interface to allow that the operator extensions are not loaded
 (defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
   (when (slot-boundp instance 'asdf::name)
     (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
@@ -372,6 +362,14 @@
     (dolist (nick (asdf::system-nicknames instance))
       (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
             (cons time instance))))))
+
+(defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
+                                     (description nil description-p)
+                                     (long-description nil long-description-p)
+                                     (contingent-on nil contingent-on-p))
+  (when description-p (setf (asdf::component-description instance) description))
+  (when long-description-p (setf (asdf::component-long-description instance) long-description))
+  (when contingent-on-p  (setf (asdf::component-property instance 'asdf::contingent-on) contingent-on)))
 
 #+(or)
 (defmethod shared-initialize :after ((instance asdf:system) (slots t) &key
@@ -403,6 +401,39 @@
     (asdf::register-system (asdf:component-name instance) instance))
   (dolist (nick (asdf::system-nicknames instance))
     (asdf::register-system nick instance)))
+
+;;; 3.0.2
+(defmethod shared-initialize :after ((instance asdf:system) (slots t) &key
+                                     (nicknames nil nicknames-p))
+  ;; if a relative pathname was supplied, canonicalize it
+  (when (slot-boundp instance 'asdf::relative-pathname)
+    (etypecase (slot-value instance 'asdf::relative-pathname)
+      (null nil)
+      (logical-pathname nil)
+      (pathname (let ((logical (ignore-errors (de.setf.utility.implementation::translate-physical-pathname
+                                               (slot-value instance 'asdf::relative-pathname)))))
+                  ;; if the translation fails, give up on setting the logical equivalent
+                  (when logical
+                    (setf (slot-value instance 'asdf::relative-pathname)
+                          logical))))))
+  ;; default nicknames to the qualified component name
+  (cond (nicknames-p
+         (setf (asdf::system-nicknames instance) nicknames))
+        ((and (null nicknames-p)
+              ; must test the binding as instantiation is split into two phases !?
+              ; first make-, then reinitialize-
+              (slot-boundp instance 'asdf::relative-pathname)
+              (asdf::component-relative-pathname instance))
+         (setf (asdf::system-nicknames instance)
+               (list (asdf::system-qualified-component-name instance)))))
+  
+  (when (slot-boundp instance 'asdf::name)
+    (let* ((name (asdf:component-name instance))
+           (entry (gethash name asdf::*defined-systems*)))
+      (when entry
+        (dolist (nick (asdf::system-nicknames instance))
+          (setf (gethash nick asdf::*defined-systems*)
+                entry))))))
 
 
 ;;; 3.0.2 ;; (trace asdf::component-relative-pathname asdf::system-qualified-component-name asdf::system-nicknames)
