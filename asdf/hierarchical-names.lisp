@@ -458,7 +458,7 @@
                     (setf (slot-value instance 'asdf::relative-pathname)
                           logical))))))
   ;; default nicknames to the qualified component name
-  (print (list :shared-initialize instance))
+  ;;(print (list :shared-initialize instance))
   (when (slot-boundp instance 'asdf::name)
     (if nicknames-p
 	(setf (asdf::system-nicknames instance) nicknames)
@@ -476,6 +476,7 @@
       (dolist (nick (asdf::system-nicknames instance))
 	(setf (gethash nick asdf::*defined-systems*)
 	      entry))))
+  instance
   )
 
 

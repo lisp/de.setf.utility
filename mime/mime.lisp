@@ -144,7 +144,9 @@
 
 (defclass mime-type ()
    ((expression :allocation :class :reader mime-type-expression :initform nil)
-    (file-type :reader get-mime-type-file-type :initform nil)))
+    (file-type :reader get-mime-type-file-type :initform nil)
+    (profile :initarg :profile :initform nil
+             :reader mime-type-profile)))
 
 (defclass mime:binary (mime:*/*)
   ()
@@ -311,19 +313,27 @@
      class designator and continue with the argument list."
     (declare (dynamic-extent args))
     (setf designator (remove #\space designator))
-    (destructuring-bind (type-name . parameters) (split-string designator "; ")
-      (setf parameters (loop for parameter in parameters
-                             append (destructuring-bind (attribute value) (split-string parameter "=")
-                                      (list (cons-symbol :keyword attribute)
-                                            (with-standard-io-syntax
-                                              (let ((*read-eval* nil)
-                                                    (*package* (find-package :keyword)))
-                                                (read-from-string value)))))))
-      (when idne-s
-        (setf args (plist-difference args '(:if-does-not-exist))))
-      (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
-        (when mime-type-symbol
-          (apply #'mime-type mime-type-symbol (append parameters args))))))
+    (flet ((quote-p (char)
+             (case char ((#\" #\') t))))
+      (with-standard-io-syntax
+          (let ((*read-eval* nil)
+                (*package* (find-package :keyword)))
+            (destructuring-bind (type-name . parameters) (split-string designator "; ")
+              (setf parameters (loop for parameter in parameters
+                                 append (destructuring-bind (attribute value) (split-string parameter "=")
+                                          (setf attribute (cons-symbol :keyword attribute))
+                                          (list attribute
+                                                (canonicalize-media-type-property attribute value)))))
+              (destructuring-bind (&key profile &allow-other-keys) parameters
+                (when idne-s
+                  (setf args (plist-difference args '(:if-does-not-exist))))
+                (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
+                  (when mime-type-symbol
+                    (when profile 
+                      ;; look for a possible subtype
+                      (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
+                        (when profile-type (setf mime-type-symbol profile-type))))
+                    (apply #'mime-type mime-type-symbol (append parameters args))))))))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.
@@ -347,6 +357,32 @@
                              (string-equal (mime-type-file-type mime-type) file-type))
                     (return mime-type)))))))))
 
+(defgeneric canonicalize-media-type-property (property-name value)
+  (:method ((name (eql :profile)) (value string))
+    (when (and (plusp (length value)) (eql (char value 0) #\"))
+      (setf value (call-next-method)))
+    (assert (and (stringp value) (> (length value) 5) (string-equal "http:" value :end2 5)) ()
+            "invalid media type profile: ~s" value)
+    value)
+  (:method ((name t) (value string))
+    (assert (plusp (length value)) () "invalid media type property: ~s" value)
+    (read-from-string value)))
+
+(defgeneric profile-media-type-type (root-type profile)
+  (:documentation "iterate over known media type classes to locate one
+   which is both a subtype of the given type and indicates the given profile.
+   the iteration is in order not to use the mop operators.
+   the profile->class mapping must be unique.")
+  (:method ((root-type symbol) profile)
+    (with-package-iterator  (next :mime :external)
+      (loop (multiple-value-bind (next-p designator) (next)
+              (unless next-p (return))
+              (let ((mime-type (when (boundp designator) (symbol-value designator))))
+                (when (and (typep mime-type root-type)
+                           (equalp profile (mime-type-profile mime-type)))
+                  (return designator)))))))
+  (:method ((mime-type mime-type) profile)
+    (profile-media-type-type (type-of mime-type) profile)))
 
 (defun list-mime-types ()
   (let ((types ()))
