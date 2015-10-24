@@ -372,7 +372,7 @@
     (labels ((qvalue-char-p (c) (or (digit-char-p c) (eql c #\.)))
              (parse-qvalue (qvalue)
                (assert (every #'qvalue-char-p qvalue) ()
-                       (http:bad-request "Invalid qvalue: '~a'" qvalue))
+                       "Invalid qvalue: '~a'" qvalue)
                (read-from-string qvalue)))
       (parse-qvalue value)))
   (:method ((name t) (value string))
