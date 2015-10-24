@@ -53,6 +53,8 @@
    :mime-type-minor-type
    :mime-type-file-type
    :mime-type-p
+   :mime-type-profile
+   :mime-type-quality
    :minor-mime-type
    :size-string
    ))
@@ -76,6 +78,8 @@
                 :mime-type-charset
                 :mime-type-expression
                 :mime-type-p
+                :mime-type-profile
+                :mime-type-quality
                 :size-string)
   (:export
    :*
@@ -101,6 +105,8 @@
    :mime-type-charset
    :mime-type-expression
    :mime-type-p
+   :mime-type-profile
+   :mime-type-quality
    :n3
    :octet-stream
    :plain

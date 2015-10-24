@@ -145,6 +145,8 @@
 (defclass mime-type ()
    ((expression :allocation :class :reader mime-type-expression :initform nil)
     (file-type :reader get-mime-type-file-type :initform nil)
+    (quality :initarg :q :initarg :quality :initform 1
+             :reader mime-type-quality)
     (profile :initarg :profile :initform nil
              :reader mime-type-profile)))
 
@@ -364,6 +366,15 @@
     (assert (and (stringp value) (> (length value) 5) (string-equal "http:" value :end2 5)) ()
             "invalid media type profile: ~s" value)
     value)
+  (:method ((name (eql :q)) (value string))
+    (canonicalize-media-type-property :quality value))
+  (:method ((name (eql :quality)) (value string))
+    (labels ((qvalue-char-p (c) (or (digit-char-p c) (eql c #\.)))
+             (parse-qvalue (qvalue)
+               (assert (every #'qvalue-char-p qvalue) ()
+                       (http:bad-request "Invalid qvalue: '~a'" qvalue))
+               (read-from-string qvalue)))
+      (parse-qvalue value)))
   (:method ((name t) (value string))
     (assert (plusp (length value)) () "invalid media type property: ~s" value)
     (read-from-string value)))
