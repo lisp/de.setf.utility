@@ -46,12 +46,14 @@
    :intern-mime-type-key
    :major-mime-type
    :mime-type
+   :mime-type-base-type
    :mime-type-charset
    :mime-type-canonical-mime-type
    :mime-type-expression
    :mime-type-major-type
    :mime-type-minor-type
    :mime-type-file-type
+   :mime-type-namestring
    :mime-type-p
    :mime-type-profile
    :mime-type-quality

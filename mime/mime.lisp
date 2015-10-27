@@ -147,8 +147,13 @@
     (file-type :reader get-mime-type-file-type :initform nil)
     (quality :initarg :q :initarg :quality :initform 1
              :reader mime-type-quality)
-    (profile :initarg :profile :initform nil
-             :reader mime-type-profile)))
+    ))
+
+(defclass mime-type-profile (mime-type)
+  ((profile :initarg :profile :initform nil
+             :reader mime-type-profile)
+   (base-type :initarg :base-type :initform nil
+              :reader mime-type-base-type)))
 
 (defclass mime:binary (mime:*/*)
   ()
@@ -285,6 +290,31 @@
     (or (get-mime-type-file-type type)
         (setf (slot-value type 'file-type)
               (string-downcase (mime-type-minor-type type))))))
+
+(defgeneric mime-type-profile (mime-type)
+  (:documentation "return the given media type's profile.
+   this signifies for profile-mime-type instance only. other return nil.")
+  (:method ((type mime-type))
+    nil))
+
+(defgeneric mime-type-base-type (mime-type)
+  (:documentation "return a base type instance for a given media type.
+   This is an initialization value for profile types, but the identity for others.")
+  (:method ((type mime-type))
+    type))
+
+(defgeneric mime-type-namestring (mime-type)
+  (:documentation "generate the namestring for a media type given its properties")
+  (:method ((media-type mime-type))
+    (format nil "~a~@[;q=~$~]~@[;charset=~a~]~@[;profile=\"~a\"~]"
+            (type-of (mime-type-base-type media-type))
+            (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
+            (mime-type-charset media-type)
+            (mime-type-profile media-type)))
+  (:method ((type string)) ; assume it is correct
+    type)
+  (:method ((type null))
+    nil))
 
 
 (defgeneric mime-type (designator &rest args)
