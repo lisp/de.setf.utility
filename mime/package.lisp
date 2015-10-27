@@ -109,7 +109,7 @@
    :mime-type-base-type
    :mime-type-charset
    :mime-type-expression
-   :mime-type-base-type
+   :mime-type-namestring
    :mime-type-p
    :mime-type-profile
    :mime-type-quality
