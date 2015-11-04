@@ -239,7 +239,8 @@
   (:documentation "The N3 mime class is the abstract base class for application/n3 and text/n3."))
 
 (defclass mime:turtle (mime:text/plain mime:rdf)
-  ()
+  ((charset
+    :initform nil))
   (:documentation "The TURTLE mime class is the abstract base class for text/turtle."))
 
 (def-mime-type ("APPLICATION" "JSON"))
