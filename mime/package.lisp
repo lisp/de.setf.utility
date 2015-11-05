@@ -133,6 +133,7 @@
    :text/x-graphviz
    :text/xml
    :turtle
+   :unsupported-mime-type
    :vnd.graphviz
    :x-graphviz
    :xhtml

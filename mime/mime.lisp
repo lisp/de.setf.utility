@@ -374,7 +374,7 @@
                 (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
                   ;; the symbol is either a known media type, or some other type, which is to be constrained, or null
                   (cond (mime-type-symbol
-                         (when profile 
+                         (when profile
                            ;; look for a possible subtype
                            (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
                              (when profile-type (setf mime-type-symbol profile-type))))
