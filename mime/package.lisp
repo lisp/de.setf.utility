@@ -59,6 +59,7 @@
    :mime-type-quality
    :minor-mime-type
    :size-string
+   :unsupported-mime-type
    ))
 
 (defpackage :mime
@@ -84,7 +85,8 @@
                 :mime-type-p
                 :mime-type-profile
                 :mime-type-quality
-                :size-string)
+                :size-string
+                :unsupported-mime-type)
   (:export
    :*
    :*/*

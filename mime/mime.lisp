@@ -40,11 +40,13 @@
   (defun intern-mime-type-key (name &key (if-does-not-exist :error))
     (or (find-symbol (setf name (string-upcase name)) *mime-type-package*)
         (ecase if-does-not-exist
-          ((nil) nil)
           (:error (error "undefined mime type keyword: ~s." name))
-          (:create (setf name (intern name *mime-type-package*))
-                   (export name *mime-type-package*)
-                   name)))))
+          ((:create mime-type)
+           (setf name (intern name *mime-type-package*))
+           (export name *mime-type-package*)
+           name)
+          (t ; if nil or some other class, return nil to indicate it does not exist
+           nil)))))
 
 (defMacro def-mime-type-key (symbol &rest args &key (if-does-not-exist :create))
   (setf symbol (apply #'intern-mime-type-key symbol :if-does-not-exist if-does-not-exist args))
@@ -154,6 +156,11 @@
              :reader mime-type-profile)
    (base-type :initarg :base-type :initform nil
               :reader mime-type-base-type)))
+
+(defclass unsupported-mime-type (mime-type)
+  ((expression :allocation :instance :initarg :expression
+               :initform "expression is required for unsupported media types.")))
+          
 
 (defclass mime:binary (mime:*/*)
   ()
@@ -307,11 +314,13 @@
 (defgeneric mime-type-namestring (mime-type)
   (:documentation "generate the namestring for a media type given its properties")
   (:method ((media-type mime-type))
-    (format nil "~a~@[;q=~$~]~@[;charset=~a~]~@[;profile=\"~a\"~]"
+    (format nil "~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]"
             (type-of (mime-type-base-type media-type))
             (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
             (mime-type-charset media-type)
             (mime-type-profile media-type)))
+  (:method ((media-type unsupported-mime-type))
+    (mime-type-expression media-type))
   (:method ((type string)) ; assume it is correct
     type)
   (:method ((type null))
@@ -335,13 +344,15 @@
       (declare (dynamic-extent args))
       (typecase major
         (keyword 
-         (apply #'mime-type (intern-mime-type-key (format nil "~a/~a" major minor)
-                                                  :if-does-not-exist :error)
-                args))
+         (let* ((expression (format nil "~a/~a" major minor))
+                (type  (intern-mime-type-key expression :if-does-not-exist nil)))
+           (if type
+               (apply #'mime-type type args)
+               (make-instance 'unsupported-mime-type :expression expression))))
         (symbol
          (apply #'mime-type major minor args)))))
 
-  (:method ((designator string) &rest args &key (if-does-not-exist :error idne-s) &allow-other-keys)
+  (:method ((designator string) &rest args &key (if-does-not-exist nil idne-s) &allow-other-keys)
     "Given a string, parse it - isolating any arguments, coerce the type to the
      class designator and continue with the argument list."
     (declare (dynamic-extent args))
@@ -361,12 +372,19 @@
                 (when idne-s
                   (setf args (plist-difference args '(:if-does-not-exist))))
                 (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
-                  (when mime-type-symbol
-                    (when profile 
-                      ;; look for a possible subtype
-                      (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
-                        (when profile-type (setf mime-type-symbol profile-type))))
-                    (apply #'mime-type mime-type-symbol (append parameters args))))))))))
+                  ;; the symbol is either a known media type, or some other type, which is to be constrained, or null
+                  (cond (mime-type-symbol
+                         (when profile 
+                           ;; look for a possible subtype
+                           (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
+                             (when profile-type (setf mime-type-symbol profile-type))))
+                         (apply #'mime-type mime-type-symbol (append parameters args)))
+                        (if-does-not-exist
+                         (assert (subtypep if-does-not-exist 'mime-type) ()
+                                 "Specified media type must specialize mime:mime-type: ~s" if-does-not-exist)
+                         (apply #'make-instance if-does-not-exist :expression type-name parameters))
+                        (t
+                         nil)))))))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.
@@ -375,7 +393,8 @@
     (let ((type (and (boundp designator) (symbol-value designator))))
       (assert (typep type 'mime-type) ()
               "Invalid mime type designator: ~s." designator)
-      (if args
+      ;;(when (getf args :charset) (break "mime-type: ~s" args))
+      (if args ; 
         (apply #'make-instance designator args)
         type)))
 
