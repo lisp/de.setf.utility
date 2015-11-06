@@ -39,7 +39,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun intern-mime-type-key (name &key (if-does-not-exist :error))
     (or (find-symbol (setf name (string-upcase name)) *mime-type-package*)
-        (ecase if-does-not-exist
+        (case if-does-not-exist
           (:error (error "undefined mime type keyword: ~s." name))
           ((:create mime-type)
            (setf name (intern name *mime-type-package*))
@@ -113,14 +113,10 @@
              (export ',class-name *mime-type-package*))
            ,(defvar-form class-name)
            (find-class ',class-name))
-        (let ((major-class-name (intern-mime-type-key (format nil "~a/~a" 
-                                                              major "*")
-                                                      :if-does-not-exist
-                                                      :create))
-              (minor-class-name (intern-mime-type-key (format nil "~a/~a"
-                                                              "*" minor)
-                                                      :if-does-not-exist
-                                                      :create)))
+        (let ((major-class-name (intern-mime-type-key (format nil "~a/~a" major "*")
+                                                      :if-does-not-exist :create))
+              (minor-class-name (intern-mime-type-key (format nil "~a/~a" "*" minor)
+                                                      :if-does-not-exist :create)))
           (proclaim `(special ,minor-class-name))
           `(progn 
              (eval-when (:execute :load-toplevel)
@@ -160,7 +156,9 @@
 (defclass unsupported-mime-type (mime-type)
   ((expression :allocation :instance :initarg :expression
                :initform "expression is required for unsupported media types.")))
-          
+(defmethod initialize-instance :before ((instance unsupported-mime-type) &key &allow-other-keys)
+  ;; ignore everything
+  )
 
 (defclass mime:binary (mime:*/*)
   ()
@@ -352,7 +350,7 @@
         (symbol
          (apply #'mime-type major minor args)))))
 
-  (:method ((designator string) &rest args &key (if-does-not-exist nil idne-s) &allow-other-keys)
+  (:method ((designator string) &rest args &key (if-does-not-exist 'unsupported-mime-type idne-s) &allow-other-keys)
     "Given a string, parse it - isolating any arguments, coerce the type to the
      class designator and continue with the argument list."
     (declare (dynamic-extent args))
