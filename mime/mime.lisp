@@ -312,7 +312,7 @@
 (defgeneric mime-type-namestring (mime-type)
   (:documentation "generate the namestring for a media type given its properties")
   (:method ((media-type mime-type))
-    (format nil "~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]"
+    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]~)"
             (type-of (mime-type-base-type media-type))
             (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
             (mime-type-charset media-type)
