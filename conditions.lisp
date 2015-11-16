@@ -209,14 +209,14 @@
 
 (defvar *load-time-validation-errors* nil)
 
-(defmacro load-time-validate (id form value)
+(defmacro load-time-validate ((id &key (test 'equalp)) form value)
   `(let ((result (handler-case ,form (error (c) c)))
          (value ,value))
      (block :validate
        (eval-when (:execute)
-         (return-from :validate (equalp result value)))
+         (return-from :validate (,test result value)))
        (eval-when (:load-toplevel)
-         (unless (equalp result value)
+         (unless (,test result value)
            (push (list ',id *load-pathname* result value) *load-validation-errors*)
            (cerror "Ignore the regression and continue."
                    "validation  resulttest vailed: ~a ~a~%expected: ~s~%actual: ~s~%" ',id ',form
