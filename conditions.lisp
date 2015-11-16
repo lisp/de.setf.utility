@@ -4,7 +4,7 @@
 ;;;  It defines utility operators and classes for work with conditions
 ;;;
 
-;;;  Copyright 2003, 2009, 2010 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
+;;;  Copyright 2003, 2009, 2010, 2015 [james anderson](mailto:james.anderson@setf.de) All Rights Reserved
 ;;;  'de.setf.utility' is free software: you can redistribute it and/or modify
 ;;;  it under the terms of version 3 of the GNU Lesser General Public License as published by
 ;;;  the Free Software Foundation.
@@ -26,7 +26,7 @@
 
 ;;;  20030602 ja : allow that scl does not implement method combinations
 ;;;  20030816 ja : allow that clisp does not implement method combinations
-;;;
+;;;  20151116 ja : add load time validation
 
 (in-package :de.setf.utility.implementation)
 
@@ -47,9 +47,11 @@
    :condition-report
    :condition-format-control
    :condition-format-arguments
+   :load-time-validate
+   :print-load-time-validation-errors
    )
   (:documentation
-   "the package :setf.conditions "))
+   "the extends the de.setf.utilits package for conditions."))
 
 
 (defgeneric condition-format-control (condition)
@@ -162,6 +164,8 @@
 (setf (ccl:assq 'define-condition ccl:*fred-special-indent-alist*) 2)
 
 (defmacro assert-condition (form &rest args)
+  "Execute a form and require the value to be true.
+   If it is not, signal a type error with the given specifications."
   (let ((format-control nil) (format-arguments nil) (operator nil))
     (when (or (typep (first args) '(and symbol (not keyword)))
               (and (consp (first args)) (eq (caar args) 'setf)))
@@ -203,6 +207,26 @@
 #+mcl
 (setf (ccl:assq 'assert-argument-types ccl:*fred-special-indent-alist*) 1)
 
+(defvar *load-time-validation-errors* nil)
+
+(defmacro load-time-validate (id form value)
+  `(let ((result (handler-case ,form (error (c) c)))
+         (value ,value))
+     (block :validate
+       (eval-when (:execute)
+         (return-from :validate (equalp result value)))
+       (eval-when (:load-toplevel)
+         (unless (equalp result value)
+           (push (list ',id *load-pathname* result value) *load-validation-errors*)
+           (cerror "Ignore the regression and continue."
+                   "validation  resulttest vailed: ~a ~a~%expected: ~s~%actual: ~s~%" ',id ',form
+                   expected result))))))
+
+(defun print-load-time-validation-errors (&optional (stream *standard-output*))
+  (loop for (id pathname result expected)
+    in (stable-sort (sort *load-validation-errors* #'string-lessp :key #'first)
+                    #'string-lessp :key #'(lambda (entry) (namestring (second entry))))
+    do (format stream "~&~a ~a~%expected: ~s~%actual: ~s~%" pathname id expected result)))
 
 #|
 (define-condition test-condition (simple-error)
