@@ -101,7 +101,8 @@
          (class-variable-name (cons-symbol package :*class. class-name "*"))
          (predicate-name (or (second (assoc :predicate options))
                              (cons-symbol package class-name :-p)))
-         (rest-arg (second (member '&rest lambda-list))))
+         ;(rest-arg (second (member '&rest lambda-list)))
+         )
     ;; iff the keyword parameters are specified, (at least for mcl) one must specify
     ;; &allow-other-keys in order to permit varied argument forms to the symbol
     ;; method

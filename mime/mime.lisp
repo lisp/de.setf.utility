@@ -465,7 +465,9 @@
 
 (unless (fboundp 'de.setf.utility::clone-instance)
   (eval-when (:compile-toplevel :load-toplevel :execute)
-    (export '(de.setf.utility::clone-instance de.setf.utility::initialize-clone)
+    (export '(de.setf.utility::clone-instance
+              de.setf.utility::initialize-clone
+              de.setf.utility::clone-instance-as)
             :de.setf.utility))
 
   (defgeneric de.setf.utility::initialize-clone (old new &rest args)
@@ -475,20 +477,35 @@
        slot values and preclude unwanted deep cloning.")
 
     (:method ((old standard-object) (new standard-object) &rest args)
-      (apply #'shared-initialize new t args))
+      (apply #'shared-initialize new t args)
+      new)
 
     (:method de.setf.utility::initialize-clone ((old mime:text/*) (new mime:text/*) &rest args
                                                 &key (charset (slot-value old 'charset)))
              (apply #'call-next-method old new
                     :charset charset
                     args)))
+  (defgeneric de.setf.utility::clone-instance-as (instance class &rest initargs)
+  (:method ((instance standard-object) (class symbol) &rest initargs)
+           (apply #'de.setf.utility::clone-instance-as instance (find-class class) initargs))
+  (:method ((instance standard-object) (class class)
+                                       &rest initargs &aux new)
+           "observing that both mcl and allegro support allocate-instance
+            on all of {built-in,funcallable-standard,standard,structure}class
+            the specialization for this function can be relaxed accordingly."
+           (declare (dynamic-extent initargs))
+           (setf new (allocate-instance class))
+           ;; pass any initargs through and augment them on the
+           ;; way to the ultimate shared-initialize call
+           (apply #'de.setf.utility::initialize-clone instance new initargs)
+           new))
 
   (defgeneric de.setf.utility::clone-instance (instance &rest args)
     (:documentation 
       "reproduce a given instance.")
 
     (:method ((instance standard-object) &rest args)
-      (apply #'de.setf.utility::initialize-clone instance (allocate-instance (class-of instance))
+      (apply #'de.setf.utility::clone-instance-as instance (class-of instance)
              args)))
   )
 
