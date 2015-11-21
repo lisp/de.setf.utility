@@ -217,7 +217,7 @@
          (return-from :validate (,test result value)))
        (eval-when (:load-toplevel)
          (unless (,test result value)
-           (push (list ',id *load-pathname* result value) *load-validation-errors*)
+           (push (list ',id *load-pathname* result value) *load-time-validation-errors*)
            (cerror "Ignore the regression and continue."
                    "validation  resulttest vailed: ~a ~a~%expected: ~s~%actual: ~s~%" ',id ',form
                    expected result))))))
