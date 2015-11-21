@@ -224,7 +224,7 @@
 
 (defun print-load-time-validation-errors (&optional (stream *standard-output*))
   (loop for (id pathname result expected)
-    in (stable-sort (sort *load-validation-errors* #'string-lessp :key #'first)
+    in (stable-sort (sort *load-time-validation-errors* #'string-lessp :key #'first)
                     #'string-lessp :key #'(lambda (entry) (namestring (second entry))))
     do (format stream "~&~a ~a~%expected: ~s~%actual: ~s~%" pathname id expected result)))
 
