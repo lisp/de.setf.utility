@@ -41,6 +41,7 @@
    :def-mime-type-key
    :defmimetype
    :defmimetypekey
+   :delegate-mime-type
    :encode-string
    :experimental-mime-type
    :intern-mime-type-key
@@ -59,6 +60,7 @@
    :mime-type-quality
    :minor-mime-type
    :size-string
+   :superseded-mime-type
    :unsupported-mime-type
    ))
 

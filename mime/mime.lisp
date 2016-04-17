@@ -165,13 +165,19 @@
   (:documentation "The abstract binary mime type is specialized, eg as APPLICATION/OCTET-STREAM, to mark a stream
  for binary operations rather than text decoding."))
 
-(defclass experimental-mime-type ()
+(defclass delegate-mime-type ()
   ((canonical-mime-type
     :initform nil
     :reader mime-type-canonical-mime-type)))
 
+(defclass experimental-mime-type (delegate-mime-type)
+  ())
+
+(defclass superseded-mime-type (delegate-mime-type)
+  ())
+
 (defgeneric canonical-mime-type (mime-type)
-  (:method ((type experimental-mime-type))
+  (:method ((type delegate-mime-type))
     (or (mime-type-canonical-mime-type type)
         type))
 
