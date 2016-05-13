@@ -77,6 +77,23 @@
   '("graph")
   "certain labels just fail to parse")
 
+(defvar setf.dot::*edge-keywords*
+  '(:ARROWHEAD :ARROWSIZE :ARROWTAIL :COLOR :COLORSCHEME :COMMENT :CONSTRAINT
+ :DECORATE :DIR :EDGEURL :EDGEHREF :EDGETARGET :EDGETOOLTIP :FONTCOLOR
+ :FONTNAME :FONTSIZE :HEADCLIP :HEADHREF :HEADLABEL :HEADPORT :HEADTARGET
+ :HEADTOOLTIP :HEADURL :HREF :ID :LABEL :LABELANGLE :LABELDISTANCE :LABELFLOAT
+ :LABELFONTCOLOR :LABELFONTNAME :LABELFONTSIZE :LABELHREF :LABELTARGET
+ :LABELTOOLTIP :LABELURL :LAYER :LEN :LHEAD :LP :LTAIL :MINLEN :NOJUSTIFY
+ :PENWIDTH :POS :SAMEHEAD :SAMETAIL :SHOWBOXES :STYLE :TAILCLIP :TAILHREF
+ :TAILLABEL :TAILPORT :TAILTARGET :TAILTOOLTIP :TAILURL :TARGET :TOOLTIP :URL
+ :WEIGHT))
+
+(defvar setf.dot::*node-keywords*
+  '(:LOCATION :ANGLE :BOTTOMLABEL :COLOR :COLORSCHEME :COMMENT :DISTORTION
+ :FILLCOLOR :FIXEDSIZE :FONTCOLOR :FONTNAME :FONTSIZE :GROUP :HEIGHT :IMAGE
+ :IMAGESCALE :LABEL :LABELLOC :LAYER :MARGIN :NOJUSTIFY :ORIENTATION :PENWIDTH
+ :PERIPHERIES :POS :RECHTS :REGULAR :ROOT :SAMPLEPOINTS :SHAPE :SHAPEFILE
+ :SHOWBOXES :SIDES :SKEW :SORTV :STYLE :TARGET :TOOLTIP :URL :WIDTH :Z))
 
 ;;;
 ;;; Classes
@@ -167,6 +184,11 @@
  <code>CONTEXT-PUT-*</code> operators to map <code>STANDARD-OBJECT</code>
  node and edge arguments to id values."))
 
+(defun type-name-of (object)
+  (let ((type (type-of object)))
+    (typecase type
+      (symbol (symbol-name type))
+      (cons (symbol-name (first type))))))
 
 (defgeneric setf.dot::context-id (context object &optional prefix)
   (:documentation
@@ -177,7 +199,11 @@
   (:method ((context setf.dot:context) (object standard-object) &optional prefix)
     (let ((cache (setf.dot:cache context)))
       (or (gethash object cache)
-          (setf (setf.dot::context-id context object) (gensym (string (or prefix (type-of object)))))))))
+          (setf (setf.dot::context-id context object) (gensym (or prefix (type-name-of object)))))))
+  (:method ((context setf.dot:context) (object t) &optional prefix)
+    (let ((cache (setf.dot:cache context)))
+      (or (gethash object cache)
+          (setf (setf.dot::context-id context object) (gensym (or prefix (type-name-of object))))))))
 
 
 (defgeneric (setf setf.dot::context-id) (id context object)
@@ -185,6 +211,8 @@
    "Set the id for an object within a given context.")
  
   (:method (id (context setf.dot:context) (object standard-object))
+    (setf (gethash object (setf.dot:cache context)) id))
+  (:method (id (context setf.dot:context) (object t))
     (setf (gethash object (setf.dot:cache context)) id)))
 
 
@@ -501,13 +529,13 @@
                             :if-exists if-exists)
       (apply #'setf.dot:context-put-graph (make-instance 'setf.dot:stream :stream stream) name statements args)))
 
-  (:method ((context setf.dot:context) name statements &rest args
+  (:method ((context setf.dot:context) name (statement-generator function) &rest args
             &key (strict (setf.dot:strict context)) (type (setf.dot:type context))
             (pretty (setf.dot:pretty context))
             &allow-other-keys)
     (setf (setf.dot:name context) name)
     (let ((*gensym-counter* (hash-table-count (setf.dot:cache context))))
-      (apply #'call-next-method context name statements
+      (apply #'call-next-method context name statement-generator
              :strict strict :type type
              :pretty pretty
              args)))
@@ -703,7 +731,37 @@
 ;;; (setf.dot:context-put-edge *trace-output* :asdf :qwer)
 ;;; (setf.dot:with-context (make-instance 'setf.dot:stream :stream *trace-output*) (setf.dot:context-put-edge setf.dot:*context* setf.dot:*context* setf.dot:*context*))
 
-
+(defgeneric setf.dot::context-put-edge* (stream attributes head &rest id-list)
+                                              
+  (:documentation "Encode a graph edge with multiple nodes ids to the given STREAM.
+ Accept the 'E' attributes per [http://www.graphviz.org/doc/info/attrs.html].
+ In addition, accept and sequester a TYPE attribute, which defaults to the dynamic *TYPE*, to determine
+ whether to emit a directed edge connector.")
+  (:method ((stream stream) attributes (head t) &rest id-list)
+    (when id-list
+      (destructuring-bind (&key (type setf.dot:*type*) &allow-other-keys)
+                          attributes
+        (when (and setf.dot:*pretty* (plusp setf.dot:*level*))
+          (setf.dot:fresh-line stream))
+        (when (typep head 'standard-object)
+          (setf head (setf.dot::context-id stream head)))
+        (setf.dot:stream-write-id stream head)
+        (loop for node in id-list
+          for node-id = (if (typep node 'standard-object) (setf.dot::context-id stream node) node)
+          do (progn
+               (write-string (if (eq type 'setf.dot:digraph) " -> " " -- ") stream)
+               (setf.dot:stream-write-id stream node-id)
+               (write-char #\space stream)))
+        (when attributes
+          (write-char #\[ stream)
+          (loop for first = t then nil
+            for (name value) on attributes by #'cddr
+            unless first
+            do (write-string ", " stream)
+            unless (member name '(:type))
+            do (setf.dot:stream-write-attribute stream name value))
+          (write-char #\] stream))
+        (write-char #\; stream)))))
 ;;;
 ;;; macro layer
 
