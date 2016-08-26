@@ -151,6 +151,7 @@
            :write-eol
 
            :context-put-edge
+           :context-put-edge*
            :context-put-graph
            :context-put-subgraph
            :context-put-node

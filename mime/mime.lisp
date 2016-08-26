@@ -149,9 +149,18 @@
 
 (defclass mime-type-profile (mime-type)
   ((profile :initarg :profile :initform nil
-             :reader mime-type-profile)
+            :accessor mime-type-profile)
    (base-type :initarg :base-type :initform nil
               :reader mime-type-base-type)))
+
+(defgeneric mime-type-profile-p (mime-type profile)
+  (:method ((mime-type t) (profile t))
+    nil)
+  (:method ((mime-type mime-type-profile) (profile t))
+    (mime-type-profile-p (mime:mime-type-profile mime-type) profile))
+  (:method ((type-profile list) (profile t))
+    (find profile type-profile :test #'iri-equal)))
+
 
 (defclass unsupported-mime-type (mime-type)
   ((expression :allocation :instance :initarg :expression
@@ -319,8 +328,8 @@
 (defgeneric mime-type-namestring (mime-type)
   (:documentation "generate the namestring for a media type given its properties")
   (:method ((media-type mime-type))
-    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]~)"
-            (type-of (mime-type-base-type media-type))
+    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~s\"~]~)"
+            (type-of (or (mime-type-base-type media-type) media-type))
             (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
             (mime-type-charset media-type)
             (mime-type-profile media-type)))
@@ -361,13 +370,13 @@
     "Given a string, parse it - isolating any arguments, coerce the type to the
      class designator and continue with the argument list."
     (declare (dynamic-extent args))
-    (setf designator (remove #\space designator))
+    (setf designator (string-trim #(#\space #\tab) designator))
     (flet ((quote-p (char)
              (case char ((#\" #\') t))))
       (with-standard-io-syntax
           (let ((*read-eval* nil)
                 (*package* (find-package :keyword)))
-            (destructuring-bind (type-name . parameters) (split-string designator "; ")
+            (destructuring-bind (type-name . parameters) (split-string designator ";")
               (setf parameters (loop for parameter in parameters
                                  append (destructuring-bind (attribute value) (split-string parameter "=")
                                           (setf attribute (cons-symbol :keyword attribute))
@@ -416,9 +425,14 @@
 
 (defgeneric canonicalize-media-type-property (property-name value)
   (:method ((name (eql :profile)) (value string))
-    (when (and (plusp (length value)) (eql (char value 0) #\"))
-      (setf value (call-next-method)))
-    (assert (and (stringp value) (> (length value) 5) (string-equal "http:" value :end2 5)) ()
+    (if (plusp (length value))
+        (if (eql (char value 0) #\")
+            (when (eql (char value (1- (length value))) #\")
+              (setf value (split-string (subseq value 1 (1- (length value))) " ")))
+            (unless (eql (char value (1- (length value))) #\")
+              (setf value (split-string value " "))))
+        (setf value ()))
+    (assert (listp value) ()
             "invalid media type profile: ~s" value)
     value)
   (:method ((name (eql :q)) (value string))

@@ -57,6 +57,7 @@
    :mime-type-namestring
    :mime-type-p
    :mime-type-profile
+   :mime-type-profile-p
    :mime-type-quality
    :minor-mime-type
    :size-string
