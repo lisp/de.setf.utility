@@ -156,10 +156,12 @@
 (defgeneric mime-type-profile-p (mime-type profile)
   (:method ((mime-type t) (profile t))
     nil)
-  (:method ((mime-type mime-type-profile) (profile t))
+  (:method ((mime-type mime-type-profile) (profile string))
     (mime-type-profile-p (mime:mime-type-profile mime-type) profile))
-  (:method ((type-profile list) (profile t))
-    (find profile type-profile :test #'iri-equal)))
+  (:method ((type-profile string) (profile string))
+    (string= profile type-profile))
+  (:method ((type-profile list) (profile string))
+    (find profile type-profile :test #'equal)))
 
 
 (defclass unsupported-mime-type (mime-type)
@@ -328,7 +330,7 @@
 (defgeneric mime-type-namestring (mime-type)
   (:documentation "generate the namestring for a media type given its properties")
   (:method ((media-type mime-type))
-    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~s\"~]~)"
+    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]~)"
             (type-of (or (mime-type-base-type media-type) media-type))
             (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
             (mime-type-charset media-type)
