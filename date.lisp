@@ -194,7 +194,9 @@
     name))
 
 (defun date:leap-p (&optional (year (date:year-in-century)))
-  (and (zerop (mod year 4)) (not (zerop (mod year 100)))))
+  (and (zerop (mod year 4))
+       (or (not (zerop (mod year 100)))
+           (zerop (mod year 400)))))
 
 (defun date:month-days (month &optional (year nil))
   "returns the number of days in a (1-based) month."
