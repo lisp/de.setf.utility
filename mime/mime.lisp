@@ -91,7 +91,7 @@
         minor (intern-mime-type-key minor))
   (flet ((defvar-form (class-name)
            `(if (boundp ',class-name)
-              (unless (typep ,class-name ',class-name)
+              (unless (eq (type-of ,class-name) ',class-name) ;; require exact match
                 (error "invalid mime type constant for type '~a': ~s."
                        ',class-name ,class-name))
               (defvar ,class-name (make-instance ',class-name)))))
@@ -103,39 +103,56 @@
       ;; otherwise, it's a concrete mime type.
       ;; define the class - either just the major, or the concrete and
       ;; the minor; export the names and bind them to constant instances.
-      (if (eq minor 'mime:*)
-        `(progn                         ; a prog1 form cause class-not-found error in mcl
-           (defclass ,class-name (major-mime-type)
-             ((major-type :initform ',major :allocation :class) ,@slots)
-             ,@options)
-           (eval-when (:execute :compile-toplevel :load-toplevel)
-             (declaim (special ,class-name))
-             (export ',class-name *mime-type-package*))
-           ,(defvar-form class-name)
-           (find-class ',class-name))
-        (let ((major-class-name (intern-mime-type-key (format nil "~a/~a" major "*")
-                                                      :if-does-not-exist :create))
-              (minor-class-name (intern-mime-type-key (format nil "~a/~a" "*" minor)
-                                                      :if-does-not-exist :create)))
-          (proclaim `(special ,minor-class-name))
-          `(progn 
-             (eval-when (:execute :load-toplevel)
-               (export '(,class-name ,minor-class-name ,major-class-name)
-                       *mime-type-package*))
-             (progn ;; always do it unless (find-class ',minor-class-name nil)
-               (defclass ,minor-class-name (minor-mime-type)
-                 ((minor-type :initform ',minor :allocation :class)))
-               (eval-when (:execute :compile-toplevel :load-toplevel)
-                 (declaim (special ,minor-class-name)))
-               ,(defvar-form minor-class-name))
-             (prog1                     ; see above re major type definition
-                                        ; nb. progn . find-class failed in ccl-1.4
-               (defclass ,class-name ( ,@supers ,major-class-name ,minor-class-name mime:*/*)
-                 ((expression :allocation :class :initform '(,(intern (string major) :keyword)
-                                                             ,(intern (string minor) :keyword)))
-                  ,@slots)
-                 ,@options)
-               ,(defvar-form class-name))))))))
+      (cond ((eq minor 'mime:*)
+             `(progn                         ; a prog1 form cause class-not-found error in mcl
+                (defclass ,class-name (major-mime-type)
+                  ((major-type :initform ',major :allocation :class) ,@slots)
+                  ,@options)
+                (eval-when (:execute :compile-toplevel :load-toplevel)
+                  (declaim (special ,class-name))
+                  (export ',class-name *mime-type-package*))
+                ,(defvar-form class-name)
+                (find-class ',class-name)))
+            ;; leave minor types as markers only. 
+            #+(or)
+            ((eq major 'mime:*)
+             (let ((minor-class-name (intern-mime-type-key (format nil "~a/~a" "*" minor)
+                                                           :if-does-not-exist :create)))
+               ;; it is a minor type defintion
+               `(progn                         ; a prog1 form cause class-not-found error in mcl
+                  (export '(,minor-class-name)
+                          *mime-type-package*)
+                  (defclass ,class-name ,(or supers '(minor-mime-type))
+                    ((minor-type :initform ',minor :allocation :class) ,@slots)
+                    ,@options)
+                  (eval-when (:execute :compile-toplevel :load-toplevel)
+                    (declaim (special ,class-name))
+                    (export ',class-name *mime-type-package*))
+                  ,(defvar-form class-name)
+                  (find-class ',class-name))))
+            (t
+             (let* ((major-class-name (intern-mime-type-key (format nil "~a/~a" major "*")
+                                                            :if-does-not-exist :create))
+                    (minor-class-name (intern-mime-type-key (format nil "~a/~a" "*" minor)
+                                                            :if-does-not-exist :create)))
+               (proclaim `(special ,minor-class-name))
+               `(progn 
+                  (eval-when (:execute :load-toplevel)
+                    (export '(,class-name ,minor-class-name ,major-class-name)
+                            *mime-type-package*))
+                  (defclass ,minor-class-name (minor-mime-type)
+                    ((minor-type :initform ',minor :allocation :class)))
+                  (eval-when (:execute :compile-toplevel :load-toplevel)
+                    (declaim (special ,minor-class-name)))
+                  ,(defvar-form minor-class-name)
+                  (prog1                     ; see above re major type definition
+                    ; nb. progn . find-class failed in ccl-1.4
+                    (defclass ,class-name ( ,@supers ,minor-class-name ,major-class-name mime:*/*)
+                      ((expression :allocation :class :initform '(,(intern (string major) :keyword)
+                                                                  ,(intern (string minor) :keyword)))
+                       ,@slots)
+                      ,@options)
+                    ,(defvar-form class-name)))))))))
 
 (defmacro defmimetype (&rest args)
   `(def-mime-type ,@args))
@@ -244,7 +261,9 @@
   ((file-type :initform "dot" :allocation :class))
   (:documentation "The abstract graphviz mime type is specialized as
  TEXT/X-GRAPHVIZ as per [graphviz-interest](https://mailman.research.att.com/pipermail/graphviz-interest/2009q1/005997.html),
- and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/)."))
+ and as TEXT/VND.GRAPHVIZ as per [IANA](http://www.iana.org/assignments/media-types/text/).
+ an implementation can associate graphviz with numerous media types, of application, image and text major types,
+ in order to specify purpose-specific encodings."))
 
 (def-mime-type ("TEXT" "PLAIN") ()
   ((file-type :initform "txt" :allocation :class)))
