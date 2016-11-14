@@ -106,6 +106,7 @@
    :binary
    :binary-mime-type-p
    :graphviz
+   :graphviz-image
    :html
    :image
    :json
