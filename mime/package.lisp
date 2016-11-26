@@ -56,6 +56,7 @@
    :mime-type-file-type
    :mime-type-namestring
    :mime-type-p
+   :mime-type-parameter
    :mime-type-profile
    :mime-type-profile-p
    :mime-type-quality
@@ -86,6 +87,7 @@
                 :mime-type-expression
                 :mime-type-namestring
                 :mime-type-p
+                :mime-type-parameter
                 :mime-type-profile
                 :mime-type-quality
                 :size-string
@@ -117,6 +119,7 @@
    :mime-type-expression
    :mime-type-namestring
    :mime-type-p
+   :mime-type-parameter
    :mime-type-profile
    :mime-type-quality
    :n3

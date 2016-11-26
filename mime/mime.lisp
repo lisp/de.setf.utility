@@ -56,10 +56,12 @@
 
 (def-mime-type-key "APPLICATION")
 (def-mime-type-key "CSV")
+(def-mime-type-key "EVENT-STREAM")
 (def-mime-type-key "FORM-DATA")
 (def-mime-type-key "HTML")
 (def-mime-type-key "HTML+RDFA")
 (def-mime-type-key "IMAGE")
+(def-mime-type-key "JAVASCRIPT")
 (def-mime-type-key "JSON")
 (def-mime-type-key "JPEG")
 (def-mime-type-key "MARKDOWN")
@@ -159,11 +161,12 @@
   `(def-mime-type ,@args))
 
 (defclass mime-type ()
-   ((expression :allocation :class :reader mime-type-expression :initform nil)
-    (file-type :reader get-mime-type-file-type :initform nil)
-    (quality :initarg :q :initarg :quality :initform 1
-             :reader mime-type-quality)
-    ))
+  ((expression :allocation :class :reader mime-type-expression :initform nil)
+   (file-type :reader get-mime-type-file-type :initform nil)
+   (quality :initarg :q :initarg :quality :initform 1
+            :reader mime-type-quality)
+   (parameters :initarg :parameters :initform ()
+               :reader mime-type-parameters)))
 
 (defclass mime-type-profile (mime-type)
   ((profile :initarg :profile :initform nil
@@ -185,9 +188,6 @@
 (defclass unsupported-mime-type (mime-type)
   ((expression :allocation :instance :initarg :expression
                :initform "expression is required for unsupported media types.")))
-(defmethod initialize-instance :before ((instance unsupported-mime-type) &key &allow-other-keys)
-  ;; ignore everything
-  )
 
 (defclass mime:binary (mime:*/*)
   ()
@@ -314,6 +314,8 @@
 (def-mime-type ("IMAGE" "SVG+XML") (mime::image/svg))
 (def-mime-type ("TEXT" "CSV") ()
   ((file-type :initform "csv" :allocation :class)))
+(def-mime-type ("TEXT" "EVENT-STREAM") ()
+  ())
 (def-mime-type ("TEXT" "N3") (mime:n3)
   ((file-type :initform "nt" :allocation :class))
   (:documentation "The [w3c](http://www.w3.org/TR/rdf-testcases/#ntriples) specifies text/plain."))
@@ -349,20 +351,119 @@
   (:method ((type mime-type))
     type))
 
+(defgeneric cl-user::format-mime-type-parameter (stream value colon at name)
+  (:method (stream (value null) (colon t) (at t) (name t))
+    ;; do nothing
+    )
+  (:method (stream (value t) (colon t) (at t) (name (eql :quality)))
+    (cl-user::format-mime-type-parameter stream value colon at :q))
+  (:method (stream (value number) (colon t) (at t) (name (eql :q)))
+    (format stream "; q=~$" value))
+  (:method (stream (value string) (colon t) (at t) (name (eql :charset)))
+    (format stream "; charset=~a" value))
+  (:method (stream (value symbol) (colon t) (at t) (name (eql :charset)))
+    (format stream "; charset=~a" value))
+  (:method (stream (value list) (colon t) (at t) (name (eql :profile)))
+    (format stream "; profile=\"~{~a~^ ~}\"" value))
+  (:method (stream (value mime-type) (colon t) (at t) (name (eql :accept)))
+    (format stream "; accept=~a" (type-of value)))
+  (:method (stream (value t) (colon t) (at t) (name t))
+    (format stream "; ~a=\"~a\"" name value)))
+
 (defgeneric mime-type-namestring (mime-type)
   (:documentation "generate the namestring for a media type given its properties")
   (:method ((media-type mime-type))
-    (format nil "~(~a~@[; q=~$~]~@[; charset=~a~]~@[; profile=\"~a\"~]~)"
+    (format nil "~(~a~{~V/format-mime-type-parameter/~}~)"
             (type-of (or (mime-type-base-type media-type) media-type))
-            (let ((q (mime-type-quality media-type))) (unless (= q 1) q))
-            (mime-type-charset media-type)
-            (mime-type-profile media-type)))
+            (mime-type-parameters media-type)))
   (:method ((media-type unsupported-mime-type))
     (mime-type-expression media-type))
   (:method ((type string)) ; assume it is correct
     type)
   (:method ((type null))
     nil))
+  
+
+(defgeneric mime:mime-type-parameter (media-type attribute)
+  (:method ((media-type mime-type) attribute)
+    (getf (mime-type-parameters media-type) attribute)))
+
+
+
+;;; instantiation
+
+(defmethod initialize-instance :before ((instance unsupported-mime-type) &key &allow-other-keys)
+  ;; ignore everything
+  )
+
+(defmethod initialize-instance ((instance mime-type-profile) &rest initargs
+                               &key parameters
+                               (profile (getf parameters :profile)))
+  (declare (dynamic-extent initargs))
+  (apply #'call-next-method instance
+         :profile profile
+         initargs))
+
+(defmethod initialize-instance ((instance mime:*/*) &rest initargs
+                               &key parameters
+                               (charset (getf parameters :charset)))
+  (declare (dynamic-extent initargs))
+  (apply #'call-next-method instance
+         :charset charset
+         initargs))
+
+(defmethod initialize-instance :around ((instance mime-type) &rest initargs
+                                        &key parameters)
+  "The :around mime-type initialization canonicalizes the given parameters by
+   trimming whitespace and delegating to canonicalize-media-type-parameter to
+   ensure that their canonical form is available to specialized initialization."
+  (declare (dynamic-extent initargs))
+  (apply #'call-next-method instance
+         :parameters (loop for (attribute value) on parameters by #'cddr
+                       do (setf attribute (etypecase attribute
+                                            (keyword attribute)
+                                            ((or symbol string) (cons-symbol :keyword (string-trim #(#\space #\tab) attribute)))))
+                       append (list attribute
+                                    (canonicalize-media-type-parameter attribute (string-trim #(#\space #\tab) value))))
+         initargs))
+
+
+(defgeneric canonicalize-media-type-parameter (parameter-name value)
+  (:documentation "canonical individual parameters from parsed strings to the
+   respective value.")
+  (:method ((name t) (value string))
+    "The default method just reads the string value"
+    (assert (plusp (length value)) () "invalid media type parameter: ~s: ~s" name value)
+    (let ((*read-eval* nil))
+      (read-from-string value)))
+
+  (:method ((name (eql :profile)) (value string))
+    (if (plusp (length value))
+        (if (eql (char value 0) #\")
+            (when (eql (char value (1- (length value))) #\")
+              (setf value (split-string (subseq value 1 (1- (length value))) " ")))
+            (unless (eql (char value (1- (length value))) #\")
+              (setf value (split-string value " "))))
+        (setf value ()))
+    (assert (listp value) ()
+            "invalid media type profile: ~s" value)
+    value)
+
+  (:method ((name (eql :charset)) (value string))
+    (intern (string-upcase value) :keyword))
+
+  (:method ((name (eql :q)) (value string))
+    (canonicalize-media-type-parameter :quality value))
+  (:method ((name (eql :quality)) (value string))
+    (labels ((qvalue-char-p (c) (or (digit-char-p c) (eql c #\.)))
+             (parse-qvalue (qvalue)
+               (assert (every #'qvalue-char-p qvalue) ()
+                       "Invalid qvalue: '~a'" qvalue)
+               (read-from-string qvalue)))
+      (parse-qvalue value)))
+
+  (:method ((name (eql :accept)) (value string))
+    (mime-type value)))
 
 
 (defgeneric mime-type (designator &rest args)
@@ -390,9 +491,12 @@
         (symbol
          (apply #'mime-type major minor args)))))
 
-  (:method ((designator string) &rest args &key (if-does-not-exist 'unsupported-mime-type idne-s) &allow-other-keys)
-    "Given a string, parse it - isolating any arguments, coerce the type to the
-     class designator and continue with the argument list."
+  (:method ((designator string) &rest args
+            &key (if-does-not-exist 'unsupported-mime-type idne-s) &allow-other-keys)
+    "Given a string, parse it - isolating any parameter, coerce the type to the
+     class designator, with possible specialization due to a profile parameter, and
+     instantiate given the effective class, the parsed parameter _strings_ and
+     the given initialization argument list."
     (declare (dynamic-extent args))
     (setf designator (string-trim #(#\space #\tab) designator))
     (flet ((quote-p (char)
@@ -403,9 +507,8 @@
             (destructuring-bind (type-name . parameters) (split-string designator ";")
               (setf parameters (loop for parameter in parameters
                                  append (destructuring-bind (attribute value) (split-string parameter "=")
-                                          (setf attribute (cons-symbol :keyword attribute))
-                                          (list attribute
-                                                (canonicalize-media-type-property attribute value)))))
+                                          ;; ensure exactly two constituents
+                                          (list attribute value))))
               (destructuring-bind (&key profile &allow-other-keys) parameters
                 (when idne-s
                   (setf args (plist-difference args '(:if-does-not-exist))))
@@ -416,7 +519,7 @@
                            ;; look for a possible subtype
                            (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
                              (when profile-type (setf mime-type-symbol profile-type))))
-                         (apply #'mime-type mime-type-symbol (append parameters args)))
+                         (apply #'mime-type mime-type-symbol :parameters parameters args))
                         (if-does-not-exist
                          (assert (subtypep if-does-not-exist 'mime-type) ()
                                  "Specified media type must specialize mime:mime-type: ~s" if-does-not-exist)
@@ -447,30 +550,6 @@
                              (string-equal (mime-type-file-type mime-type) file-type))
                     (return mime-type)))))))))
 
-(defgeneric canonicalize-media-type-property (property-name value)
-  (:method ((name (eql :profile)) (value string))
-    (if (plusp (length value))
-        (if (eql (char value 0) #\")
-            (when (eql (char value (1- (length value))) #\")
-              (setf value (split-string (subseq value 1 (1- (length value))) " ")))
-            (unless (eql (char value (1- (length value))) #\")
-              (setf value (split-string value " "))))
-        (setf value ()))
-    (assert (listp value) ()
-            "invalid media type profile: ~s" value)
-    value)
-  (:method ((name (eql :q)) (value string))
-    (canonicalize-media-type-property :quality value))
-  (:method ((name (eql :quality)) (value string))
-    (labels ((qvalue-char-p (c) (or (digit-char-p c) (eql c #\.)))
-             (parse-qvalue (qvalue)
-               (assert (every #'qvalue-char-p qvalue) ()
-                       "Invalid qvalue: '~a'" qvalue)
-               (read-from-string qvalue)))
-      (parse-qvalue value)))
-  (:method ((name t) (value string))
-    (assert (plusp (length value)) () "invalid media type property: ~s" value)
-    (read-from-string value)))
 
 (defgeneric profile-media-type-type (root-type profile)
   (:documentation "iterate over known media type classes to locate one
@@ -523,13 +602,7 @@
 
     (:method ((old standard-object) (new standard-object) &rest args)
       (apply #'shared-initialize new t args)
-      new)
-
-    (:method de.setf.utility::initialize-clone ((old mime:text/*) (new mime:text/*) &rest args
-                                                &key (charset (slot-value old 'charset)))
-             (apply #'call-next-method old new
-                    :charset charset
-                    args)))
+      new))
   (defgeneric de.setf.utility::clone-instance-as (instance class &rest initargs)
   (:method ((instance standard-object) (class symbol) &rest initargs)
            (apply #'de.setf.utility::clone-instance-as instance (find-class class) initargs))
@@ -554,11 +627,36 @@
              args)))
   )
 
+(defmethod de.setf.utility::initialize-clone ((old mime-type) (new mime-type) &rest args
+                                              &key (expression (slot-value old 'expression))
+                                              ;; where file-type is allocated by instance, the class must provide a method
+                                              ;; (file-type (slot-value old 'file-type))
+                                              (quality (slot-value old 'quality))
+                                              (parameters (slot-value old 'parameters)))
+  (apply #'call-next-method old new
+         :expression expression
+         :quality quality
+         :parameters parameters
+         args))
+
+(defmethod de.setf.utility::initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
+                                              &key (profile (slot-value old 'profile)))
+  (apply #'call-next-method old new
+         :profile profile
+         args))
+
+(defmethod de.setf.utility::initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
+                                              &key (profile (slot-value old 'profile)))
+  (apply #'call-next-method old new
+         :profile profile
+         args))
 
 (defmethod content-encoding ((mime-type mime:text/*) &rest args)
   (declare (dynamic-extent args) (ignore args))
   (content-encoding (mime-type-charset mime-type)))
 
+;;; (mime-type "text/tab-separated-values; charset=utf-8")
+;;; (mime-type-namestring (mime-type "text/tab-separated-values; accept=text/html; q=0.5"))
 
 :mime
 
