@@ -163,7 +163,7 @@
 (defclass mime-type ()
   ((expression :allocation :class :reader mime-type-expression :initform nil)
    (file-type :reader get-mime-type-file-type :initform nil)
-   (quality :initarg :q :initarg :quality :initform 1
+   (quality :initarg :quality :initform 1
             :reader mime-type-quality)
    (parameters :initarg :parameters :initform ()
                :reader mime-type-parameters)))
@@ -395,6 +395,18 @@
 (defmethod initialize-instance :before ((instance unsupported-mime-type) &key &allow-other-keys)
   ;; ignore everything
   )
+
+(defmethod initialize-instance ((instance mime-type) &rest initargs
+                                &key parameters
+                                ;; reduce initargs to just :quality
+                                (q nil)
+                                (quality (or q
+                                             (getf parameters :quality)
+                                             (getf parameters :q))))
+  (declare (dynamic-extent initargs))
+  (apply #'call-next-method instance
+         :quality quality
+         initargs))
 
 (defmethod initialize-instance ((instance mime-type-profile) &rest initargs
                                &key parameters
