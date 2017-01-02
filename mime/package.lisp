@@ -66,7 +66,7 @@
    :unsupported-mime-type
    ))
 
-(defpackage :mime
+(modpackage :mime
   (:nicknames :de.setf.utility.mime.type)
   (:use )
 
