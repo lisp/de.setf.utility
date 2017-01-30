@@ -583,9 +583,9 @@
 
 (unless (fboundp 'clone-instance)
   (eval-when (:compile-toplevel :load-toplevel :execute)
-    (export '(clone-instance
-              initialize-clone
-              clone-instance-as)
+    (export '(de.setf.utility::clone-instance
+              de.setf.utility::initialize-clone
+              de.setf.utility::clone-instance-as)
             :de.setf.utility)))
 
 (unless (fboundp 'clone-instance)
