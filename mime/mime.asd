@@ -19,7 +19,8 @@
 
 
 (asdf:defsystem :de.setf.utility.mime
-  :depends-on (:de.setf.utility)
+  :depends-on (:de.setf.utility
+               :closer-mop) ;; for slot initarg introspection
   :description "de.setf.utility.mime defines singletons to designate mime content types and
  codecs for the related content encodings."
   :serial t
