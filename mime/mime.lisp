@@ -581,8 +581,8 @@
 ;;;
 ;;; simple cloning
 
-(unless (fboundp 'clone-instance)
-  (eval-when (:compile-toplevel :load-toplevel :execute)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (fboundp 'de.setf.utility::clone-instance)
     (export '(de.setf.utility::clone-instance
               de.setf.utility::initialize-clone
               de.setf.utility::clone-instance-as)
