@@ -163,7 +163,7 @@
 (defclass mime-type ()
   ((expression :allocation :class :reader mime-type-expression :initform nil)
    (file-type :reader get-mime-type-file-type :initform nil)
-   (quality :initarg :quality :initform 1
+   (quality :initarg :quality :initarg :q :initform 1
             :reader mime-type-quality)
    (parameters :initarg :parameters :initform ()
                :reader mime-type-parameters)))
@@ -396,48 +396,30 @@
   ;; ignore everything
   )
 
-(defmethod initialize-instance ((instance mime-type) &rest initargs
-                                &key parameters
-                                ;; reduce initargs to just :quality
-                                (q nil)
-                                (quality (or q
-                                             (getf parameters :quality)
-                                             (getf parameters :q))))
-  (declare (dynamic-extent initargs))
-  (apply #'call-next-method instance
-         :quality quality
-         initargs))
-
-(defmethod initialize-instance ((instance mime-type-profile) &rest initargs
-                               &key parameters
-                               (profile (getf parameters :profile)))
-  (declare (dynamic-extent initargs))
-  (apply #'call-next-method instance
-         :profile profile
-         initargs))
-
-(defmethod initialize-instance ((instance mime:*/*) &rest initargs
-                               &key parameters
-                               (charset (getf parameters :charset)))
-  (declare (dynamic-extent initargs))
-  (apply #'call-next-method instance
-         :charset charset
-         initargs))
 
 (defmethod initialize-instance :around ((instance mime-type) &rest initargs
                                         &key parameters)
   "The :around mime-type initialization canonicalizes the given parameters by
    trimming whitespace and delegating to canonicalize-media-type-parameter to
-   ensure that their canonical form is available to specialized initialization."
+   ensure that their canonical form is available to specialized initialization.
+   any parameters which are know initargs are added to the initarg list."
   (declare (dynamic-extent initargs))
-  (apply #'call-next-method instance
-         :parameters (loop for (attribute value) on parameters by #'cddr
-                       do (setf attribute (etypecase attribute
-                                            (keyword attribute)
-                                            ((or symbol string) (cons-symbol :keyword (string-trim #(#\space #\tab) attribute)))))
-                       append (list attribute
-                                    (canonicalize-media-type-parameter attribute (string-trim #(#\space #\tab) value))))
-         initargs))
+  (if parameters
+      (let ((slot-definitions (c2mop:class-slots (class-of instance))))
+        (apply #'call-next-method instance
+               :parameters (loop for (attribute value) on parameters by #'cddr
+                             do (setf attribute (etypecase attribute
+                                                  (keyword attribute)
+                                                  ((or symbol string) (cons-symbol :keyword (string-trim #(#\space #\tab) attribute))))
+                                      value (canonicalize-media-type-parameter attribute (string-trim #(#\space #\tab) value)))
+                             append (list attribute value)
+                             when (and (eq (getf initargs attribute attribute) attribute)
+                                       (loop for sd in slot-definitions
+                                         when (find attribute (c2mop:slot-definition-initargs sd))
+                                         return t))
+                             do (setf initargs (list* attribute value initargs)))
+               initargs))
+      (call-next-method)))
 
 
 (defgeneric canonicalize-media-type-parameter (parameter-name value)
@@ -599,14 +581,15 @@
 ;;;
 ;;; simple cloning
 
-(unless (fboundp 'de.setf.utility::clone-instance)
+(unless (fboundp 'clone-instance)
   (eval-when (:compile-toplevel :load-toplevel :execute)
-    (export '(de.setf.utility::clone-instance
-              de.setf.utility::initialize-clone
-              de.setf.utility::clone-instance-as)
-            :de.setf.utility))
+    (export '(clone-instance
+              initialize-clone
+              clone-instance-as)
+            :de.setf.utility)))
 
-  (defgeneric de.setf.utility::initialize-clone (old new &rest args)
+(unless (fboundp 'clone-instance)
+  (defgeneric initialize-clone (old new &rest args)
     (:documentation
       "invoke shared-initialize on the collected initargs to initialize slots
        prior to copying from the instance to the clonein order to override the existing
@@ -615,9 +598,9 @@
     (:method ((old standard-object) (new standard-object) &rest args)
       (apply #'shared-initialize new t args)
       new))
-  (defgeneric de.setf.utility::clone-instance-as (instance class &rest initargs)
+  (defgeneric clone-instance-as (instance class &rest initargs)
   (:method ((instance standard-object) (class symbol) &rest initargs)
-           (apply #'de.setf.utility::clone-instance-as instance (find-class class) initargs))
+           (apply #'clone-instance-as instance (find-class class) initargs))
   (:method ((instance standard-object) (class class)
                                        &rest initargs &aux new)
            "observing that both mcl and allegro support allocate-instance
@@ -627,38 +610,38 @@
            (setf new (allocate-instance class))
            ;; pass any initargs through and augment them on the
            ;; way to the ultimate shared-initialize call
-           (apply #'de.setf.utility::initialize-clone instance new initargs)
+           (apply #'initialize-clone instance new initargs)
            new))
 
-  (defgeneric de.setf.utility::clone-instance (instance &rest args)
+  (defgeneric clone-instance (instance &rest args)
     (:documentation 
       "reproduce a given instance.")
 
     (:method ((instance standard-object) &rest args)
-      (apply #'de.setf.utility::clone-instance-as instance (class-of instance)
+      (apply #'clone-instance-as instance (class-of instance)
              args)))
   )
 
-(defmethod de.setf.utility::initialize-clone ((old mime-type) (new mime-type) &rest args
-                                              &key (expression (slot-value old 'expression))
-                                              ;; where file-type is allocated by instance, the class must provide a method
-                                              ;; (file-type (slot-value old 'file-type))
-                                              (quality (slot-value old 'quality))
-                                              (parameters (slot-value old 'parameters)))
+(defmethod initialize-clone ((old mime-type) (new mime-type) &rest args
+                             &key (expression (slot-value old 'expression))
+                             ;; where file-type is allocated by instance, the class must provide a method
+                             ;; (file-type (slot-value old 'file-type))
+                             (quality (slot-value old 'quality))
+                             (parameters (slot-value old 'parameters)))
   (apply #'call-next-method old new
          :expression expression
          :quality quality
          :parameters parameters
          args))
 
-(defmethod de.setf.utility::initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
-                                              &key (profile (slot-value old 'profile)))
+(defmethod initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
+                             &key (profile (slot-value old 'profile)))
   (apply #'call-next-method old new
          :profile profile
          args))
 
-(defmethod de.setf.utility::initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
-                                              &key (profile (slot-value old 'profile)))
+(defmethod initialize-clone ((old mime-type-profile) (new mime-type-profile) &rest args
+                             &key (profile (slot-value old 'profile)))
   (apply #'call-next-method old new
          :profile profile
          args))
@@ -669,6 +652,17 @@
 
 ;;; (mime-type "text/tab-separated-values; charset=utf-8")
 ;;; (mime-type-namestring (mime-type "text/tab-separated-values; accept=text/html; q=0.5"))
+
+(unless (and (every #'eql
+                    (loop for args in '(("text/html") ("text/html;q=.1") ("text/html;q=.1" :q .2) ("text/html" :q .2))
+                      collect (mime-type-quality (apply #'mime-type args)))
+                    '(1 .1 .2 .2))
+             (every #'eql
+                    (loop for args in '(("text/html") ("text/html;charset=usascii"))
+                      collect (mime-type-charset (apply #'mime-type args)))
+                    '(:ISO-8859-1 :usascii))
+             )
+  (cerror "Ignore the error and continue:" "Some mime type quality test failed"))
 
 :mime
 
