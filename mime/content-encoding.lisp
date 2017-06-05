@@ -192,7 +192,8 @@ from de.setf.xml suffice."))
     (compute-charset-codecs (content-encoding charset)))
   (:method ((encoding content-encoding))
     (values (content-encoding-byte-decoder encoding)
-            (content-encoding-byte-encoder encoding))))
+            (content-encoding-byte-encoder encoding)
+            (content-encoding-encoded-code-point-size encoding))))
 
 
 (defgeneric encode-string (string encoding)
