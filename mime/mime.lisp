@@ -517,7 +517,7 @@
                         (if-does-not-exist
                          (assert (subtypep if-does-not-exist 'mime-type) ()
                                  "Specified media type must specialize mime:mime-type: ~s" if-does-not-exist)
-                         (apply #'make-instance if-does-not-exist :expression type-name parameters))
+                         (apply #'make-instance if-does-not-exist :expression type-name :parameters parameters args))
                         (t
                          nil)))))))))
 
