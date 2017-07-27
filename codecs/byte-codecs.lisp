@@ -33,6 +33,8 @@
 
 
 
+;;; decoders accept a get-byte operator, which retrieves the bytes from succesive buffer positions,
+;;; compose the value according to endian order and then, for signed, interpret the sign mit.
 
 (defun decode-unsigned-byte (get-byte bit-count)
   (declare (type (function () (unsigned-byte 8)) get-byte)
@@ -44,9 +46,31 @@
       (setf value
             (if (= i 0) (funcall get-byte) (+ (ash value 8) (funcall get-byte)))))))
 
+(defun decode-unsigned-byte-le (get-byte bit-count)
+  (declare (type (function () (unsigned-byte 8)) get-byte)
+           (dynamic-extent get-byte))
+  (ecase bit-count
+    (8 (funcall get-byte))
+    (16 (+ (funcall get-byte) (ash (funcall get-byte) 8)))
+    (32 (+ (+ (funcall get-byte) (ash (funcall get-byte) 8))
+           (+ (ash (funcall get-byte) 16) (ash (funcall get-byte) 24))))
+    (64 (+ (funcall get-byte) (ash (funcall get-byte) 8)
+           (ash (funcall get-byte) 16) (ash (funcall get-byte) 24)
+           (ash (funcall get-byte) 32) (ash (funcall get-byte) 40)
+           (ash (funcall get-byte) 48) (ash (funcall get-byte) 56)))))
+
 (defun decode-signed-byte (get-byte bit-count)
   (declare (dynamic-extent get-byte))
   (let ((value (decode-unsigned-byte get-byte bit-count)))
+    (ecase bit-count
+      (8 (sign-byte-8 value))
+      (16 (sign-byte-16 value))
+      (32 (sign-byte-32 value))
+      (64 (sign-byte-64 value)))))
+
+(defun decode-signed-byte-le (get-byte bit-count)
+  (declare (dynamic-extent get-byte))
+  (let ((value (decode-unsigned-byte-le get-byte bit-count)))
     (ecase bit-count
       (8 (sign-byte-8 value))
       (16 (sign-byte-16 value))
@@ -84,6 +108,17 @@
     (dotimes (i byte-count)
       (funcall put-byte (ldb (byte 8 bit-offset) value))
       (decf bit-offset 8))
+    (values)))
+
+(defun encode-unsigned-byte-le (put-byte value bit-count)
+  (declare (type (function ((unsigned-byte 8)) t) put-byte)
+           (dynamic-extent put-byte))
+  (let* ((byte-count (ecase bit-count (8 1) (16 2) (32 4) (64 8)))
+         (bit-offset 0))
+    (declare (type unsigned-byte value) (type fixnum byte-count bit-offset))
+    (dotimes (i byte-count)
+      (funcall put-byte (ldb (byte 8 bit-offset) value))
+      (incf bit-offset 8))
     (values)))
 
 (define-compiler-macro encode-unsigned-byte (&whole form put-byte value bit-count)
@@ -216,8 +251,10 @@
                     (unsigned-writer-name (cons-symbol :de.setf.utility.codecs :stream-write-unsigned-byte- bit-count-string))
                     (signed-getter-name (cons-symbol :de.setf.utility.codecs :buffer-get-signed-byte- bit-count-string))
                     (unsigned-getter-name (cons-symbol :de.setf.utility.codecs :buffer-get-unsigned-byte- bit-count-string))
+                    (unsigned-getter-name-le (cons-symbol :de.setf.utility.codecs :buffer-get-unsigned-byte- bit-count-string :-le))
                     (signed-setter-name (cons-symbol :de.setf.utility.codecs :buffer-set-signed-byte- bit-count-string))
-                    (unsigned-setter-name (cons-symbol :de.setf.utility.codecs :buffer-set-unsigned-byte- bit-count-string)))
+                    (unsigned-setter-name (cons-symbol :de.setf.utility.codecs :buffer-set-unsigned-byte- bit-count-string))
+                    (unsigned-setter-name-le (cons-symbol :de.setf.utility.codecs :buffer-set-unsigned-byte- bit-count-string :-le)))
 
                `(progn
                   (defun ,signed-getter-name (buffer position)
@@ -234,6 +271,13 @@
                       (declare (dynamic-extent #'get-byte)
                                (ftype (function () (unsigned-byte 8)) get-byte))
                       (values (decode-unsigned-byte #'get-byte ,bit-count) position)))
+                  (defun ,unsigned-getter-name-le (buffer position)
+                    (assert-argument-type ,signed-setter-name buffer byte-buffer)
+                    (flet ((get-byte ()
+                             (aref buffer (shiftf position (1+ position)))))
+                      (declare (dynamic-extent #'get-byte)
+                               (ftype (function () (unsigned-byte 8)) get-byte))
+                      (values (decode-unsigned-byte-le #'get-byte ,bit-count) position)))
                   
                   (defun ,signed-setter-name (buffer value position)
                     (assert-argument-type ,signed-setter-name value ,signed-type)
@@ -268,8 +312,32 @@
                           (declare (dynamic-extent #'put-byte #'simple-put-byte)
                                    (ftype (function ((unsigned-byte 8)) (values)) put-byte simple-put-byte))
                           (encode-unsigned-byte (etypecase buffer
-                                         (simple-byte-buffer #'simple-put-byte)
-                                         (byte-buffer #'put-byte))
+                                                  (simple-byte-buffer #'simple-put-byte)
+                                                  (byte-buffer #'put-byte))
+                                       value ,bit-count)
+                          position)))
+                  (defun ,unsigned-setter-name-le (buffer value position)
+                    (assert-argument-type ,signed-setter-name value ,unsigned-type)
+                    (assert-argument-type ,signed-setter-name buffer byte-buffer)
+                    (assert-condition (and (typep position 'fixnum) (<= (+ position ,byte-count) (length buffer)))
+                                      ,signed-setter-name "value overflows buffer: (~s + ~s), ~s"
+                                      position ,byte-count (length buffer))
+                    ,(if (eql bit-count 8)
+                       `(progn (setf (aref buffer position) (logand value #xff))
+                               (1+ position))
+                       `(flet ((put-byte (byte)
+                                 (declare (type byte-buffer buffer))
+                                 (setf (aref buffer (shiftf position (1+ position))) byte)
+                                 (values))
+                               (simple-put-byte (byte)
+                                 (declare (type simple-byte-buffer buffer))
+                                 (setf (aref buffer (shiftf position (1+ position))) byte)
+                                 (values)))
+                          (declare (dynamic-extent #'put-byte #'simple-put-byte)
+                                   (ftype (function ((unsigned-byte 8)) (values)) put-byte simple-put-byte))
+                          (encode-unsigned-byte-le (etypecase buffer
+                                                     (simple-byte-buffer #'simple-put-byte)
+                                                     (byte-buffer #'put-byte))
                                        value ,bit-count)
                           position)))
                   
@@ -320,3 +388,5 @@
   (def-codec 16)
   (def-codec 32)
   (def-codec 64))
+
+
