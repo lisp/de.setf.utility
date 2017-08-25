@@ -172,7 +172,6 @@
                (loop for (key left-value) on left by #'cddr
                      do (let ((right-value (getf right key left)))
                           (unless (test-equal left-value right-value)
-                            (break "test-equal plist failed.")
                             (return nil)))
                      finally (return t))))
       (if (ignore-errors (and (keywordp (first left)) (keywordp (first right))
