@@ -495,7 +495,7 @@
 (defgeneric setf.dot:context-put-graph (stream name statements
                                      &key
                                      if-exists if-does-not-exist       ; file creation
-                                     type strict name statement-type pretty ; global properties
+                                     type strict statement-type pretty ; global properties
                                      graph node edge    ; default attributes, by respective statement type
                                      aspect bb bgcolor center charset clusterrank color colorscheme comment
                                      compound concentrate
