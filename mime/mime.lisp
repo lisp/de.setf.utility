@@ -376,6 +376,14 @@
     (format nil "~(~a~{~V/format-mime-type-parameter/~}~)"
             (type-of (or (mime-type-base-type media-type) media-type))
             (mime-type-parameters media-type)))
+  (:method ((media-type mime:*/*))
+    (let ((base (call-next-method))
+          (charset (mime-type-charset media-type))
+          (charset-parameter (getf (mime-type-parameters media-type) :charset)))
+      (if (and charset (not charset-parameter))
+          (concatenate 'string base
+                       (cl-user::format-mime-type-parameter nil charset nil nil :charset))
+          base)))
   (:method ((media-type unsupported-mime-type))
     (mime-type-expression media-type))
   (:method ((type string)) ; assume it is correct
