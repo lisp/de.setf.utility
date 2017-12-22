@@ -175,13 +175,11 @@
               :reader mime-type-base-type)))
 
 (defgeneric mime-type-profile-p (mime-type profile)
-  (:method ((mime-type t) (profile t))
-    nil)
-  (:method ((mime-type mime-type-profile) (profile string))
+  (:method ((type-profile t) (profile t))
+    (equal mime-type profile))
+  (:method ((mime-type mime-type-profile) (profile t))
     (mime-type-profile-p (mime:mime-type-profile mime-type) profile))
-  (:method ((type-profile string) (profile string))
-    (string= profile type-profile))
-  (:method ((type-profile list) (profile string))
+  (:method ((type-profile list) (profile t))
     (find profile type-profile :test #'equal)))
 
 
