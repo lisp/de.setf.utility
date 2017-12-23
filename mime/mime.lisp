@@ -175,7 +175,7 @@
               :reader mime-type-base-type)))
 
 (defgeneric mime-type-profile-p (mime-type profile)
-  (:method ((type-profile t) (profile t))
+  (:method ((mime-type t) (profile t))
     (equal mime-type profile))
   (:method ((mime-type mime-type-profile) (profile t))
     (mime-type-profile-p (mime:mime-type-profile mime-type) profile))
