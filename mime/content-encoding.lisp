@@ -61,6 +61,22 @@ from de.setf.xml suffice."))
     :initarg :documentation :initform nil
     :accessor content-encoding-documentation)))
 
+(define-condition simple-encoding-error (simple-type-error)
+  ()
+  (:default-initargs
+      :format-control "The character ~S (code x~2,'0x) cannot be encoded as ~a."))
+(defun simple-encoding-error (&key datum expected-type encoding)
+  (error 'simple-encoding-error :datum datum :expected-type expected-type
+         :format-arguments (list datum (char-code datum) encoding)))
+
+(define-condition simple-decoding-error (simple-type-error)
+  ()
+  (:default-initargs
+      :format-control "The code x~2,'0x cannot be decoded as ~a."))
+(defun simple-decoding-error (&key datum expected-type encoding)
+  (error 'simple-encoding-error :datum datum :expected-type expected-type
+         :format-arguments (list datum encoding)))
+
 (def-class-constructor content-encoding
   (:method ((name string) &rest initargs)
     (declare (dynamic-extent initargs))
@@ -142,7 +158,7 @@ from de.setf.xml suffice."))
                            (ash (logand #x3f (read-byte-code)) 6)
                            (logand (read-byte-code) #x3f)))
                   (t
-                   (error "Illegal UTF-8 data: x~2,'0x." byte1))))))
+                   (simple-decoding-error :datum byte1 :encoding :utf-8))))))
        (utf8-code-point-size (char)
          (let ((code (char-code char)))
              (declare (type (mod #x110000) code))
@@ -159,8 +175,11 @@ from de.setf.xml suffice."))
 
 (flet ((iso-8859-1-encode (char put-byte destination)
          (let ((code (char-code char)))
-           (declare (type (mod #x100) code))
-           (assert (< code #x100) () "Cannot be encoded as iso-8859-1: ~s" char)
+           (declare ;(type (mod #x100) code)
+                    ;; permit assertion to run
+                    (optimize (speed 3) (safety 0)))
+           (unless (< code #x100)
+             (simple-encoding-error :datum char :encoding :iso-8859-1))
            (funcall put-byte destination code)))
        (iso-8859-1-decode (get-byte source)
          (code-char (or (funcall get-byte source)
