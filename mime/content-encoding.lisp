@@ -64,18 +64,21 @@ from de.setf.xml suffice."))
 (define-condition simple-encoding-error (simple-type-error)
   ()
   (:default-initargs
-      :format-control "The character ~S (code x~2,'0x) cannot be encoded as ~a."))
+      :format-control "The character ~S ~@[(code x~2,'0x) ~]cannot be encoded as ~a."))
 (defun simple-encoding-error (&key datum expected-type encoding)
   (error 'simple-encoding-error :datum datum :expected-type expected-type
-         :format-arguments (list datum (char-code datum) encoding)))
+         :format-arguments (list datum (typecase datum (character (char-code datum))) encoding)))
+;;; (dsu:simple-encoding-error :datum #\c :expected-type 'string :encoding t)
+;;; (dsu:simple-encoding-error :datum 1 :expected-type 'string :encoding t)
 
 (define-condition simple-decoding-error (simple-type-error)
   ()
   (:default-initargs
       :format-control "The code x~2,'0x cannot be decoded as ~a."))
 (defun simple-decoding-error (&key datum expected-type encoding)
-  (error 'simple-encoding-error :datum datum :expected-type expected-type
+  (error 'simple-decoding-error :datum datum :expected-type expected-type
          :format-arguments (list datum encoding)))
+;;; (dsu:simple-decoding-error :datum 1 :expected-type 'string :encoding t)
 
 (def-class-constructor content-encoding
   (:method ((name string) &rest initargs)
