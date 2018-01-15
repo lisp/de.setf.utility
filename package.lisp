@@ -56,6 +56,8 @@
    :require-features
    :runtime-directory-name
    :set-relative-logical-pathname-translations
+   :simple-encoding-error
+   :simple-decoding-error
    :stream-reader
    :stream-writer
    :stream-tyi
