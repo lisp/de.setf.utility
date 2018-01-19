@@ -505,6 +505,7 @@
           (let ((*read-eval* nil)
                 (*package* (find-package :keyword)))
             (destructuring-bind (type-name . parameters) (split-string designator ";")
+              (when (equal type-name "*") (setf type-name "*/*"))
               (setf parameters (loop for parameter in parameters
                                  append (destructuring-bind (attribute value) (split-string parameter "=")
                                           ;; ensure exactly two constituents
