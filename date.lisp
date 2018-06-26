@@ -121,11 +121,11 @@
 (defvarconstant +ordinal-month-quarter+ #(0 1 1 1 2 2 2 3 3 3 4 4 4)
   "a constant array of the respective quarter for each (1-based) month.")
 
-(defvar *day-names* #("Sunday" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
-  "a static array of the (0-based) day names.")
+(defvar *day-names* #("Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday")
+  "a static array of the (0-based) day names. Monday is [0]")
 
-(defvar *day-names-from-one* #(nil "Sunday" "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday")
-  "a static array of the (1-based) day names.")
+(defvar *day-names-from-one* #(nil "Monday" "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday")
+  "a static array of the (1-based) day names. Monday is [1]")
 
 (defvar *month-day-names*
   (let ((names (make-array 32 :initial-element nil)))

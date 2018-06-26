@@ -168,6 +168,10 @@
    (parameters :initarg :parameters :initform ()
                :reader mime-type-parameters)))
 
+(defmethod print-object ((object dsu:mime-type) stream)
+  (handler-case (call-next-method)
+    (error (c) (format stream "erroneous ~s: ~s" (type-of object) c))))
+
 (defclass mime-type-profile (mime-type)
   ((profile :initarg :profile :initform nil
             :accessor mime-type-profile)
@@ -279,8 +283,7 @@
   (:documentation "The N3 mime class is the abstract base class for application/n3 and text/n3."))
 
 (defclass mime:turtle (mime:text/plain mime:rdf)
-  ((charset
-    :initform nil))
+  ((charset :initform :utf-8))
   (:documentation "The TURTLE mime class is the abstract base class for text/turtle."))
 
 (def-mime-type ("APPLICATION" "JSON"))
@@ -291,7 +294,8 @@
   ((file-type :initform "html" :allocation :class))
   (:documentation "as per [w3c](http://www.w3.org/TR/xhtml-media-types/)."))
 (def-mime-type ("APPLICATION" "XHTML+RDFA") (mime:application/xhtml+xml))
-(def-mime-type ("APPLICATION" "XML"))
+(def-mime-type ("APPLICATION" "XML")
+  ((charset :initform :utf-8)))
 (def-mime-type ("APPLICATION" "RDF+XML") (mime:rdf mime:application/xml)
   ((file-type :initform "rdf" :allocation :class))
   (:documentation "This includes OWL as well as per [w3c](http://www.w3.org/TR/owl-ref/#MIMEType)."))
@@ -315,7 +319,8 @@
   ((charset :initform :utf-8)
    (file-type :initform "csv" :allocation :class))
   (:documentation "Provides for SPARQL results encoded as a stream of tab-separated values lines.
- As per rfc7111 the default charset is utf-8"))
+ As per rfc4180, updated by rfc7111 the default charset is utf-8.
+ See also https://www.iana.org/assignments/media-types/text/csv"))
 (def-mime-type ("TEXT" "EVENT-STREAM") ()
   ())
 (def-mime-type ("TEXT" "N3") (mime:n3)
