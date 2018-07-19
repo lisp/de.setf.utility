@@ -289,7 +289,7 @@
   ((charset :initform :utf-8))
   (:documentation "The TURTLE mime class is the abstract base class for text/turtle."))
 
-(def-mime-type ("APPLICATION" "JSON")
+(def-mime-type ("APPLICATION" "JSON") ()
   ((charset :initform :utf-8)))
 (def-mime-type ("APPLICATION" "N3") (mime:n3))
 (def-mime-type ("APPLICATION" "OCTET-STREAM") (mime:binary))
