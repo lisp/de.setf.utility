@@ -30,7 +30,7 @@
 
 (defclass vector-stream ()
   ((position
-    :initform 0
+    :initform 0 :initarg :position
     :reader get-stream-position :writer setf-stream-position)
    (vector
     ;; nb no type information, otherwise sbcl objects to later specification
@@ -83,9 +83,9 @@
 
 (defmethod shared-initialize
            ((instance vector-stream) (slots t) &key (vector nil vector-s) (length 128)
-            (element-type '(unsigned-byte 8)))
-  (with-slots (position signed) instance
-    (setf position 0)
+            (element-type '(unsigned-byte 8)) (position 0))
+  (with-slots (signed) instance
+    (setf (slot-value instance 'position) position)
     (setf signed (ecase (first element-type) (signed-byte t) (unsigned-byte nil)))
     (when vector-s
       (setf-vector-stream-vector
@@ -103,7 +103,9 @@
        instance))
     (call-next-method)
     (unless (slot-boundp instance 'vector)
-      (setf-vector-stream-vector (make-vector-stream-buffer length element-type) instance))))
+      (setf-vector-stream-vector (make-vector-stream-buffer length element-type) instance))
+    (assert (< position (length (get-vector-stream-vector instance))) ()
+            "Invalid vector-stream position: ~s." position)))
 
 #+cmu
 (let ((old-definition (fdefinition 'stream-element-type)))
@@ -161,8 +163,8 @@
 (defgeneric (setf vector-stream-vector) (vector vector-stream)
   (:method ((new-vector vector) (stream vector-stream))
     (with-slots (vector position) stream
-    (assert (equal (array-element-type new-vector) (array-element-type vector)) ()
-            "Invalid vector stream element type: ~s." (array-element-type new-vector))
+      (assert (equal (array-element-type new-vector) (array-element-type vector)) ()
+              "Invalid vector stream element type: ~s." (array-element-type new-vector))
       (setf position 0
             vector new-vector))))
 
