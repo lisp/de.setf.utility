@@ -509,37 +509,35 @@
     "Given a string, parse it - isolating any parameter, coerce the type to the
      class designator, with possible specialization due to a profile parameter, and
      instantiate given the effective class, the parsed parameter _strings_ and
-     the given initialization argument list."
+     the given initialization argument list.
+     nb. parameter canonicalization is performed furing initialization, _not_ here."
     (declare (dynamic-extent args))
     (setf designator (string-trim #(#\space #\tab) designator))
-    (flet ((quote-p (char)
-             (case char ((#\" #\') t))))
-      (with-standard-io-syntax
-          (let ((*read-eval* nil)
-                (*package* (find-package :keyword)))
-            (destructuring-bind (type-name . parameters) (split-string designator ";")
-              (when (equal type-name "*") (setf type-name "*/*"))
-              (setf parameters (loop for parameter in parameters
-                                 append (destructuring-bind (attribute value) (split-string parameter "=")
-                                          ;; ensure exactly two constituents
-                                          (list attribute value))))
-              (destructuring-bind (&key profile &allow-other-keys) parameters
-                (when idne-s
-                  (setf args (plist-difference args '(:if-does-not-exist))))
-                (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
-                  ;; the symbol is either a known media type, or some other type, which is to be constrained, or null
-                  (cond (mime-type-symbol
-                         (when profile
-                           ;; look for a possible subtype
-                           (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
-                             (when profile-type (setf mime-type-symbol profile-type))))
-                         (apply #'mime-type mime-type-symbol :parameters parameters args))
-                        (if-does-not-exist
-                         (assert (subtypep if-does-not-exist 'mime-type) ()
-                                 "Specified media type must specialize mime:mime-type: ~s" if-does-not-exist)
-                         (apply #'make-instance if-does-not-exist :expression type-name :parameters parameters args))
-                        (t
-                         nil)))))))))
+    (destructuring-bind (type-name . parameters) (split-string designator ";")
+      (when (equal type-name "*") (setf type-name "*/*"))
+      (setf parameters (loop for parameter in parameters
+                         append (destructuring-bind (attribute value) (split-string parameter "=")
+                                  ;; ensure exactly two constituents
+                                  (list attribute value))))
+      (destructuring-bind (&key profile &allow-other-keys) parameters
+        (when idne-s
+          (setf args (plist-difference args '(:if-does-not-exist))))
+        (let ((mime-type-symbol (intern-mime-type-key type-name :if-does-not-exist if-does-not-exist)))
+          ;; the symbol is either a known media type, or some other type, which is to be constrained, or null
+          (cond (mime-type-symbol
+                 (when profile
+                   ;; look for a possible subtype
+                   (let ((profile-type (profile-media-type-type mime-type-symbol profile)))
+                     (when profile-type (setf mime-type-symbol profile-type))))
+                 (if parameters
+                     (apply #'mime-type mime-type-symbol :parameters parameters args)
+                     (apply #'mime-type mime-type-symbol args)))
+                (if-does-not-exist
+                 (assert (subtypep if-does-not-exist 'mime-type) ()
+                         "Specified media type must specialize mime:mime-type: ~s" if-does-not-exist)
+                 (apply #'make-instance if-does-not-exist :expression type-name :parameters parameters args))
+                (t
+                 nil))))))
 
   (:method ((designator symbol) &rest args)
     "Given a type designator, w/ args make a new one, w/o args return the singleton.

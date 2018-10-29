@@ -149,6 +149,10 @@
   (let ((hook (stream-force-output-hook stream)))
     (when hook (funcall hook stream))))
 
+(defmethod stream-clear-output ((stream vector-stream))
+  (setf-stream-position 0 stream)
+  nil)
+
 #-mcl
 (defmethod open-stream-p ((stream vector-stream))
   t)
