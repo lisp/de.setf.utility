@@ -387,11 +387,15 @@ methods, which it removes from the effective method."))
 
 (defgeneric specializer-prototype (class)
   #+CCL (:method ((class ccl::std-class)) (class-prototype class))
+  #+sbcl (:method ((class sb-pcl:system-class)) (specializer-prototype (class-name class)))
   (:method ((class standard-class)) (allocate-instance class))
   (:method ((class structure-class)) (allocate-instance class))
   (:method ((class built-in-class)) (specializer-prototype (class-name class)))
-  (:method ((type symbol)) (or (rest (assoc type *type-prototype-alist*))
-                                   (no-applicable-method #'specializer-prototype type)))
+  (:method ((type symbol)) 
+    (let ((pair (assoc type *type-prototype-alist*)))
+      (if pair
+          (rest pair)
+          (no-applicable-method #'specializer-prototype type))))
   (:method ((specializer cons)) (second specializer)))
   
 
