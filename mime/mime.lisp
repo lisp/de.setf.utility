@@ -513,7 +513,9 @@
      nb. parameter canonicalization is performed furing initialization, _not_ here."
     (declare (dynamic-extent args))
     (setf designator (string-trim #(#\space #\tab) designator))
-    (destructuring-bind (type-name . parameters) (split-string designator ";")
+    (destructuring-bind (&optional type-name . parameters) (split-string designator ";")
+      (assert (typep type-name '(string 1)) ()
+            "Invalid mime type designator: ~s." designator)
       (when (equal type-name "*") (setf type-name "*/*"))
       (setf parameters (loop for parameter in parameters
                          append (destructuring-bind (attribute value) (split-string parameter "=")
