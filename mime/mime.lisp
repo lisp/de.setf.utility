@@ -476,7 +476,10 @@
       (parse-qvalue value)))
 
   (:method ((name (eql :accept)) (value string))
-    (mime-type value)))
+    (mime-type value))
+
+  (:method ((name (eql :boundary)) (value string))
+    (string-trim #(#\space #\tab) value)))
 
 
 (defgeneric mime-type (designator &rest args)
