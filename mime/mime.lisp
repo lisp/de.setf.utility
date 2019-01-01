@@ -249,6 +249,24 @@
     :documentation "See http://www.iana.org/assignments/character-sets")))
 (defvar mime:*/* (make-instance 'mime:*/*))
 
+(defgeneric mime-type-file-type (mime-type)
+  (:method ((type minor-mime-type))
+    (or (get-mime-type-file-type type)
+        (setf (slot-value type 'file-type)
+              (string-downcase (mime-type-minor-type type))))))
+
+(defgeneric mime-type-profile (mime-type)
+  (:documentation "return the given media type's profile.
+   this signifies for profile-mime-type instance only. other return nil.")
+  (:method ((type mime-type))
+    nil))
+
+(defgeneric mime-type-base-type (mime-type)
+  (:documentation "return a base type instance for a given media type.
+   This is an initialization value for profile types, but the identity for others.")
+  (:method ((type mime-type))
+    type))
+
 ;;; must be ordered such that abstract mime types appear first,
 ;;; as each definition form instantiates a singleton
 
@@ -343,24 +361,6 @@
 (def-mime-type ("TEXT" "XML") ()
   ((file-type :initform "xml" :allocation :class)))
 
-
-(defgeneric mime-type-file-type (mime-type)
-  (:method ((type minor-mime-type))
-    (or (get-mime-type-file-type type)
-        (setf (slot-value type 'file-type)
-              (string-downcase (mime-type-minor-type type))))))
-
-(defgeneric mime-type-profile (mime-type)
-  (:documentation "return the given media type's profile.
-   this signifies for profile-mime-type instance only. other return nil.")
-  (:method ((type mime-type))
-    nil))
-
-(defgeneric mime-type-base-type (mime-type)
-  (:documentation "return a base type instance for a given media type.
-   This is an initialization value for profile types, but the identity for others.")
-  (:method ((type mime-type))
-    type))
 
 (defgeneric cl-user::format-mime-type-parameter (stream value colon at name)
   (:method (stream (value null) (colon t) (at t) (name t))
@@ -517,7 +517,7 @@
     (declare (dynamic-extent args))
     (setf designator (string-trim #(#\space #\tab) designator))
     (destructuring-bind (&optional type-name . parameters) (split-string designator ";")
-      (assert (typep type-name '(string 1)) ()
+      (assert (and (stringp type-name) (plusp (length type-name))) ()
             "Invalid mime type designator: ~s." designator)
       (when (equal type-name "*") (setf type-name "*/*"))
       (setf parameters (loop for parameter in parameters
