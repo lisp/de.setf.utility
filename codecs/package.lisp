@@ -134,6 +134,7 @@
            :buffer-get-signed-byte-8
            :buffer-get-signed-byte-16
            :buffer-get-signed-byte-32
+           :buffer-get-signed-byte-48
            :buffer-get-signed-byte-64
            :buffer-get-string-iso-8
            :buffer-get-string-iso-16
@@ -145,6 +146,7 @@
            :buffer-get-unsigned-byte-8
            :buffer-get-unsigned-byte-16
            :buffer-get-unsigned-byte-32
+           :buffer-get-unsigned-byte-48
            :buffer-get-unsigned-byte-64
            :buffer-set-float-32
            :buffer-set-float-64
@@ -152,6 +154,7 @@
            :buffer-set-signed-byte-8
            :buffer-set-signed-byte-16
            :buffer-set-signed-byte-32
+           :buffer-set-signed-byte-48
            :buffer-set-signed-byte-64
            :buffer-set-string-iso-8
            :buffer-set-string-iso-16
@@ -163,6 +166,7 @@
            :buffer-set-unsigned-byte-8
            :buffer-set-unsigned-byte-16
            :buffer-set-unsigned-byte-32
+           :buffer-set-unsigned-byte-48
            :buffer-set-unsigned-byte-64
            :double-float-positive-infinity
            :double-float-nan
@@ -171,6 +175,7 @@
            :sign-byte-8
            :sign-byte-16
            :sign-byte-32
+           :sign-byte-48
            :sign-byte-64
            :single-float-positive-infinity
            :single-float-nan
@@ -212,6 +217,7 @@
            :stream-read-unsigned-byte-8
            :stream-read-unsigned-byte-16
            :stream-read-unsigned-byte-32
+           :stream-read-unsigned-byte-48
            :stream-read-unsigned-byte-64
            :stream-reader
            :stream-start-line-p
@@ -229,6 +235,7 @@
            :stream-write-signed-byte-8
            :stream-write-signed-byte-16
            :stream-write-signed-byte-32
+           :stream-write-signed-byte-48
            :stream-write-signed-byte-64
            :stream-write-string
            :stream-write-string-iso-8
@@ -237,11 +244,13 @@
            :stream-write-string-iso-sized
            :stream-write-string-utf8-8
            :stream-write-string-utf8-16
+           :stream-write-string-utf8-48
            :stream-write-string-utf8-32
            :stream-write-unsigned-byte
            :stream-write-unsigned-byte-8
            :stream-write-unsigned-byte-16
            :stream-write-unsigned-byte-32
+           :stream-write-unsigned-byte-48
            :stream-write-unsigned-byte-64
            :stream-writer
            :unsigned-byte-8))

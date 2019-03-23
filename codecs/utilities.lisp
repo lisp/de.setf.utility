@@ -31,6 +31,7 @@
   (def-signed-byte 8)
   (def-signed-byte 16)
   (def-signed-byte 32)
+  (def-signed-byte 48)
   (def-signed-byte 64))
 
 (defun unsigned-byte-8 (datum)

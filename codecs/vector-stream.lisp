@@ -254,7 +254,12 @@
 ;;;
 ;;; output
 
-
+#+(or)
+(defmethod stream-write-byte :before
+  ((stream vector-output-stream) (datum integer) &aux next)
+  ;(print (list 'stream-write-byte stream datum))
+  )
+  
 (defmethod stream-write-byte ((stream vector-output-stream) (datum integer) &aux next)
   (with-slots (position vector) stream
     (unless (< (setf next (1+ position)) (length vector))
@@ -265,6 +270,11 @@
           (logand #xff datum))
     (setf position next)))
 
+#+(or)
+(defmethod stream-write-sequence :before
+  ((stream vector-output-stream) (sequence vector) &optional (start 0) (end nil))
+  ;(print (list 'stream-write-sequence stream sequence))
+  )
 
 (defmethod stream-write-sequence
            #+mcl ((stream vector-output-stream) (sequence vector) &key (start 0) (end nil))
@@ -284,7 +294,7 @@
                  :start1 position :end1 new-position
                  :start2 start :end2 end)
         (setf position new-position))
-      new-position)))
+      sequence)))
 
 (defmethod stream-write-string
            #-mcl ((stream vector-output-stream) (sequence string) &optional (start 0) (end nil))

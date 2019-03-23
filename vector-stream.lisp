@@ -17,6 +17,8 @@
 |#
 (in-package :de.setf.utility.implementation)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (error "this is ibsolete. see codecs/vector-streamlisp"))
 
 ;;;
 ;;; abstract
@@ -61,6 +63,7 @@
 (defMethod print-object
            ((vs vector-stream) (stream t)
             &aux (*print-array* t) (*print-length* 32) (*print-base* 16))
+  ;;nb. length and base likely render the vector unreadable
   (print-unreadable-object (vs stream :type t)
     (princ (vector-stream.vector vs) stream)))
 
@@ -148,6 +151,7 @@ defMethod stream-tyo ((stream vector-output-stream) (datum integer) &aux next)
                                        :element-type '(unsigned-byte 8))))
           (setf (aref vector position) datum)
           (setf position next)))))
+
 
 (defmethod stream-write-sequence ((stream vector-output-stream) (sequence vector)
                                   &optional (start 0) (end nil))
