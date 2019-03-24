@@ -124,3 +124,14 @@
 
   (defconstant single-float-nan SYSTEM::*SINGLE-FLOAT-NAN*)
   (defconstant double-float-nan SYSTEM::*DOUBLE-FLOAT-NAN*))
+
+(defun nan-p (object)
+  (or (eql object DOUBLE-FLOAT-NAN) (eql object SINGLE-FLOAT-NAN)))
+(defun infinity-p (object)
+  (or (positive-infinity-p object) (negative-infinity-p object)))
+(defun negative-infinity-p (object)
+  (or (eql object single-float-negative-infinity) (eql object double-float-negative-infinity)))
+(defun positive-infinity-p (object)
+  (or (eql object single-float-positive-infinity) (eql object double-float-positive-infinity)))
+
+

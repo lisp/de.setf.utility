@@ -171,6 +171,9 @@
            :double-float-positive-infinity
            :double-float-nan
            :double-float-negative-infinity
+           :nan-p
+           :negative-infinity-p
+           :positive-infinity-p
            :sign-byte
            :sign-byte-8
            :sign-byte-16
