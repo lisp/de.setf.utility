@@ -50,7 +50,8 @@
                        single-float-negative-infinity))
 
 (declaim (double-float double-float-nan)
-         (single-float single-float-nan))
+         (single-float single-float-nan)
+         (special double-float-nan single-float-nan))
 
 #+mcl
 (unless (boundp 'double-float-positive-infinity)
