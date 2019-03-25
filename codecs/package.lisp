@@ -126,7 +126,8 @@
                 :double-float-positive-infinity
                 :double-float-negative-infinity
                 :single-float-positive-infinity
-                :single-float-negative-infinity)
+                :single-float-negative-infinity
+                :float-infinity-p)
   
   (:export :buffer-get-float-32
            :buffer-get-float-64
@@ -171,9 +172,11 @@
            :double-float-positive-infinity
            :double-float-nan
            :double-float-negative-infinity
+           :infinity-p
            :nan-p
            :negative-infinity-p
            :positive-infinity-p
+           :float-infinity-p
            :sign-byte
            :sign-byte-8
            :sign-byte-16
