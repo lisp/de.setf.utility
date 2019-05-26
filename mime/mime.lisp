@@ -172,9 +172,6 @@
   (handler-case (call-next-method)
     (error (c) (format stream "erroneous ~s: ~s" (type-of object) c))))
 
-(defmethod print-object ((object unsupported-mime-type) stream)
-  (print-unreadable-object (object stream :type t)
-    (write-string (mime-type-namestring object) stream)))
 
 (defclass mime-type-profile (mime-type)
   ((profile :initarg :profile :initform nil
@@ -194,6 +191,11 @@
 (defclass unsupported-mime-type (mime-type)
   ((expression :allocation :instance :initarg :expression
                :initform "expression is required for unsupported media types.")))
+
+(defmethod print-object ((object unsupported-mime-type) stream)
+  (print-unreadable-object (object stream :type t)
+    (write-string (mime-type-namestring object) stream)))
+
 
 (defclass mime:binary (mime:*/*)
   ()
