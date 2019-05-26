@@ -168,9 +168,13 @@
    (parameters :initarg :parameters :initform ()
                :reader mime-type-parameters)))
 
-(defmethod print-object ((object dsu:mime-type) stream)
+(defmethod print-object ((object mime-type) stream)
   (handler-case (call-next-method)
     (error (c) (format stream "erroneous ~s: ~s" (type-of object) c))))
+
+(defmethod print-object ((object unsupported-mime-type) stream)
+  (print-unreadable-object (object stream :type t)
+    (write-string (mime-type-namestring object) stream)))
 
 (defclass mime-type-profile (mime-type)
   ((profile :initarg :profile :initform nil
