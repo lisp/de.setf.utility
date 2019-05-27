@@ -174,9 +174,11 @@ from de.setf.xml suffice."))
                           (let ((low-code (read-char-code)))
                             (cond ((<= #xdc00 low-code #xdfff)
                                    (code-char (+ (ash code 16) low-code)))
-                                  (t
+                                  (t ;; not a low surrogate
                                    (simple-decoding-error :datum (cons code low-code) :encoding :utf-8))))
-                           (simple-decoding-error :datum code :encoding :utf-8)))
+                          (simple-decoding-error :datum code :encoding :utf-8)))
+                     ((< code #xe000)  ;; low surrogate alone
+                      (simple-decoding-error :datum code :encoding :utf-8))
                      (t
                       (code-char code)))))))
        (utf8-code-point-size (char)
