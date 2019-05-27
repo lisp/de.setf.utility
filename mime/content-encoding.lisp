@@ -117,6 +117,8 @@ from de.setf.xml suffice."))
   nil)
 
 
+(defparameter *utf8-junk-allowed* nil)
+(defparameter *utf8-surrogates-allowed* t)
 
 (flet ((utf-8-encode (char put-byte destination)
          (declare (optimize (speed 3) (safety 0)))
@@ -137,7 +139,7 @@ from de.setf.xml suffice."))
                     (emit (logior #b10000000 (logand (ash code -12) #b00111111)))
                     (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
                     (emit (logior #b10000000 (logand code #b00111111))))))))
-       (utf-8-decode (get-byte source &key (junk-allowed nil) (surrogates-allowed nil))
+       (utf-8-decode (get-byte source)
          (flet ((read-byte-code ()
                   (or (funcall get-byte source)
                       (return-from utf-8-decode nil))))
@@ -160,21 +162,23 @@ from de.setf.xml suffice."))
                                    (ash (logand #x3f (read-byte-code)) 12)
                                    (ash (logand #x3f (read-byte-code)) 6)
                                    (logand (read-byte-code) #x3f)))
-                          (junk-allowed
+                          (*utf8-junk-allowed*
                            byte1)
                           (t
                            (simple-decoding-error :datum byte1 :encoding :utf-8)))))
              (let ((code (read-char-code)))
                (cond ((< code #xd800)
                       (code-char code))
-                     ((and (< code #xdc00) surrogates-allowed)
-                      (let ((low-code (read-char-code)))
-                        (cond ((<= #xdc00 low-code #xdff)
-                               (code-char (+ (ash code 16) low-code)))
-                              (t
-                               (simple-decoding-error :datum (cons code low-code) :encoding :utf-8)))))
+                     ((< code #xdc00)
+                      (if *utf8-surrogates-allowed*
+                          (let ((low-code (read-char-code)))
+                            (cond ((<= #xdc00 low-code #xdfff)
+                                   (code-char (+ (ash code 16) low-code)))
+                                  (t
+                                   (simple-decoding-error :datum (cons code low-code) :encoding :utf-8))))
+                           (simple-decoding-error :datum code :encoding :utf-8)))
                      (t
-                      (simple-decoding-error :datum code :encoding :utf-8)))))))
+                      (code-char code)))))))
        (utf8-code-point-size (char)
          (let ((code (char-code char)))
              (declare (type (mod #x110000) code))
