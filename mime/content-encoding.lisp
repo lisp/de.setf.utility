@@ -32,6 +32,11 @@ from de.setf.xml suffice."))
 
 
 (defparameter *content-encodings* (make-hash-table ))
+(defparameter *utf8-iso8859-allowed* nil
+  "When true, permit anomalous iso-8859 bytes (eg >= #xf1) in utf-8")
+(defparameter *utf8-surrogates-allowed* t
+  "When true, allow and decode surrogate pairs in utf-8")
+
 
 (defclass content-encoding ()
   ((name
@@ -117,9 +122,6 @@ from de.setf.xml suffice."))
   nil)
 
 
-(defparameter *utf8-junk-allowed* nil)
-(defparameter *utf8-surrogates-allowed* t)
-
 (flet ((utf-8-encode (char put-byte destination)
          (declare (optimize (speed 3) (safety 0)))
          (macrolet ((emit (code) `(funcall put-byte destination ,code)))
@@ -162,25 +164,23 @@ from de.setf.xml suffice."))
                                    (ash (logand #x3f (read-byte-code)) 12)
                                    (ash (logand #x3f (read-byte-code)) 6)
                                    (logand (read-byte-code) #x3f)))
-                          (*utf8-junk-allowed*
+                          (*utf8-iso8859-allowed*
                            byte1)
                           (t
                            (simple-decoding-error :datum byte1 :encoding :utf-8)))))
              (let ((code (read-char-code)))
                (cond ((< code #xd800)
                       (code-char code))
-                     ((< code #xdc00)
-                      (if *utf8-surrogates-allowed*
-                          (let ((low-code (read-char-code)))
-                            (cond ((<= #xdc00 low-code #xdfff)
-                                   (code-char (+ (ash code 16) low-code)))
-                                  (t ;; not a low surrogate
-                                   (simple-decoding-error :datum (cons code low-code) :encoding :utf-8))))
-                          (simple-decoding-error :datum code :encoding :utf-8)))
-                     ((< code #xe000)  ;; low surrogate alone
-                      (simple-decoding-error :datum code :encoding :utf-8))
+                     ((>= code #xe000)  ;; above surrogates
+                      (code-char code))
+                     ((and (< code #xdc00) *utf8-surrogates-allowed*)
+                      (let ((low-code (read-char-code)))
+                        (cond ((<= #xdc00 low-code #xdfff)
+                               (code-char (+ #x10000 (+ (ash (logand code #x03ff) 10) (logand #x03ff low-code)))))
+                              (t ;; not a low surrogate
+                               (simple-decoding-error :datum (cons code low-code) :encoding :utf-8)))))
                      (t
-                      (code-char code)))))))
+                      (simple-decoding-error :datum code :encoding :utf-8)))))))
        (utf8-code-point-size (char)
          (let ((code (char-code char)))
              (declare (type (mod #x110000) code))

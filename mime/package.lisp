@@ -28,6 +28,8 @@
   (:export
    :*class.content-encoding*
    :*mime-type-package*
+   :*utf8-iso8859-allowed*
+   :*utf8-surrogates-allowed*
    :binary-mime-type-p
    :canonical-mime-type
    :clone-instance
