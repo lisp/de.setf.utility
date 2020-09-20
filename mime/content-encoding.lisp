@@ -28,7 +28,11 @@
   a much more extensive library.
 
 As the (ultimate) goal is to en/decode to/from network buffers, just the stream operators
-from de.setf.xml suffice."))
+from de.setf.xml suffice.
+
+The decoding permits surrogate pairs in utf-8 under the control of *utf8-surrogates-allowed*.
+The encoding always encodes 4-byte values for the surrogates.
+(see http://unicode.org/faq/utf_bom.html#utf8-4)"))
 
 
 (defparameter *content-encodings* (make-hash-table ))
@@ -123,6 +127,7 @@ from de.setf.xml suffice."))
 
 
 (flet ((utf-8-encode (char put-byte destination)
+         ;; ecode surrogates as a four-byte sequence
          (declare (optimize (speed 3) (safety 0)))
          (macrolet ((emit (code) `(funcall put-byte destination ,code)))
            (let ((code (char-code char)))
@@ -142,6 +147,7 @@ from de.setf.xml suffice."))
                     (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
                     (emit (logior #b10000000 (logand code #b00111111))))))))
        (utf-8-decode (get-byte source)
+         ;; decode two-element surrogates
          (flet ((read-byte-code ()
                   (or (funcall get-byte source)
                       (return-from utf-8-decode nil))))

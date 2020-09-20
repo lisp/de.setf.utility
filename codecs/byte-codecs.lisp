@@ -46,6 +46,22 @@
       (setf value
             (if (= i 0) (funcall get-byte) (+ (ash value 8) (funcall get-byte)))))))
 
+(define-compiler-macro decode-unsigned-byte (&whole form get-byte bit-count)
+  (if (integerp bit-count)
+    (let ((byte-count (ecase bit-count (8 1) (16 2) (32 4) (48 6) (64 8)))
+          (call-form (if (and (consp get-byte) (eq (first get-byte) 'function))
+                       (list (second get-byte))
+                       `(funcall ,get-byte))))
+      `(let ((value 0))
+         (declare (type unsigned-byte value))
+         ,@(loop for i from 0 below byte-count
+                 collect 
+                 (if (= i 0)
+                   `(setf value ,call-form)
+                   `(setf value (+ (ash value 8) ,call-form))))
+         value))
+    form))
+
 (defun decode-unsigned-byte-le (get-byte bit-count)
   (declare (type (function () (unsigned-byte 8)) get-byte)
            (dynamic-extent get-byte))
@@ -72,6 +88,11 @@
       (48 (sign-byte-48 value))
       (64 (sign-byte-64 value)))))
 
+(define-compiler-macro decode-signed-byte (&whole form get-byte bit-count)
+  (if (integerp bit-count)
+    `(sign-byte (decode-unsigned-byte ,get-byte ,bit-count) (+ 0 ,bit-count))
+    form))
+
 (defun decode-signed-byte-le (get-byte bit-count)
   (declare (dynamic-extent get-byte))
   (let ((value (decode-unsigned-byte-le get-byte bit-count)))
@@ -81,27 +102,6 @@
       (32 (sign-byte-32 value))
       (48 (sign-byte-48 value))
       (64 (sign-byte-64 value)))))
-
-(define-compiler-macro decode-unsigned-byte (&whole form get-byte bit-count)
-  (if (integerp bit-count)
-    (let ((byte-count (ecase bit-count (8 1) (16 2) (32 4) (48 6) (64 8)))
-          (call-form (if (and (consp get-byte) (eq (first get-byte) 'function))
-                       (list (second get-byte))
-                       `(funcall ,get-byte))))
-      `(let ((value 0))
-         (declare (type unsigned-byte value))
-         ,@(loop for i from 0 below byte-count
-                 collect 
-                 (if (= i 0)
-                   `(setf value ,call-form)
-                   `(setf value (+ (ash value 8) ,call-form))))
-         value))
-    form))
-
-(define-compiler-macro decode-signed-byte (&whole form get-byte bit-count)
-  (if (integerp bit-count)
-    `(sign-byte (decode-unsigned-byte ,get-byte ,bit-count) (+ 0 ,bit-count))
-    form))
 
 
 (defun encode-unsigned-byte (put-byte value bit-count)

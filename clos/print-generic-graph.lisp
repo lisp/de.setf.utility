@@ -53,6 +53,7 @@
                  :fontname fontname
                  :edge edge
                  :node node
+                 :label (format nil "[~{~a~^ x ~}]" (sb-mop:generic-function-lambda-list function))
                  attributes))))
     (when *print-pretty*
       (fresh-line destination))
