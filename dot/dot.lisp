@@ -866,12 +866,12 @@
              (let ((asdf::*verbose-out* nil)
                    (typed-pathname (make-pathname :type type :defaults dot-pathname)))
                (when (and (zerop (nth-value 2 (UIOP/RUN-PROGRAM:run-program
-                                               (forma nil "~a -o ~a -T~a ~a"
-                                                      (make-pathname :name graphviz-program
-                                                                     :defaults setf.dot:*graphviz-pathname*)
-                                                      typed-pathname
-                                                      type
-                                                      dot-pathname))))
+                                               (format nil "~a -o ~a -T~a ~a"
+                                                       (make-pathname :name graphviz-program
+                                                                      :defaults setf.dot:*graphviz-pathname*)
+                                                       typed-pathname
+                                                       type
+                                                       dot-pathname))))
                           display-program)
                  (UIOP/RUN-PROGRAM:run-program (format nil "open -a ~a ~a" display-program typed-pathname))))))))
   (defun setf.dot:dot (&rest args) (apply #'graphviz :graphviz-program "dot" args))
