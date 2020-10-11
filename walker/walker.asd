@@ -20,7 +20,7 @@
 (asdf:defsystem :de.setf.utility.walker
   :depends-on (:de.setf.utility.dot
                :de.setf.utility.clos
-               :net.common-lisp.closer-mop
+               :closer-mop
                #+sbcl
                :sb-introspect
                #+mcl

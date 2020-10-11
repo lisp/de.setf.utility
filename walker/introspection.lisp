@@ -45,7 +45,8 @@
 #+lispworks
 (defun dsw:function-name (function) (system::function-name function))
 #+sbcl
-(defun dsw:function-name (function) (sb-impl::fun-name function))
+;; before 2.0 (defun dsw:function-name (function) (sb-impl::fun-name function))
+(defun dsw:function-name (function) (sb-impl::%fun-name function))
 
 
 
