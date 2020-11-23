@@ -26,6 +26,7 @@
 (modpackage :de.setf.utility
   (:export
    :collate
+   :combinations
    :destructuring-keys
    :lambda-list-arity
    :map-plist
@@ -169,6 +170,16 @@
              (permute (1- length)))))
 ;(permutations '(:a :s :d) 2)
 
+
+(defgeneric combinations (sequence)
+  (:method ((list list))
+    (labels ((combine (remaining)
+               (if (rest remaining)
+                   (loop for elt in remaining
+                     append (loop for combination in (combine (remove elt remaining))
+                              collect (cons elt combination)))
+                   (list remaining))))
+      (combine list))))
 
 
 (defun partial-order-sort

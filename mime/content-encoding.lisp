@@ -32,7 +32,11 @@ from de.setf.xml suffice.
 
 The decoding permits surrogate pairs in utf-8 under the control of *utf8-surrogates-allowed*.
 The encoding always encodes 4-byte values for the surrogates.
-(see http://unicode.org/faq/utf_bom.html#utf8-4)"))
+(see http://unicode.org/faq/utf_bom.html#utf8-4)
+
+the codecs now return the byte count rather than the return values from the last put-byte.
+this makes the sizer unnecessary in encoding loops.
+the decoder could be change in a similar mannter to return two values."))
 
 
 (defparameter *content-encodings* (make-hash-table ))
@@ -126,27 +130,9 @@ The encoding always encodes 4-byte values for the surrogates.
   nil)
 
 
-(flet ((utf-8-encode (char put-byte destination)
-         ;; ecode surrogates as a four-byte sequence
-         (declare (optimize (speed 3) (safety 0)))
-         (macrolet ((emit (code) `(funcall put-byte destination ,code)))
-           (let ((code (char-code char)))
-             (declare (type (mod #x110000) code))
-             (cond ((< code #x80)
-                    (emit code))
-                   ((< code #x800)
-                    (emit (logior #b11000000 (ash code -6)))
-                    (emit (logior #b10000000 (logand code #b00111111))))
-                   ((< code #x10000)
-                    (emit (logior #b11100000 (ash code -12)))
-                    (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
-                    (emit (logior #b10000000 (logand code #b00111111))))
-                   (t
-                    (emit (logior #b11110000 (ash code -18)))
-                    (emit (logior #b10000000 (logand (ash code -12) #b00111111)))
-                    (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
-                    (emit (logior #b10000000 (logand code #b00111111))))))))
-       (utf-8-decode (get-byte source)
+(flet ((utf-8-decode (get-byte source)
+         "get-byte should be a function of one argument which returns (byte 8)
+          values up to EOF, at which point it returns nil"
          ;; decode two-element surrogates
          (flet ((read-byte-code ()
                   (or (funcall get-byte source)
@@ -187,6 +173,30 @@ The encoding always encodes 4-byte values for the surrogates.
                                (simple-decoding-error :datum (cons code low-code) :encoding :utf-8)))))
                      (t
                       (simple-decoding-error :datum code :encoding :utf-8)))))))
+       (utf-8-encode (char put-byte destination)
+         ;; ecode surrogates as a four-byte sequence
+         (declare (optimize (speed 3) (safety 0)))
+         (macrolet ((emit (code) `(funcall put-byte destination ,code)))
+           (let ((code (char-code char)))
+             (declare (type (mod #x110000) code))
+             (cond ((< code #x80)
+                    (emit code)
+                    1)
+                   ((< code #x800)
+                    (emit (logior #b11000000 (ash code -6)))
+                    (emit (logior #b10000000 (logand code #b00111111)))
+                    2)
+                   ((< code #x10000)
+                    (emit (logior #b11100000 (ash code -12)))
+                    (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
+                    (emit (logior #b10000000 (logand code #b00111111)))
+                    3)
+                   (t
+                    (emit (logior #b11110000 (ash code -18)))
+                    (emit (logior #b10000000 (logand (ash code -12) #b00111111)))
+                    (emit (logior #b10000000 (logand (ash code -6) #b00111111)))
+                    (emit (logior #b10000000 (logand code #b00111111)))
+                    4)))))
        (utf8-code-point-size (char)
          (let ((code (char-code char)))
              (declare (type (mod #x110000) code))
@@ -208,7 +218,8 @@ The encoding always encodes 4-byte values for the surrogates.
                     (optimize (speed 3) (safety 0)))
            (unless (< code #x100)
              (simple-encoding-error :datum char :encoding :iso-8859-1))
-           (funcall put-byte destination code)))
+           (funcall put-byte destination code)
+           1))
        (iso-8859-1-decode (get-byte source)
          (code-char (or (funcall get-byte source)
                         (return-from iso-8859-1-decode nil)))))
