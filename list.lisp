@@ -171,7 +171,7 @@
 ;(permutations '(:a :s :d) 2)
 
 
-(defgeneric combinations (sequence)
+(defgeneric dsu:combinations (sequence)
   (:method ((list list))
     (labels ((combine (remaining)
                (if (rest remaining)
