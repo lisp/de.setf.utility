@@ -45,7 +45,7 @@
 (defun trim-string-whitespace (string)
   (string-trim #(#\space #\tab #\return #\linefeed) string))
 
-(defun whitespace.p (c)
+(defun whitespace-p (c)
   (find c #(#\space #\tab #\return #\linefeed)))
 
 ;;; these don't do the right thing, as they modify their argument lists

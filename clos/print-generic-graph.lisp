@@ -19,6 +19,9 @@
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
 ;;; (dsu:graph-function 'spocq.si::graph-store-response #p"/tmp/graph-store-response.dot")
+;;; (dsu:graph-function 'spocq.i::compute-bgp-lambda #p"/tmp/compute-bgp-lambda.dot")
+;;; (dsu:graph-function 'rlmdb::map-repository-statements #p"/tmp/map-repository-statements.dot")
+
 
 (modpackage :de.setf.utility
   (:export

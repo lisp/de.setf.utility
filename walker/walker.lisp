@@ -33,15 +33,15 @@
   method complement is determined by the node class, but the actions of the effective methos are further
   constrained based on the actual argument. (see the denominated method combination.)
   an application controls the behaviour by providing a walker which mixes in the desired control classes
-  to offer the desired methods and, in needed, specializes the :qualifying method to indicate which aspects
+  to offer the desired methods and, if needed, specializes the :qualifying method to indicate which aspects
   of the effective method to run.
   
   The traversal terminology follows from Knuth (section 2.3 of "fundamental algorithms"), as does the test
   example. His discussion concentrates on the graph nodes and relegates the links to representational artifacts,
-  so the terms "initial" and "final" node are adopted from Truss ("discrete methematics for computer scientists").</p>
+  so the terms "initial" and "final" node are adopted from Truss ("discrete methematics for computer scientists").
   
   A test example demonstrates how the abstract components are combined to define a walker.
-  tHe literal test model does not agree with knuth's list notation (p 334 of the 1968 edition), as this latter 
+  The literal test model does not agree with Knuth's list notation (p 334 of the 1968 edition), as this latter 
   is ambiguous and incomplete, but that does not affect the results."))
 
 
@@ -51,7 +51,7 @@
 
  - walker is the abstract class for which the elementary interface functions - walk-model
    walk-node, and walk-link, are defined.
- - walk-operator distinguished classes intended to operate on nodes and links.
+ - walk-operator distinguishes classes intended to operate on nodes and links.
  - walk-navigator distinguishes classes intended to traverse nodes and links.
  - cyclic-walker binds a cache and implements operations to record properties for nodes and links.
    uses recorded node properties to limit node operations to once only.
@@ -115,7 +115,7 @@ these, in turn, are combined in classes which implement concrete walking pattern
     "a list of method qualifiers which constrain the selection and order of
      methods for a given denominated method combination. by default it is
      shared by the combinations for the functions walk-node, walk-link,
-     walk-navigate-nde-predecessors, and walk-node-successors. should there
+     walk-navigate-node-predecessors, and walk-node-successors. should there
      be some reason to need to treat identical qualifiers differently for the
      respective methods, the immediate source in each case is the respective
      function *-qualifiers, which can be specialized by walker. note that the
@@ -268,7 +268,7 @@ these, in turn, are combined in classes which implement concrete walking pattern
 
 (:documentation "cache management"
   "a cyclic-walker maintaines a record for nodes. the specialization
- cyclic-walker implements and :around method for walk-node which cuts off
+ cyclic-walker implements an :around method for walk-node which cuts off
  the walk if the respective cache entry indicates that the node has already
  been visited. it does not, however, either add the cache entry or set the
  indicator. this is left to the application in order that it can specify

@@ -531,13 +531,13 @@
 
   (:method ((context setf.dot:context) name (statement-generator function) &rest args
             &key (strict (setf.dot:strict context)) (type (setf.dot:type context))
-            (pretty (setf.dot:pretty context))
+            ((:pretty setf.dot:*pretty*) setf.dot:*pretty*)
             &allow-other-keys)
     (setf (setf.dot:name context) name)
     (let ((*gensym-counter* (hash-table-count (setf.dot:cache context))))
       (apply #'call-next-method context name statement-generator
              :strict strict :type type
-             :pretty pretty
+             :pretty setf.dot:*pretty*
              args)))
 
   (:method ((setf.dot:*context* stream) (name t) (statement-generator function) &rest attributes)
@@ -656,7 +656,7 @@
                              (setf attributes-p t)))
                       (setf.dot:stream-write-attribute stream name value)))
       (destructuring-bind (&key location angle &allow-other-keys) attributes
-        (when (and setf.dot:*pretty* (plusp setf.dot:*level*))
+        (when (and setf.dot:*pretty* ) ;; (plusp setf.dot:*level*))
           (setf.dot:fresh-line stream))
         (setf.dot:stream-write-node-id stream id :location location :angle angle)
         (when attributes
