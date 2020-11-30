@@ -133,6 +133,8 @@
 (defun positive-infinity-p (object)
   (or (eql object single-float-positive-infinity) (eql object double-float-positive-infinity)))
 (defun infinity-p (object)
-  (float-infinity-p object))
+  (and (floatp object)
+       (float-infinity-p object)))
+
 
 
