@@ -250,7 +250,7 @@
 (defclass mime:*/* (major-mime-type minor-mime-type)
   ((charset
     :initarg :charset :initform nil
-    :reader mime-type-charset
+    :accessor mime-type-charset
     :type symbol
     :documentation "See http://www.iana.org/assignments/character-sets")))
 (defvar mime:*/* (make-instance 'mime:*/*))
