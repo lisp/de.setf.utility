@@ -405,6 +405,8 @@
     (mime-type-expression media-type))
   (:method ((type string)) ; assume it is correct
     type)
+  (:method ((type symbol))
+    (symbol-name type))
   (:method ((type null))
     nil))
   
