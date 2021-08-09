@@ -78,7 +78,7 @@
   "certain labels just fail to parse")
 
 (defvar setf.dot::*edge-keywords*
-  '(:ARROWHEAD :ARROWSIZE :ARROWTAIL :COLOR :COLORSCHEME :COMMENT :CONSTRAINT
+  '(:ARROWHEAD :ARROWSIZE :ARROWTAIL :CLASS :COLOR :COLORSCHEME :COMMENT :CONSTRAINT
  :DECORATE :DIR :EDGEURL :EDGEHREF :EDGETARGET :EDGETOOLTIP :FONTCOLOR
  :FONTNAME :FONTSIZE :HEADCLIP :HEADHREF :HEADLABEL :HEADPORT :HEADTARGET
  :HEADTOOLTIP :HEADURL :HREF :ID :LABEL :LABELANGLE :LABELDISTANCE :LABELFLOAT
@@ -89,7 +89,7 @@
  :WEIGHT))
 
 (defvar setf.dot::*node-keywords*
-  '(:LOCATION :ANGLE :BOTTOMLABEL :COLOR :COLORSCHEME :COMMENT :DISTORTION
+  '(:LOCATION :ANGLE :BOTTOMLABEL :CLASS :COLOR :COLORSCHEME :COMMENT :DISTORTION
  :FILLCOLOR :FIXEDSIZE :FONTCOLOR :FONTNAME :FONTSIZE :GROUP :HEIGHT :IMAGE
  :IMAGESCALE :LABEL :LABELLOC :LAYER :MARGIN :NOJUSTIFY :ORIENTATION :PENWIDTH
  :PERIPHERIES :POS :RECHTS :REGULAR :ROOT :SAMPLEPOINTS :SHAPE :SHAPEFILE
@@ -633,7 +633,7 @@
                                               &key
                                               location angle     ; id arguments
                                               bottomlabel
-                                              color colorscheme comment distortion
+                                              class color colorscheme comment distortion
                                               fillcolor fixedsize fontcolor fontname fontsize
                                               group height image imagescale label labelloc layer margin nojustify
                                               orientation penwidth peripheries pos rechts regular root
@@ -677,7 +677,7 @@
                                               &key
                                               type         ; graph type determines link form
                                               arrowhead arrowsize arrowtail
-                                              color colorscheme comment constraint decorate dir
+                                              class color colorscheme comment constraint decorate dir
                                               edgeURL edgehref edgetarget edgetooltip
                                               fontcolor fontname fontsize
                                               headclip headhref headlabel headport headtarget headtooltip headURL href
