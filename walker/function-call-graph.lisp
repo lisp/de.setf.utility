@@ -271,17 +271,16 @@
                :pretty t
                graph-arguments)))
 
-    (values walk-count
-            stream))))
+    (values stream
+            walk-count))))
 
 
 ;;; this requires a runnable dot utility.
 ;;; it should be relatively recent in order to support the css class attributes for svg generation
 
 (defun html-function-caller-graph (functions &rest args)
-  (multiple-value-bind (count stream)
+  (multiple-value-bind (stream count)
                        (apply #'dot-function-caller-graph functions args)
-    (declare (ignore count))
     (sb-ext:run-program "/usr/bin/dot" (list "-Tsvg" "-o" (namestring (make-pathname :type "svg" :defaults stream))
                                       (namestring stream))
                  :wait t)
@@ -323,7 +322,8 @@
 </body>
 </html>
 "
-   html)))))
+   (values html
+           count))))))
     
 
 #+(or)
@@ -339,7 +339,6 @@
                              :extent '(:spocq.i :spocq :spocq.si :dydra :rdfcache :dydra-ndk
                                        :rlmdb rlmdb.i)
                              :limit '(spocq.si::graph-store-response)
-                             :count 10
                              )
 
   (html-function-caller-graph '(rlmdb:map-repository-statements rlmdb::map-index-statements)
@@ -348,7 +347,7 @@
                              :extent '(:spocq.i :spocq :spocq.si :dydra :rdfcache :dydra-ndk
                                        :rlmdb rlmdb.i)
                              :limit '(spocq.si::graph-store-response)
-                            ;; :count 2
+                             :graph-arguments '(:ranksep "2in")
                              )
 
 
