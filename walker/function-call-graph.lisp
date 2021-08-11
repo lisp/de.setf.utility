@@ -221,7 +221,7 @@
                           name)
                          (t
                           (let ((abstract-function (fdefinition name))
-                                (*call-path* (cons name *call-path*)))
+                                (*call-path* (cons (name-id name) *call-path*)))
                             (setf (gethash name nodes) abstract-function) ;; stop reexamination
                             (when (plusp (loop for caller in (find-callers abstract-function)
                                            count (let ((caller-name (put-function caller)))
@@ -229,13 +229,15 @@
                                                      (push caller-name (gethash (symbol-package caller-name) package-nodes))
                                                      (unless (gethash (list caller-name name) edges)
                                                        (setf (gethash (list caller-name name) edges)
-                                                             (cons caller-name *call-path*))
+                                                             (cons (name-id caller-name) *call-path*))
                                                        ;;(setf.dot:put-node name)
                                                        ;;(setf.dot:put-edge caller-name name)
                                                        )))))
                               (push name (gethash (symbol-package name) package-nodes))
                               (incf walk-count)
-                              name)))))))))
+                              name))))))))
+               (name-id (name)
+                 (format nil "~a:~a" (package-name (symbol-package name)) name)))
 
       (destructuring-bind (&key (size size) (rankdir rankdir) (margin margin) (ratio ratio)
                                 &allow-other-keys)
@@ -252,9 +254,15 @@
                      do (setf.dot:context-put-subgraph setf.dot:*context*
                                                        (format nil "cluster_~a" (package-name package))
                                                        #'(lambda ()
+                                                           (format *trace-output* "~%cluster ~a x ~s"
+                                                                   (package-name package)
+                                                                   (length nodes))
                                                            (loop for name in (remove-duplicates nodes)
-                                                             do (setf.dot:put-node name
-                                                                                   :class (string name))))
+                                                             for label = (symbol-name name)
+                                                             for id = (name-id name)
+                                                             do (setf.dot:put-node id
+                                                                                   :label label
+                                                                                   :class label)))
                                                        :label (package-name package)
                                                        :color (format nil "/spectral8/~a" (1+ (mod count 8)))
                                                        :node `(:color ,(format nil "/spectral8/~a" (1+ (mod count 8))))))
@@ -262,7 +270,7 @@
                    (loop for edge being each hash-key of edges
                      using (hash-value call-path)
                      for (caller-name called-name) = edge
-                     do (setf.dot:put-edge caller-name called-name
+                     do (setf.dot:put-edge (name-id caller-name) (name-id called-name)
                                            :class (format nil "~{~a~^ ~}" call-path))))
                :size size
                :ratio ratio
@@ -322,8 +330,9 @@
 </body>
 </html>
 "
-   (values html
-           count))))))
+                      html)
+        (values html
+                count)))))
     
 
 #+(or)
@@ -348,6 +357,19 @@
                                        :rlmdb rlmdb.i)
                              :limit '(spocq.si::graph-store-response)
                              :graph-arguments '(:ranksep "2in")
+                             )
+
+
+
+  (defun cl-user::leaf1 ()) (defun cl-user::leaf2 ())
+  (defun branch () (cl-user::leaf2))
+  (defun limit-function () (cl-user::leaf1) (branch))
+  (html-function-caller-graph '(cl-user::leaf1 cl-user::leaf2)
+                              :stream #p"/tmp/test-caller-graph.dot"
+                              :name "spocq-caller-graph"
+                              :extent `(:cl-user ,(package-name *package*))
+                              :limit '(limit-function)
+                              :graph-arguments '(:ranksep "2in")
                              )
 
 
