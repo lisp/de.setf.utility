@@ -303,7 +303,7 @@
  ellipse { pointer-events: mousedown; fill: white }
  </style>
 </head>
-<body>
+<body  style='transform:translate(400%,400%) scale(4.0);'>
 "
                       html)
         (alexandria:copy-stream svg html)
