@@ -207,7 +207,8 @@
              (find-callers (function)
                (sb-introspect:find-function-callers function))
              (put-function (function)
-               (let* ((name (function-name function))) (print (list :name name))
+               (let* ((name (function-name function)))
+                 ;; (print (list :name name))
                  (when (and name (member (symbol-package name) extent))
                  (multiple-value-bind (known-function) (gethash name nodes)
                    (cond (known-function
@@ -237,7 +238,8 @@
                               (incf walk-count)
                               name))))))))
                (name-id (name)
-                 (format nil "~a:~a" (package-name (symbol-package name)) name)))
+                 (substitute-if #\_ #'(lambda (c) (not (or (alphanumericp c) (eql c #\-) (eql c #\_))))
+                                (format nil "~a:~a" (package-name (symbol-package name)) name))))
 
       (destructuring-bind (&key (size size) (rankdir rankdir) (margin margin) (ratio ratio)
                                 &allow-other-keys)
@@ -262,7 +264,7 @@
                                                              for id = (name-id name)
                                                              do (setf.dot:put-node id
                                                                                    :label label
-                                                                                   :class label)))
+                                                                                   :class id)))
                                                        :label (package-name package)
                                                        :color (format nil "/spectral8/~a" (1+ (mod count 8)))
                                                        :node `(:color ,(format nil "/spectral8/~a" (1+ (mod count 8))))))
