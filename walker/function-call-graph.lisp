@@ -210,33 +210,33 @@
                (let* ((name (function-name function)))
                  ;; (print (list :name name))
                  (when (and name (member (symbol-package name) extent))
-                 (multiple-value-bind (known-function) (gethash name nodes)
-                   (cond (known-function
-                          name)
-                         ((member name start-names :test #'equal)
-                          ;;(setf.dot:put-node name)
-                          ;; no callers
-                          (setf (gethash name nodes) (list name))
-                          (push name (gethash (symbol-package name) package-nodes))
-                          (incf walk-count)
-                          name)
-                         (t
-                          (let ((abstract-function (fdefinition name))
-                                (*call-path* (cons (name-id name) *call-path*)))
-                            (setf (gethash name nodes) abstract-function) ;; stop reexamination
-                            (when (plusp (loop for caller in (find-callers abstract-function)
-                                           count (let ((caller-name (put-function caller)))
-                                                   (when caller-name
-                                                     (push caller-name (gethash (symbol-package caller-name) package-nodes))
-                                                     (unless (gethash (list caller-name name) edges)
-                                                       (setf (gethash (list caller-name name) edges)
-                                                             (cons (name-id caller-name) *call-path*))
-                                                       ;;(setf.dot:put-node name)
-                                                       ;;(setf.dot:put-edge caller-name name)
-                                                       )))))
-                              (push name (gethash (symbol-package name) package-nodes))
-                              (incf walk-count)
-                              name))))))))
+                   (multiple-value-bind (known) (gethash name nodes)
+                     (cond (known
+                            (when (functionp known)
+                              name))
+                           ((member name start-names :test #'equal)
+                            ;; stop tracing callers at boundary
+                            (setf (gethash name nodes) (fdefinition name))
+                            (push name (gethash (symbol-package name) package-nodes))
+                            (incf walk-count)
+                            name)
+                           (t
+                            (let ((abstract-function (fdefinition name))
+                                  (*call-path* (cons (name-id name) *call-path*)))
+                              (setf (gethash name nodes) t) ;; stop traversal
+                              (when (plusp (loop for caller in (find-callers abstract-function)
+                                             count (let ((caller-name (put-function caller)))
+                                                     (when caller-name
+                                                       (push caller-name (gethash (symbol-package caller-name) package-nodes))
+                                                       (unless (gethash (list caller-name name) edges)
+                                                         (setf (gethash (list caller-name name) edges)
+                                                               (cons (name-id caller-name) *call-path*))
+                                                         )))))
+                                (push name (gethash (symbol-package name) package-nodes))
+                                (incf walk-count)
+                                ; (setf (get :put-function name) t)
+                                (setf (gethash name nodes) abstract-function) ;; update, to indicate that it was a caller
+                                name))))))))
                (name-id (name)
                  (substitute-if #\_ #'(lambda (c) (not (or (alphanumericp c) (eql c #\-) (eql c #\_))))
                                 (format nil "~a:~a" (package-name (symbol-package name)) name))))
@@ -256,13 +256,17 @@
                      do (setf.dot:context-put-subgraph setf.dot:*context*
                                                        (format nil "cluster_~a" (package-name package))
                                                        #'(lambda ()
+                                                           (setf nodes (remove-duplicates nodes))
                                                            (format *trace-output* "~%cluster ~a x ~s"
                                                                    (package-name package)
                                                                    (length nodes))
-                                                           (loop for name in (remove-duplicates nodes)
+                                                           (loop for name in nodes
                                                              for label = (symbol-name name)
                                                              for id = (name-id name)
                                                              do (setf.dot:put-node id
+                                                                                   :penwidth (if (or (member name functions)
+                                                                                                     (member name limit))
+                                                                                                 "3.0" "1.0")
                                                                                    :label label
                                                                                    :class id)))
                                                        :label (package-name package)
@@ -305,12 +309,14 @@
  ellipse { pointer-events: mousedown; fill: white }
  </style>
 </head>
-<body  style='transform:translate(400%,400%) scale(4.0);'>
+<body>
+ <div style='transform: translate(100%,100%) scale(2.0);'>
 "
                       html)
         (alexandria:copy-stream svg html)
         (write-string "
-<script id='script'>
+ </div>
+ <script id='script'>
  function highlight(event) {
    event.preventDefault();
    var element = event.target;
