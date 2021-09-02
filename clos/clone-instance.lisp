@@ -100,12 +100,16 @@
 (defgeneric initialize-clone (old new &rest initargs &key &allow-other-keys)
   (:documentation
       "invoke shared-initialize with initargs to initialize slots
-       prior to copying from the instance to the clonein order to override the existing
+       prior to copying from the instance to the clone in order to override the existing
        slot values and preclude unwanted deep cloning.")
 
   (:method ((old standard-object) (new standard-object) &rest initargs)
     (declare (dynamic-extent initargs))
-    (apply #'shared-initialize new t initargs))         ;; must pass t to get default initform protocol
+    (apply #'shared-initialize new t initargs)          ;; must pass t to get default initform protocol
+    ;; after running shared initialize and between specialization next-method calls
+    ;; perform any standard slot copying
+    (copy-instance-slots old new)
+    new)
 
   (:method ((from simple-condition) (to simple-condition) &rest
             de.setf.utility.implementation::initargs &key
@@ -138,15 +142,19 @@
     slots with bound values are left unchanged in order to permit previous initarg
     based initialization (see clone-instance), which can then avoid unwanted deep
     cloning.")
-  (:method-combination progn :most-specific-first))
+  (:method-combination progn :most-specific-first)
+  (:method progn ((old standard-object) (new standard-object))
+    ;; the base method does nothing
+    ))
     
 
-(defmacro defcopy-instance-slots ((class &rest slot-names) &rest body)
+(defmacro def-copy-instance-slots (class slot-names &rest body)
   `(defmethod copy-instance-slots progn ((from ,class) (to ,class))
      ,@(mapcar #'(lambda (slot-name)
                    `(unless (slot-boundp to ',slot-name)
-                      (setf (slot-value to ',slot-name)
-                        (slot-value from ',slot-name))))
+                      (when (slot-boundp from ',slot-name)
+                        (setf (slot-value to ',slot-name)
+                              (slot-value from ',slot-name)))))
                slot-names)
      ,@body
      to))
