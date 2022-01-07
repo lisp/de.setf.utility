@@ -215,8 +215,14 @@
 
 #+sbcl
 (defun logical-hosts ()
-  (loop for host being each hash-key of SB-IMPL::*LOGICAL-HOSTS*
-        collect host))
+  (etypecase SB-IMPL::*LOGICAL-HOSTS*
+    (hash-table
+     (loop for host being each hash-key of SB-IMPL::*LOGICAL-HOSTS*
+       collect host))
+    (vector
+     (loop for host across SB-IMPL::*LOGICAL-HOSTS*
+       collect host))))
+
 
 #-(or allegro ccl clisp lispworks sbcl ecl cmu)
 (defun logical-hosts ()
