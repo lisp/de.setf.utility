@@ -37,13 +37,13 @@
          (ecase *read-default-float-format*
            ;; constraint exponents
            ((short-float single-float)
-            (if (plusp es)
+            (if (plusp s)
               (when (> e 38)
                 (return-from meta:parse-float de.setf.utility.codecs:single-float-positive-infinity))
               (when (> e 45)
                 (return-from meta:parse-float de.setf.utility.codecs:single-float-negative-infinity))))
            ((double-float long-float)
-            (if (plusp es)
+            (if (plusp s)
               (when (> e 308)
                 (return-from meta:parse-float de.setf.utility.codecs:double-float-positive-infinity))
               (when (> e 324)
