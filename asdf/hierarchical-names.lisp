@@ -354,14 +354,6 @@
 ;;; additions to instantiation steps to support the above
 
 ;;; use primitive interface to allow that the operator extensions are not loaded
-(defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
-  (when (slot-boundp instance 'asdf::name)
-    (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
-  (when (slot-boundp instance 'asdf::properties)
-    (let ((time (get-universal-time)))
-    (dolist (nick (asdf::system-nicknames instance))
-      (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
-            (cons time instance))))))
 
 (defmethod shared-initialize :after ((instance asdf:component) (slots t) &key
                                      (description nil description-p)
@@ -370,6 +362,16 @@
   (when description-p (setf (asdf::component-description instance) description))
   (when long-description-p (setf (asdf::component-long-description instance) long-description))
   (when contingent-on-p  (setf (asdf::component-property instance 'asdf::contingent-on) contingent-on)))
+
+#+(or)
+(defmethod shared-initialize :before ((instance asdf::system) (slots t) &key)
+  (when (slot-boundp instance 'asdf::name)
+    (remhash (asdf::coerce-name (asdf:component-name instance)) asdf::*defined-systems*))
+  (when (slot-boundp instance 'asdf::properties)
+    (let ((time (get-universal-time)))
+    (dolist (nick (asdf::system-nicknames instance))
+      (setf (gethash (asdf::coerce-name nick) asdf::*defined-systems*)
+            (cons time instance))))))
 
 #+(or)
 (defmethod shared-initialize :after ((instance asdf:system) (slots t) &key
@@ -426,7 +428,7 @@
               (asdf::component-relative-pathname instance))
          (setf (asdf::system-nicknames instance)
                (list (asdf::system-qualified-component-name instance)))))
-  
+  #+(or)
   (when (slot-boundp instance 'asdf::name)
     (let* ((name (asdf:component-name instance))
            (entry (gethash name asdf::*defined-systems*)))
@@ -458,7 +460,7 @@
                     (setf (slot-value instance 'asdf::relative-pathname)
                           logical))))))
   ;; default nicknames to the qualified component name
-  ;;(print (list :shared-initialize instance))
+  ;; (print (list :shared-initialize instance))
   (when (slot-boundp instance 'asdf::name)
     (if nicknames-p
 	(setf (asdf::system-nicknames instance) nicknames)
@@ -468,6 +470,7 @@
 			 (ignore-errors (pathname-qualified-component-name system-name source-file)))))
 	(setf (asdf::system-nicknames instance) (when nickname (list nickname)))))
     (print (list :name (asdf::component-name instance) :nicknames (asdf::system-nicknames instance)))
+    #+(or)
     (let* ((name (asdf:component-name instance))
            (entry (gethash name asdf::*defined-systems*)))
       #+(or)(unless entry

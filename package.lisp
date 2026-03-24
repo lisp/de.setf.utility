@@ -67,6 +67,7 @@
   (:use #+:CCL :ccl
         :common-lisp
         :de.setf.utility)
+  (:nicknames :d.s.u.i :dsu.i)
   #+sbcl
   (:import-from :sb-gray
                 :stream-line-column

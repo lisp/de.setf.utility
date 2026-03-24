@@ -17,12 +17,13 @@
 ;;;  A copy of the GNU Lesser General Public License should be included with 'de.setf.utility, as `lgpl.txt`.
 ;;;  If not, see the GNU [site](http://www.gnu.org/licenses/).
 
+#+sbcl
+(require :sb-introspect #p"/usr/local/lib/sbcl/contrib/sb-introspect.fasl")
+
 (asdf:defsystem :de.setf.utility.walker
   :depends-on (:de.setf.utility.dot
                :de.setf.utility.clos
                :closer-mop
-               #+sbcl
-               :sb-introspect
                #+mcl
                :de.setf.utility.bsd
                )
